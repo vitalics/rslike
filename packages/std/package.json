@@ -4,6 +4,7 @@
   "description": "JavaScript Standard library without udndefined behavior!",
   "main": "./dist/index.cjs",
   "types": "./dist/index.d.ts",
+  "private": false,
   "scripts": {
     "build:base": "esbuild --bundle --tree-shaking=true",
     "build:package:types": "tsc",
