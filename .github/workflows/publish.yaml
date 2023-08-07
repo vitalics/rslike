@@ -1,0 +1,76 @@
+name: build and publish release to npm
+
+on:
+  workflow_dispatch:
+    inputs: # choose which type of release you want to build publish
+      release_type:
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+        description: "version type, can be 'patch', 'minor', 'major'"
+        required: true
+        default: patch
+
+jobs:
+  npm_release:
+    name: "Build and publish to npm"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/cache@v3
+        env:
+          cache-name: cache-node-modules
+        with:
+          # See here for caching with `yarn` https://github.com/actions/cache/blob/main/examples.md#node---yarn or you can leverage caching with actions/setup-node https://github.com/actions/setup-node
+          path: |
+            ~/.pnpm
+          # Generate a new cache whenever packages or source files change.
+          key: ${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}-${{ hashFiles('**/*.[jt]s', '**/*.[jt]sx') }}
+          # If source files changed but packages didn't, rebuild from a prior cache.
+          restore-keys: |
+            ${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}-
+            ${{ runner.os }}-
+      - name: Setup Git User
+        uses: fregante/setup-git-user@v2
+      - name: use pnpm with node
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+      - name: Use Node.js 18.x
+        uses: actions/setup-node@v2
+        with:
+          node-version: 18
+          cache: "pnpm"
+      - name: Versioning
+        run: |
+          pnpm version ${{ github.event.inputs.release_type || 'patch' }} --git-tag-version=false
+          git push origin --follow-tags
+      - name: Automated Version ${{ github.event.inputs.release_type || 'patch' }}
+        uses: "phips28/gh-action-bump-version@master" # add version
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          target-branch: "main"
+          default: ${{ github.event.inputs.release_type || 'patch' }}
+          commit-message: "CI: bumps version to {{version}}"
+      - uses: fregante/release-with-changelog@v3 # create changelog and github release
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-template: "- {title} ← {hash}"
+          template: |
+            ### Changelog
+            {commits}
+            Full changelog: {range}
+            finds me on npm: <https://www.npmjs.com/package/aasy>
+            ### Installation:
+            npm: `npm install aasy`
+            yarn: `yarn add aasy`
+            pnpm: `pnpm add aasy`
+            made with ❤ from Vitali Haradkou
+      - uses: JS-DevTools/npm-publish@v2 # publish to npm
+        with:
+          token: ${{ secrets.NPM_PUBLISH_TOKEN }}
+          ignore-scripts: true
+          strategy: upgrade

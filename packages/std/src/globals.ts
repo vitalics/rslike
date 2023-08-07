@@ -21,3 +21,40 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
+
+import { None, Option, Some, Err, Ok, Result } from './';
+
+type NoneFn = typeof None;
+type OptionCtor = typeof Option;
+type SomeFn = typeof Some;
+
+type ErrFn = typeof Err;
+type OkFn = typeof Ok;
+type ResultCtor = typeof Result;
+
+// eslint-disable-next-line @typescript-eslint/no-namespace
+declare namespace globalThis {
+  let Some: SomeFn;
+  let None: NoneFn;
+  let Option: OptionCtor;
+  let Err: ErrFn;
+  let Ok: OkFn;
+  let Result: ResultCtor;
+}
+
+declare global {
+  let Some: SomeFn;
+  let None: NoneFn;
+  let Option: OptionCtor;
+  let Err: ErrFn;
+  let Ok: OkFn;
+  let Result: ResultCtor;
+}
+
+globalThis.Ok = Ok;
+globalThis.None = None;
+globalThis.Option = Option;
+
+globalThis.Some = Some;
+globalThis.Err = Err;
+globalThis.Result = Result;

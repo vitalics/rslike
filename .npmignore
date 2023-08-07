@@ -1,0 +1,9 @@
+.github
+.vscode
+src
+.husky
+tsconfig.json
+jest.config.js
+.eslintrc.cjs
+.eslintcache
+CONTRIBUTING.md

@@ -21,3 +21,20 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
+
+/**
+ * interface for `Clonable` classes
+ */
+export type CloneLike<T> = {
+  clone(): T;
+}
+
+export type EqualLike = {
+  /**
+   * Check does other is same type, instance and has same values
+   *
+   * @param {unknown} other
+   * @return {*}  {boolean}
+   */
+  equal(other: unknown): boolean;
+}
