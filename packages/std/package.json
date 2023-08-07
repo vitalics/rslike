@@ -1,7 +1,7 @@
 {
   "name": "@rslike/std",
   "version": "1.0.0",
-  "description": "JavaScript Standard library without udndefined behavior",
+  "description": "JavaScript Standard library without udndefined behavior!",
   "main": "./dist/index.cjs",
   "types": "./dist/index.d.ts",
   "scripts": {
@@ -14,9 +14,7 @@
     "build:package": "pnpm run '/^build:package:.*/'",
     "docs": "pnpm typedoc src/index.ts",
     "test": "jest",
-    "test:coverage": "jest --coverage",
-    "lint": "eslint src --ext .ts --cache",
-    "lint:fix": "pnpm lint --fix"
+    "test:coverage": "jest --coverage"
   },
   "exports": {
     ".": {
