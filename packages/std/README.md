@@ -1,21 +1,25 @@
-# Rust Like Standard Library
+# Rust-Like Standard Library
 
 Make Javascript without undefined behavior. Forgot about `try/catch/finally` which breakes your code!
 
-## Reason to use rslike
+## Installation
 
-1. Less undefined behavior, when using `Option` and `Result`.
-2. Well tested.
-3. JSDoc with examples.
-4. Typescript ready - `d.ts` types are generated with tsc.
+NPM:
 
-## Wanna be contributor?
+```bash
+npm i @rslike/std
+```
 
-See [contribute guide](./CONTRIBUTING.md)
+YARN/PNPM:
+
+```bash
+yarn add @rslike/std
+pnpm add @rslike/std
+```
 
 ## Adding global functions and classes
 
-1. Install package: `npm i @rslike/std`
+1. Install [package](#installation)
 2. In your entry file write next:
 
 ```typescript
@@ -26,6 +30,8 @@ import '@rslike/std/globals';
 
 // rest your file
 ```
+
+# API
 
 ## Option
 
@@ -40,7 +46,7 @@ Type `Option` represents an optional value: every `Option` is either `Some` and 
 - Swapping things out of difficult situations
 - Options are commonly paired with pattern matching to query the presence of a value and take action, always accounting for the None case.
 
-#### Examples
+### Examples
 
 ``` typescript
 function divide(numerator: number, denominator: number) : Option<number> {
@@ -57,7 +63,7 @@ result.isSome() // true
 result.unwrap() // 0.66666
 ```
 
-#### Boolean Operators
+### Boolean Operators
 
 These methods treat the `Option` as a boolean value, where `Some` acts like true and `None` acts like false. There are two categories of these methods: ones that take an `Option` as input, and ones that take a function as input (to be lazily evaluated).
 
@@ -76,7 +82,7 @@ The `and`, `or`, and `xor` methods take another Option as input, and produce an 
 | xor    | Some    | None      | Some(x) |
 | xor    | Some(x) | Some(y)   | None    |
 
-The `andThen` and `orElse` methods take a function as input, and only evaluate the function when they need to produce a new value. Only the and_then method can produce an `Option<U>` value having a different inner type `U` than `Option<T>`.
+The `andThen` and `orElse` methods take a function as input, and only evaluate the function when they need to produce a new value. Only the `andThen` method can produce an `Option<U>` value having a different inner type `U` than `Option<T>`.
 
 | method    | self    | function input | function result | output  |
 | --------- | ------- | -------------- | --------------- | ------- |
@@ -93,7 +99,7 @@ This is an example of using methods like `andThen` and or in a pipeline of metho
 
 `Result<T, E>` is the type used for returning and propagating errors. It is an enum with the variants, `Ok(T)`, representing success and containing a value, and `Err(E)`, representing error and containing an error value.
 
-#### Boolean Operators
+### Boolean Operators
 
 These methods treat the `Result` as a boolean value, where `Ok` acts like true and `Err` acts like false. There are two categories of these methods: ones that take a `Result` as input, and ones that take a function as input (to be lazily evaluated).
 
@@ -110,16 +116,16 @@ The and and or methods take another `Result` as input, and produce a `Result` as
 
 The `andThen` and `orElse` methods take a function as input, and only evaluate the function when they need to produce a new value. The `andThen` method can produce a `Result<U, E>` value having a different inner type `U` than `Result<T, E>`. The `orElse` method can produce a `Result<T, F>` value having a different error type `F` than `Result<T, E>`.
 
-| method    | self   | function       | input           | function | result | output |
-| --------- | ------ | -------------- | --------------- | -------- | ------ |
-| `andThen` | Err(e) | (not provided) | (not evaluated) | Err(e)   |
-| `andThen` | Ok(x)  | x              | Err(d)          | Err(d)   |
-| `andThen` | Ok(x)  | x              | Ok(y)           | Ok(y)    |
-| `orElse`  | Err(e) | e              | Err(d)          | Err(d)   |
-| `orElse`  | Err(e) | e              | Ok(y)           | Ok(y)    |
-| `orElse`  | Ok(x)  | (not provided) | (not evaluated) | Ok(x)    |
+| method    | self   | function       input | function  result | output |
+| --------- | ------ | -------------------- | ---------------- | ------ |
+| `andThen` | Err(e) | (not provided)       | (not evaluated)  | Err(e) |
+| `andThen` | Ok(x)  | x                    | Err(d)           | Err(d) |
+| `andThen` | Ok(x)  | x                    | Ok(y)            | Ok(y)  |
+| `orElse`  | Err(e) | e                    | Err(d)           | Err(d) |
+| `orElse`  | Err(e) | e                    | Ok(y)            | Ok(y)  |
+| `orElse`  | Ok(x)  | (not provided)       | (not evaluated)  | Ok(x)  |
 
-#### Examples
+### Examples
 
 ```typescript
 function fnFromSomewhere(...args){
@@ -132,20 +138,3 @@ const result = callable(args);
 
 result.isErr() // true
 ```
-
-## Tech Stack
-
-- pnpm
-- esbuild
-- typescript
-- husky
-- github actions
-- jest
-- eslint
-
-## Plans
-
-- [] Promise
-- [] Node.js API
-- [] Web API
-- [] fetch
