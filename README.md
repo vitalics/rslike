@@ -13,6 +13,10 @@ Make Javascript without undefined behavior. Forget about `try/catch/finally`
 
 See [contribute guide](./CONTRIBUTING.md)
 
+## Wiki
+
+Available by link: https://github.com/vitalics/rslike/wiki
+
 ## Packages
 
 - [std](./packages/std/README.md). Standard library. Includes `Result` and `Option`

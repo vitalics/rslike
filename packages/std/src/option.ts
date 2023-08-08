@@ -271,7 +271,7 @@ export class Option<T> implements CloneLike<Option<T>>, EqualLike {
    *
    * @example
    * function toString(x: number): Option<string> {
-   *  return String(x);
+   *  return Some(String(x));
    * }
    * console.assert(Some(2).andThen(toString) === Some(2.toString()));
    * console.assert(None().andThen(toString) === None());
@@ -387,6 +387,13 @@ export class Option<T> implements CloneLike<Option<T>>, EqualLike {
    * 
    * If self is `Some(s)` and other is `Some(o)`, this method returns `Some((s, o))`. Otherwise, `None` is returned.
    *
+   * @example
+   * const x = Some(1);
+   * const y = Some("hi");
+   * const z = None<number>();
+   * 
+   * x.zip(y) === Some((1, "hi"));
+   * x.zip(z) === None();
    * @template U
    * @param {Option<U>} other
    * @return {*}  {Option<[Value, U]>}
@@ -405,6 +412,18 @@ export class Option<T> implements CloneLike<Option<T>>, EqualLike {
    * 
    * If self is `Some(s)` and other is `Some(o)`, this method returns `Some(f(s, o))`. Otherwise, `None` is returned.
    *
+   * @example
+   * class Point {
+   *   constructor (readonly x: number, readonly y: number){}
+   *   static create(x:number, y: number){
+   *     return new Point(x,y);
+   *   }
+   * }
+   * const x = Some(17.5);
+   * const y = Some(42.7);
+   * 
+   * x.zipWith(y, Point.create) === Some({ x: 17.5, y: 42.7 })
+   * 
    * @template U
    * @template R
    * @param {Option<U>} other
@@ -539,7 +558,11 @@ export class Option<T> implements CloneLike<Option<T>>, EqualLike {
    * Inserts value into the option if it is `None`, then returns a mutable reference to the contained value. 
    * 
    * See also `insert`, which updates the value even if the option already contains `Some`.
-   *
+   * @example
+   * const x = None<number>();
+   * const y = x.getOrInsert(7);
+   * 
+   * y === 7 // true
    * @param {T} value
    * @return {*}  {Value}
    */
@@ -552,7 +575,12 @@ export class Option<T> implements CloneLike<Option<T>>, EqualLike {
 
   /**
    * Inserts a value computed from f into the option if it is `None`, then returns the contained value.
-   *
+   * @example
+   * const x = None<number>();
+   * const y = x.getOrInsertWith(() => 5);
+   * 
+   * y === 5 // true
+   * 
    * @param {() => T} predicate
    * @return {*}  {Value}
    */
@@ -605,9 +633,9 @@ export class Option<T> implements CloneLike<Option<T>>, EqualLike {
    * function nobody(): Option<string> { return None() }
    * function vikings(): Option<string> { return Some("vikings") }
    * 
-   * console.assert(Some("barbarians").or_else(vikings) === Some("barbarians"));
-   * console.assert(None.or_else(vikings) === Some("vikings"));
-   * console.assert(None.or_else(nobody) === None);
+   * Some("barbarians").orElse(vikings) === Some("barbarians"); // true
+   * None().orElse(vikings) === Some("vikings"); // true
+   * None().orElse(nobody) === None(); // true
    * 
    * @param {() => Option<T>} predicate
    * @return {*}  {Option<Value>}

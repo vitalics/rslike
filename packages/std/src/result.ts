@@ -67,7 +67,7 @@ export class Result<T, E> implements CloneLike<Result<T, E>>, EqualLike {
     return this.value as T;
   }
   /**
-   * Returns the contained Ok value, consuming the self value.
+   * Returns the contained `Ok` value, consuming the self value.
    * 
    * Because this function may throws, its use is generally discouraged. Instead, call `unwrapOr`, `unwrapOrElse`.
    *

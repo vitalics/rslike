@@ -1,6 +1,6 @@
 {
   "name": "@rslike/std",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "JavaScript Standard library without udndefined behavior!",
   "main": "./dist/index.cjs",
   "types": "./dist/index.d.ts",
