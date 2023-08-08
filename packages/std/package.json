@@ -1,6 +1,6 @@
 {
   "name": "@rslike/std",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "JavaScript Standard library without udndefined behavior!",
   "main": "./dist/index.cjs",
   "types": "./dist/index.d.ts",
@@ -38,5 +38,10 @@
     "result"
   ],
   "author": "Vitali Haradkou",
-  "license": "ISC"
+  "license": "MIT",
+  "homepage": "https://github.com/vitalics/rslike/blob/main/packages/std/README.md",
+  "bugs": {
+    "url": "https://github.com/vitalics/rslike/issues",
+    "email": "vitalicset@yandex.ru"
+  }
 }
