@@ -25,7 +25,7 @@ SOFTWARE.
 import { CloneLike, EqualLike } from './types';
 import { Err, Ok, Result } from './result';
 
-export enum Status {
+enum Status {
   None,
   Some,
 }

@@ -517,63 +517,6 @@ export class Result<T, E> implements CloneLike<Result<T, E>>, EqualLike {
     return new Result(Status.Err, null, value);
   }
 
-  /**
-   * Bind function and return a new callable function.
-   * 
-   * Result of this function will be mapped into `Result<T,E>`
-   *
-   * @example
-   * const fn = (a: number) => a + 2;
-   * const newFn = Result.bind(fn);
-   * 
-   * const res = newFn(1);
-   * res.unwrap() // 3
-   * newFn(10).unwrap() // 12
-   * 
-   * const thrower = () => {throw new Error('shit happens :)')};
-   * const func = Result.bind(thrower);
-   * func().isErr() // true
-   * const err = func().unwrapErr();
-   * console.log(err) // {message: 'shit happens :)'}
-   * err instanceof Error // true
-   * 
-   * // async example
-   * const asyncFn = () => Promise.resolve(123);
-   * const fn = Result.bind(asyncFn);
-   * 
-   * const r = await fn();
-   * 
-   * r.isOk() // true
-   * r.unwrap() // 123
-   * 
-   * @static
-   * @template T result type
-   * @template E error type
-   * @template This function `this` type
-   * @template A arguments array
-   * @param {(...args: A) => T} fn
-   * @param {(This | undefined)} [thisArg=undefined]
-   * @return {*} Callable function which returns an instance of `Result<T,E>`
-   * @memberof Result
-   */
-  static bind<T, E, This = void, A extends unknown[] = []>(fn: (...args: A) => T, thisArg: This | undefined = undefined): (...args: A) => T extends Promise<infer PromiseRes> ? Promise<Result<PromiseRes, E>> : Result<T, E> {
-    if (typeof fn !== 'function') {
-      throw new TypeError(`Undefined behavior. "Result.bind" Expect first argument as a function. Got "${typeof fn}"`)
-    }
-    return function (...args: A) {
-      try {
-        const result = fn.call(thisArg, ...args);
-        if (result instanceof Promise) {
-          return result.then(res => Ok(res), reason => Err(reason)) as Promise<Result<T, E>>;
-        }
-        return Ok(result);
-      }
-      catch (e) {
-        return Err(e);
-      }
-    } as never;
-  }
-
   equal(other: unknown): boolean {
     if (other instanceof Result) {
       return this.value === other.value || this.error === other.error;

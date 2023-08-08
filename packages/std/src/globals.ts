@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-import { None, Option, Some, Err, Ok, Result } from './';
+import { None, Option, Some, Err, Ok, Result, Bind } from './';
 
 type NoneFn = typeof None;
 type OptionCtor = typeof Option;
@@ -32,6 +32,8 @@ type ErrFn = typeof Err;
 type OkFn = typeof Ok;
 type ResultCtor = typeof Result;
 
+type BindFn = typeof Bind;
+
 // eslint-disable-next-line @typescript-eslint/no-namespace
 declare namespace globalThis {
   let Some: SomeFn;
@@ -40,6 +42,7 @@ declare namespace globalThis {
   let Err: ErrFn;
   let Ok: OkFn;
   let Result: ResultCtor;
+  let Bind: BindFn
 }
 
 declare global {
@@ -49,6 +52,7 @@ declare global {
   let Err: ErrFn;
   let Ok: OkFn;
   let Result: ResultCtor;
+  let Bind: BindFn
 }
 
 globalThis.Ok = Ok;
@@ -58,3 +62,5 @@ globalThis.Option = Option;
 globalThis.Some = Some;
 globalThis.Err = Err;
 globalThis.Result = Result;
+
+globalThis.Bind = Bind;
