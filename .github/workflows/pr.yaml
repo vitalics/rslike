@@ -11,29 +11,13 @@ jobs:
     steps:
       - name: Clone repository
         uses: actions/checkout@v3
-      - uses: actions/cache@v3
-        env:
-          cache-name: cache-node-modules
-        with:
-          # See here for caching with `yarn` https://github.com/actions/cache/blob/main/examples.md#node---yarn or you can leverage caching with actions/setup-node https://github.com/actions/setup-node
-          path: |
-            ~/.pnpm
-          # Generate a new cache whenever packages or source files change.
-          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/pnpm-lock.yaml') }}-${{ hashFiles('**/*.[jt]s', '**/*.[jt]sx') }}
-          # If source files changed but packages didn't, rebuild from a prior cache.
-          restore-keys: |
-            ${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}-
-            ${{ runner.os }}-
-      - name: use pnpm with node
-        uses: pnpm/action-setup@v2
-        with:
-          version: 8
+      - uses: pnpm/action-setup@v2
       - name: Use Node.js 18.x
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v3
         with:
           node-version: 18
           cache: "pnpm"
-      - name: Install dependencies
-        run: pnpm it
+      - if: ${{ steps.cache-node.outputs.cache-hit != 'true' }}
+        run: pnpm install
       - name: Generate build
         run: pnpm build
