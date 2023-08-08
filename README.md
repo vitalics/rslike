@@ -1,3 +1,5 @@
+![image](https://github.com/vitalics/rslike/assets/8816260/170f3954-b2a1-4df7-a639-455c3be1ebb8)
+
 # Rust Like
 
 Make Javascript without undefined behavior. Forget about `try/catch/finally`
