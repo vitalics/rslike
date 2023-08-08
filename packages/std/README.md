@@ -37,6 +37,43 @@ Available by link: https://github.com/vitalics/rslike/wiki
 
 ## API
 
+## Bind
+
+Function decorator. Combines Result and Option modules. Make the function safe to execute.
+
+Wraps function and return new function with binded context.
+
+Result of this function will be mapped into `Result<Option<T>,E>`.
+
+Function `result` will be mapped into `Ok(Some(result))`.
+
+`undefined` function result will mapped into `Ok(None())`.
+
+``` ts
+const fn = (a: number) => a + 2;
+const newFn = Bind(fn);
+
+const res = newFn(1);
+res.unwrap().unwrap() // 3
+newFn(10).unwrap().unwrap() // 12
+
+const thrower = () => {throw new Error('shit happens :)')};
+const func = Bind(thrower);
+func().isErr() // true
+const err = func().unwrapErr();
+console.log(err) // {message: 'shit happens :)'}
+err instanceof Error // true
+
+// async example
+const asyncFn = () => Promise.resolve(123);
+const fn = Bind(asyncFn);
+
+const r = await fn();
+
+r.isOk() // true
+r.unwrap() // 123
+```
+
 ## Option
 
 Type `Option` represents an optional value: every `Option` is either `Some` and contains a value, or `None`, and does not. `Option` have a number of uses:
