@@ -8,8 +8,8 @@
   "scripts": {
     "build:base": "esbuild --bundle --tree-shaking=true",
     "build:package:types": "tsc",
-    "build:package:globals:cjs": "pnpm build:base ./src/globals.ts --external:./ --outfile=dist/globals.cjs --format=cjs",
-    "build:package:globals:esm": "pnpm build:base ./src/globals.ts --external:./ --outfile=dist/globals.esm.cjs --format=esm",
+    "build:package:globals:cjs": "pnpm build:base ./src/globals.ts --external:./index --outfile=dist/globals.cjs --format=cjs",
+    "build:package:globals:esm": "pnpm build:base ./src/globals.ts --external:./index --outfile=dist/globals.esm.cjs --format=esm",
     "build:package:cjs": "pnpm build:base ./src/index.ts --outfile=dist/index.cjs --format=cjs",
     "build:package:esm": "pnpm build:base ./src/index.ts --outfile=dist/index.esm.js --format=esm",
     "build:package": "pnpm run '/^build:package:.*/'",

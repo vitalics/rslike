@@ -1,5 +1,5 @@
 {
-  "name": "monorepo",
+  "name": "@rslike/root",
   "private": true,
   "version": "1.0.0",
   "description": "Rust-like standard library without undefined behavior",
@@ -8,6 +8,8 @@
     "build": "pnpm run -r --stream --parallel --color build:package",
     "lint": "eslint packages/**/src --ext .ts --cache",
     "lint:fix": "pnpm lint --fix",
+    "ci:version": "changeset version && pnpm install --no-frozen-lockfile",
+    "ci:publish": "changeset publish",
     "dx": "husky install"
   },
   "devDependencies": {
