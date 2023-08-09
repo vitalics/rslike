@@ -22,8 +22,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+import { Errors } from './errors';
 import { None, Option, Some } from './option';
-import type { CloneLike, EqualLike } from './types';
+import type { EqualLike } from './types';
 
 enum Status {
   Ok,
@@ -41,7 +42,7 @@ enum Status {
  * @template T
  * @template E
  */
-export class Result<T, E> implements CloneLike<Result<T, E>>, EqualLike {
+export class Result<T, E> implements EqualLike {
   private constructor(protected readonly status: Status, protected readonly value: T | null | undefined, protected readonly error: E | null) {
     if (error) {
       this.status = Status.Err;
@@ -358,10 +359,10 @@ export class Result<T, E> implements CloneLike<Result<T, E>>, EqualLike {
   * @return {*}  {T}
   */
   unwrapOrElse(fn: (err: E) => T): T {
-    assertArgument('unwrapOrElse', fn, 'function');
     if (this.status === Status.Ok) {
       return this.value as T;
     }
+    assertArgument('unwrapOrElse', fn, 'function');
     return fn(this.error as E);
   }
   /**
@@ -390,14 +391,13 @@ export class Result<T, E> implements CloneLike<Result<T, E>>, EqualLike {
    * @return {*}  {Result<U, E>}
    */
   and<U>(res: Result<U, E>): Result<U, E> {
-    if (res instanceof Result) {
-      if (this.status === Status.Err) {
-        return Err(this.error as E);
-      } else {
-        return res;
-      }
+    if (!(res instanceof Result)) {
+      throw new Errors.UndefinedBehavior(`Method "and" should accepts isntance of Result`, { cause: { value: res } });
     }
-    throw new Error('Undefined behavior. Operator "and" expected to pass instance of Result', { cause: res });
+    if (this.status === Status.Err) {
+      return Err(this.error as E);
+    }
+    return res;
   }
   /**
    * Calls op if the result is `Ok`, otherwise returns the `Err` value of self.
@@ -422,7 +422,7 @@ export class Result<T, E> implements CloneLike<Result<T, E>>, EqualLike {
       if (res instanceof Result) {
         return res;
       }
-      throw new TypeError('Undefined behavior. Function result expected to be instance of Result.', { cause: res })
+      throw new Errors.UndefinedBehavior('Function result expected to be instance of Result.', { cause: res })
     }
     return Err(this.error as E);
   }
@@ -452,13 +452,13 @@ export class Result<T, E> implements CloneLike<Result<T, E>>, EqualLike {
    * @return {*}  {Result<T, F>}
    */
   or<F>(res: Result<T, F>): Result<T, F> {
-    if (res instanceof Result) {
-      if (this.status === Status.Err) {
-        return res;
-      }
-      return Ok(this.value as T);
+    if (!(res instanceof Result)) {
+      throw new Errors.UndefinedBehavior(`Operator "or" expect to pass instance of Result`, { cause: { value: res } });
     }
-    throw new Error('Undefined behavior. Operator "or" expect to pass instance of Result')
+    if (this.status === Status.Err) {
+      return res;
+    }
+    return Ok(this.value as T);
   }
   /**
    * Calls `fn` if the result is `Err`, otherwise returns the `Ok` value of self.
@@ -478,13 +478,13 @@ export class Result<T, E> implements CloneLike<Result<T, E>>, EqualLike {
    * @return {*}  {Result<T, F>}
    */
   orElse<F>(fn: (err: E) => Result<T, F>): Result<T, F> {
-    assertArgument('orElse', fn, 'function');
     if (this.status === Status.Err) {
+      assertArgument('orElse', fn, 'function');
       const res = fn(this.error as E);
-      if (res instanceof Result) {
-        return res;
+      if (!(res instanceof Result)) {
+        throw new Errors.UndefinedBehavior('Operator "orElse" expected to return instance of Result. Use "Ok" or "Err" function to define them.', { cause: { value: res, type: typeof res } })
       }
-      throw new Error('Undefined behavior. Operator "orElse" expected to return instance of Result. Use "Ok" or "Err" function to define them.')
+      return res;
     }
     return new Result(this.status, this.value, this.error as F);
   }
@@ -505,9 +505,9 @@ export class Result<T, E> implements CloneLike<Result<T, E>>, EqualLike {
     */
   flatten(): T extends Result<infer Ok, E> ? Result<Ok, E> : Result<T, E> {
     if (this.value instanceof Result) {
-      return this.value as T extends Result<infer Ok, E> ? Result<Ok, E> : Result<T, E>;
+      return this.value as never;
     }
-    return new Result(this.status, this.value, this.error) as T extends Result<infer Ok, E> ? Result<Ok, E> : Result<T, E>;
+    return this as never;
   }
 
   static Ok<Value>(value: Value) {
@@ -519,14 +519,17 @@ export class Result<T, E> implements CloneLike<Result<T, E>>, EqualLike {
 
   equal(other: unknown): boolean {
     if (other instanceof Result) {
-      return this.value === other.value || this.error === other.error;
+      if (this.status === Status.Ok && other.status === Status.Ok) {
+        return this.value === other.value;
+      }
+      if (this.status === Status.Err && other.status === Status.Err) {
+        return this.error === other.error;
+      }
+      return false;
     }
     return false;
   }
 
-  clone(): Result<T, E> {
-    return structuredClone(new Result(this.status, this.value, this.error));
-  }
   /**
    * @protected
    */
@@ -536,7 +539,7 @@ export class Result<T, E> implements CloneLike<Result<T, E>>, EqualLike {
   /**
    * @protected
    */
-  [Symbol.toStringTag]() {
+  get [Symbol.toStringTag]() {
     return 'Result';
   }
 }
@@ -555,6 +558,6 @@ type TypeofResult = "string" | "number" | "bigint" | "boolean" | "symbol" | "und
 function assertArgument(method: ResultMethods, value: unknown, expectedType: TypeofResult): asserts value {
   const type = typeof value;
   if (type !== expectedType) {
-    throw new Error(`Undefined behavior. Method "${String(method)}" should accepts or returns ${expectedType}`, { cause: { value, type, } });
+    throw new Errors.UndefinedBehavior(`Method "${String(method)}" should accepts or returns ${expectedType}`, { cause: { value, type, } });
   }
 }

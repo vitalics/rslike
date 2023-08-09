@@ -24,6 +24,9 @@ SOFTWARE.
 
 /**
  * interface for `Clonable` classes
+ * 
+ * @experimantal
+ * Defered for now
  */
 export type CloneLike<T> = {
   clone(): T;

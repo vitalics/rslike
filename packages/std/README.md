@@ -2,6 +2,15 @@
 
 Make Javascript without undefined behavior. Forgot about `try/catch/finally` which breakes your code!
 
+## Reasons to install @rsLike/std?
+
+1. Less undefined behavior, when using Option and Result.
+2. Well tested. `100% test coverage`
+3. JSDoc with examples.
+4. Typescript ready - d.ts types are generated with tsc.
+5. first-class `CJS` and `ESM` support.
+6. Deno?
+
 ## Installation
 
 NPM:
@@ -16,6 +25,10 @@ YARN/PNPM:
 yarn add @rslike/std
 pnpm add @rslike/std
 ```
+
+## Wiki
+
+Avaliable by link: https://github.com/vitalics/rslike/wiki
 
 ## Adding global functions and classes
 
