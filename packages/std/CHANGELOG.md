@@ -1,5 +1,11 @@
 # @rslike/std
 
+## 1.4.2
+
+### Patch Changes
+
+- a6c71a2: Package/fix
+
 ## 1.4.1
 
 ### Patch Changes
