@@ -22,9 +22,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-import { Errors } from './errors';
-import { Option, Some } from './option'
-import { Result, Err, Ok } from './result';
+import { Errors } from './errors.ts';
+import { Option, Some } from './option.ts'
+import { Result, Err, Ok } from './result.ts';
 
 /**
  * Function decorator. Combines `Option` and `Result` classes.

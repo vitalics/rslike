@@ -21,3 +21,5 @@ jobs:
         run: pnpm install
       - name: Generate build
         run: pnpm build
+      - name: pnpm test
+        run: pnpm test
