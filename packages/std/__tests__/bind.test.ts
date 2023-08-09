@@ -27,10 +27,11 @@ SOFTWARE.
 import { Bind } from '../src/bind';
 import { Option } from '../src/option';
 import { Result } from '../src/result';
+import { Errors } from '../src/errors'
 
 test('Bind should throw undefined behavior when not a function is provided', () => {
   // @ts-expect-error
-  expect(() => Bind(123)).toThrow(Error);
+  expect(() => Bind(123)).toThrow(Errors.UndefinedBehavior);
 });
 
 test('Bind should returns a new function', () => {
@@ -69,14 +70,18 @@ test('Bind should not throw for async function', async () => {
 });
 
 test('Bind should use this argument correctly', () => {
-  function a(this: { b: number }): number {
+  const fn = jest.fn(function (this: { b: number }) {
+    expect(this.b).toBe(2);
     return this.b + 1;
-  }
+  });
 
-  const b = Bind(a, { b: 2 });
+  const b = Bind(fn, { b: 2 });
 
   const res = b();
 
+  expect(fn).toBeCalled();
+  expect(res.isOk()).toBeTruthy();
+  expect(res.unwrap().isSome()).toBe(true);
   expect(res.unwrap().unwrap()).toBe(3);
 })
 

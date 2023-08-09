@@ -26,6 +26,7 @@ SOFTWARE.
 
 import { Result, Ok, Err } from '../src/result';
 import { Option } from '../src/option';
+import { Errors } from '../src/errors';
 
 test('isOk should returns true for Ok value', () => {
   const a = Ok(12);
@@ -389,10 +390,9 @@ test('andThen should call fn when status is Ok', () => {
 test('andThen should throw if function returns not Result instance', () => {
   const a = Ok(2);
 
-
   const fn = jest.fn((x: number) => x * 2);
   // @ts-expect-error
-  expect(() => a.andThen(fn)).toThrow("Undefined behavior. Function result expected to be instance of Result.");
+  expect(() => a.andThen(fn)).toThrow(Errors.UndefinedBehavior);
 
   expect(fn).toBeCalled();
 });
@@ -449,4 +449,109 @@ test('or should returns 1 Ok for (Ok, Ok) Pair', () => {
   const res = a.or(another);
 
   expect(res.unwrap()).toBe(1);
+});
+
+test('orElse should not throws undefined behavior when status is Ok', () => {
+  const a = Ok(4);
+
+  // @ts-expect-error
+  const res = a.orElse(2);
+  expect(res.isOk()).toBe(true);
+  expect(res.unwrap()).toBe(4);
+});
+
+test('orElse should throw an "UndefinedBehavior" error when status is Err and argument is not a function', () => {
+  const e = Err(4);
+
+  // @ts-expect-error
+  expect(() => e.orElse(2)).toThrow(Errors.UndefinedBehavior);
+})
+
+test('orElse should throw an "UndefinedBehavior" error when status is Err and function returns non Result isntance', () => {
+  const e = Err(4);
+
+  // @ts-expect-error
+  expect(() => e.orElse(() => 3)).toThrow(Errors.UndefinedBehavior);
+});
+
+test('orElse should returns function result for Err status', () => {
+  const a = Err(34);
+
+  const res = a.orElse(() => Ok(2));
+  expect(res).toBeInstanceOf(Result);
+  expect(res.isOk()).toBeTruthy();
+});
+
+
+test('orElse should returns self Ok status', () => {
+  const a = Ok(34);
+
+  const res = a.orElse(() => Ok(2));
+  expect(res).toBeInstanceOf(Result);
+  expect(res.isOk()).toBeTruthy();
+  expect(res.unwrap()).toBe(34);
+});
+
+test('flatten should returns self contained value for non Result instance under provided value', () => {
+  const a = Ok(4);
+
+  const another = a.flatten();
+
+  expect(another.unwrap()).toBe(a.unwrap());
+});
+
+
+test('flatten should unwraps contained value', () => {
+  const a = Ok(Ok(4));
+
+  const another = a.flatten();
+
+  expect(another.unwrap()).toBe(a.unwrap().unwrap());
+});
+
+test('equals should returns true for (Ok, Ok) pair with same values', () => {
+  const a = Ok(5);
+  const b = Ok(5);
+
+  const equals = a.equal(b);
+  expect(equals).toBeTruthy();
+});
+
+
+test('equals should returns false for (Ok, Ok) pair with varios values', () => {
+  const a = Ok(5);
+  const b = Ok(4);
+
+  const equals = a.equal(b);
+  expect(equals).toBe(false);
+});
+
+test('equals should returns false for (Ok, non Result) pair with same values', () => {
+  const a = Ok(5);
+
+  const equals = a.equal(5);
+  expect(equals).toBeFalsy();
+});
+
+
+test('equals should returns true for (Err, Err) pair with same values', () => {
+  const a = Err(5);
+  const b = Err(5);
+
+  const equals = a.equal(b);
+  expect(equals).toBeTruthy();
+});
+
+test('equals should returns false for (Ok, Err) pair with same values', () => {
+  const a = Ok(5);
+  const b = Err(5);
+
+  const equals = a.equal(b);
+  expect(equals).toBeFalsy();
+});
+
+test('toString should returns [object Result]', () => {
+  const a = Ok(5);
+
+  expect(Object.prototype.toString.call(a)).toBe("[object Result]");
 });

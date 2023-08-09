@@ -26,5 +26,6 @@ export { None, Option, Some } from './option';
 export { Err, Ok, Result } from './result';
 export type { CloneLike, EqualLike } from './types';
 export { Bind } from './bind';
+export { Errors } from './errors';
 
 export default { Bind, Err, Ok, Result, Some, None, Option };

@@ -22,6 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+import { Errors } from './errors';
 import { Option, Some } from './option'
 import { Result, Err, Ok } from './result';
 
@@ -70,7 +71,7 @@ import { Result, Err, Ok } from './result';
  */
 export function Bind<T, E = unknown, A extends unknown[] = [], This = void>(fn: (this: This, ...args: A) => T | Promise<T>, thisArg: This | undefined = undefined): (...args: A) => T extends Promise<infer P> ? Promise<Result<Option<P>, E>> : Result<Option<T>, E> {
   if (typeof fn !== 'function') {
-    throw new Error('Undefined behavior. "bind" function expect to pass function as 1 argument', { cause: { value: fn, type: typeof fn } });
+    throw new Errors.UndefinedBehavior(`"Bind" function expect to pass function as 1 argument`, { cause: { value: fn, type: typeof fn } })
   }
   return function (...args: A) {
     try {

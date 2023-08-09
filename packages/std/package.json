@@ -2,8 +2,6 @@
   "name": "@rslike/std",
   "version": "1.2.1",
   "description": "JavaScript Standard library without udndefined behavior!",
-  "main": "./dist/index.cjs",
-  "types": "./dist/index.d.ts",
   "private": false,
   "scripts": {
     "build:base": "esbuild --bundle --tree-shaking=true",
@@ -14,8 +12,7 @@
     "build:package:esm": "pnpm build:base ./src/index.ts --outfile=dist/index.esm.js --format=esm",
     "build:package": "pnpm run '/^build:package:.*/'",
     "docs": "pnpm typedoc src/index.ts",
-    "test": "jest",
-    "test:coverage": "jest --coverage"
+    "test": "jest"
   },
   "exports": {
     ".": {
@@ -32,6 +29,10 @@
   "keywords": [
     "std",
     "standard",
+    "undefined behavior",
+    "try",
+    "try/catch",
+    "try/catch/finally",
     "rust like",
     "rust",
     "option",

@@ -22,14 +22,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-import { CloneLike, EqualLike } from './types';
+import { EqualLike } from './types';
 import { Err, Ok, Result } from './result';
+import { Errors } from './errors';
 
 enum Status {
   None,
   Some,
 }
-
 
 /**
  * Type Option represents an optional value: every `Option` is either `Some` and contains a value, or `None`, and does not. Option types are very common in code, as they have a number of uses:
@@ -50,8 +50,8 @@ enum Status {
  * @implements {OptionLike<T>}
  * @template T
  */
-export class Option<T> implements CloneLike<Option<T>>, EqualLike {
-  private constructor(protected status: Status, protected value?: T | null) { }
+export class Option<T> implements EqualLike {
+  private constructor(protected status: Status, protected value?: T) { }
   /**
    * Returns the contained `Some` value, consuming the self value.
    * @example
@@ -64,8 +64,9 @@ export class Option<T> implements CloneLike<Option<T>>, EqualLike {
    * @return {*}  {Value}
    */
   expect(reason: string): T {
+    assertArgument('expect', reason, 'string');
     if (this.status === Status.None) {
-      throw new Error(reason, { cause: "Option have None status" })
+      throw new Error(reason, { cause: "Option have 'None' status" })
     }
     return this.value as T;
   }
@@ -86,7 +87,7 @@ export class Option<T> implements CloneLike<Option<T>>, EqualLike {
   */
   unwrap(): T {
     if (this.status === Status.None) {
-      throw new Error("Unwrap error. Option have None status", { cause: `Status: ${this.status}` })
+      throw new Error("Unwrap error. Option have 'None' status", { cause: { status: this.status, value: this.value } })
     }
     return this.value as T;
   }
@@ -257,11 +258,10 @@ export class Option<T> implements CloneLike<Option<T>>, EqualLike {
     if (this.status === Status.None) {
       return None();
     }
-    if (optb instanceof Option && this.status === Status.Some) {
-      return optb;
-    } else {
-      return None();
+    if (!(optb instanceof Option)) {
+      throw new Errors.UndefinedBehavior(`Method "and" should accepts instance of Option`, { cause: { value: optb, } });
     }
+    return optb;
   }
 
   /**
@@ -281,10 +281,13 @@ export class Option<T> implements CloneLike<Option<T>>, EqualLike {
   andThen<U>(f: (value: T) => Option<U>): Option<U> {
     if (this.status === Status.None) {
       return None();
-    } else {
-      assertArgument('andThen', f, 'function')
-      return f(this.value as T);
     }
+    assertArgument('andThen', f, 'function')
+    const res = f(this.value as T);
+    if (!(res instanceof Option)) {
+      throw new Errors.UndefinedBehavior('callback for Method "andThen" expects to returns instance of Option. Use "None" or "Some" funtions', { cause: { value: res } })
+    }
+    return res;
   }
 
   /**
@@ -310,6 +313,7 @@ export class Option<T> implements CloneLike<Option<T>>, EqualLike {
     }
     assertArgument('filter', predicate, 'function');
     const success = predicate(this.value as T);
+    assertArgument('filter', success, 'boolean');
     if (success) {
       return Some(this.value);
     }
@@ -323,16 +327,13 @@ export class Option<T> implements CloneLike<Option<T>>, EqualLike {
    * @return {*}  {Option<Value>}
    */
   xor(optb: Option<T>): Option<T> {
-    if (optb instanceof Option) {
-      if (this.status === Status.Some) {
-        return this;
-      }
-      if (optb.status === Status.Some) {
-        return optb;
-      }
-      return None();
+    if (this.status === Status.Some) {
+      return this;
     }
-    return this;
+    if (!(optb instanceof Option)) {
+      throw new Errors.UndefinedBehavior(`Method "xor" should accepts instance of Option`, { cause: { value: optb } });
+    }
+    return optb;
   }
 
   /**
@@ -355,8 +356,13 @@ export class Option<T> implements CloneLike<Option<T>>, EqualLike {
    * @return {*}  {Option<Value>}
    */
   insert(value: T): Option<T> {
-    this.status = Status.Some;
-    this.value = value;
+    if (value === undefined) {
+      this.status = Status.None;
+      this.value = undefined;
+    } else {
+      this.status = Status.Some;
+      this.value = value;
+    }
     return this;
   }
   /**
@@ -399,11 +405,11 @@ export class Option<T> implements CloneLike<Option<T>>, EqualLike {
    * @return {*}  {Option<[Value, U]>}
    */
   zip<U>(other: Option<U>): Option<[T, U]> {
-    if (other instanceof Option) {
-      if (this.status === Status.Some && other.status === Status.Some) {
-        return new Option(Status.Some, [this.value, other.value]) as Option<[T, U]>;
-      }
-      return None();
+    if (!(other instanceof Option)) {
+      throw new Errors.UndefinedBehavior(`Method "zip" should accepts instance of Option`, { cause: { value: other } });
+    }
+    if (this.status === Status.Some && other.status === Status.Some) {
+      return new Option(Status.Some, [this.value, other.value]) as Option<[T, U]>;
     }
     return None();
   }
@@ -431,11 +437,12 @@ export class Option<T> implements CloneLike<Option<T>>, EqualLike {
    * @return {*}  {Option<R>}
    */
   zipWith<U, R>(other: Option<U>, fn: (value: T, other: U) => R): Option<R> {
-    if (other instanceof Option) {
-      if (this.status === Status.Some && other.status === Status.Some) {
-        return Some(fn(this.value as T, other.value as U));
-      }
-      return None();
+    if (!(other instanceof Option)) {
+      throw new Errors.UndefinedBehavior(`Method "zipWith" should accepts instance of Option`, { cause: { value: other } });
+    }
+    assertArgument("zipWith", fn, 'function');
+    if (this.status === Status.Some && other.status === Status.Some) {
+      return Some(fn(this.value as T, other.value as U));
     }
     return None();
   }
@@ -482,7 +489,7 @@ export class Option<T> implements CloneLike<Option<T>>, EqualLike {
    */
   static Some<T>(value?: T | null | undefined) {
     if (value === undefined) {
-      return new Option(Status.None);
+      return new Option(Status.None, undefined);
     }
     return new Option(Status.Some, value);
   }
@@ -504,9 +511,6 @@ export class Option<T> implements CloneLike<Option<T>>, EqualLike {
     return false;
   }
 
-  clone(): Option<T> {
-    return structuredClone(this);
-  }
   /**
    * Returns `true` if the option is a `Some` value.
    * 
@@ -519,7 +523,7 @@ export class Option<T> implements CloneLike<Option<T>>, EqualLike {
    * @return {*}  {boolean}
    */
 
-  isSome() {
+  isSome(): boolean {
     return this.status === Status.Some;
   }
 
@@ -528,7 +532,7 @@ export class Option<T> implements CloneLike<Option<T>>, EqualLike {
    *
    * @return {*}  {boolean}
   */
-  isNone() {
+  isNone(): boolean {
     return this.status === Status.None;
   }
 
@@ -566,9 +570,12 @@ export class Option<T> implements CloneLike<Option<T>>, EqualLike {
    * @param {T} value
    * @return {*}  {Value}
    */
-  getOrInsert(value: T) {
+  getOrInsert(value: T): T {
     if (this.status === Status.None) {
-      return value;
+      if (value === undefined) {
+        throw new Errors.UndefinedBehavior(`Method "getOrInsert" should provide non "undefined" value.`);
+      }
+      return this.insert(value).unwrap();
     }
     return this.value as T;
   }
@@ -587,7 +594,11 @@ export class Option<T> implements CloneLike<Option<T>>, EqualLike {
   getOrInsertWith(callback: () => T): T {
     if (this.status === Status.None) {
       assertArgument('getOrInsertWith', callback, 'function');
-      return callback();
+      const res = callback();
+      if (res === undefined) {
+        throw new Errors.UndefinedBehavior("Callback for method 'getOrInsertWith' should returns non 'undefined' value.")
+      }
+      return this.insert(res).unwrap();
     }
     return this.value as T;
   }
@@ -617,13 +628,13 @@ export class Option<T> implements CloneLike<Option<T>>, EqualLike {
    * @return {*}  {Option<Value>}
    */
   or(optb: Option<T>): Option<T> {
-    if (this.status === Status.None) {
-      if (optb instanceof Option) {
-        return optb;
-      }
+    if (this.status === Status.Some) {
       return this;
     }
-    return this;
+    if (!(optb instanceof Option)) {
+      throw new Errors.UndefinedBehavior(`Method "or" should accepts isntance of Option`, { cause: { value: optb } });
+    }
+    return optb;
   }
 
   /**
@@ -641,11 +652,15 @@ export class Option<T> implements CloneLike<Option<T>>, EqualLike {
    * @return {*}  {Option<Value>}
    */
   orElse(callback: () => Option<T>): Option<T> {
-    if (this.status === Status.None) {
-      assertArgument('orElse', callback, 'function');
-      return callback();
+    if (this.status === Status.Some) {
+      return this;
     }
-    return this;
+    assertArgument('orElse', callback, 'function');
+    const result = callback();
+    if (!(result instanceof Option)) {
+      throw new Errors.UndefinedBehavior(`Callback result for method "orElse" should returns instance of Option. Use Some or None.`, { cause: { value: result } })
+    }
+    return result;
   }
   /**
    * @protected
@@ -656,7 +671,7 @@ export class Option<T> implements CloneLike<Option<T>>, EqualLike {
   /**
    * @protected
    */
-  [Symbol.toStringTag]() {
+  get [Symbol.toStringTag]() {
     return 'Option';
   }
 }
@@ -678,9 +693,8 @@ export function None<T = undefined>() {
 type Methods = keyof Option<undefined>;
 type TypeofResult = "string" | "number" | "bigint" | "boolean" | "symbol" | "undefined" | "object" | "function";
 
-function assertArgument(method: Methods, value: unknown, expectedType: TypeofResult): asserts value {
-  const type = typeof value;
-  if (type !== expectedType) {
-    throw new Error(`Undefined behavior. Method "${String(method)}" should accepts or returns ${expectedType}`, { cause: { value, type, } });
+const assertArgument = (method: Methods, value: unknown, expectedType: TypeofResult) => {
+  if (typeof value !== expectedType) {
+    throw new Errors.UndefinedBehavior(`Method "${String(method)}" should accepts ${expectedType}`, { cause: { value: value, type: typeof value, } });
   }
 }
