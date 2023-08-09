@@ -33,6 +33,7 @@ Available by link: https://github.com/vitalics/rslike/wiki
 - pnpm
 - esbuild
 - typescript
+- changeset
 - husky
 - github actions
 - jest
