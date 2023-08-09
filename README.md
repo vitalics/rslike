@@ -1,6 +1,6 @@
 ![image](https://github.com/vitalics/rslike/assets/8816260/170f3954-b2a1-4df7-a639-455c3be1ebb8)
 
-![status](https://github.com/vitalics/rslike/blob/main/.github/workflows/publish.yaml/badge.svg)
+![status](https://github.com/vitalics/rslike/actions/workflows/publish.yaml/badge.svg)
 
 # Rust Like
 
