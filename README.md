@@ -9,9 +9,12 @@ Make Javascript without undefined behavior. Forget about `try/catch/finally`
 ## Reason to use rslike
 
 1. Less undefined behavior, when using `Option` and `Result`.
-2. Well tested.
-3. JSDoc with examples.
-4. Typescript ready - `d.ts` types are generated with tsc.
+2. Zero library
+3. Well tested. `100% test coverage`
+4. JSDoc with examples.
+5. Typescript ready - d.ts types are generated with tsc.
+6. first-class `CJS` and `ESM` support.
+7. Deno?
 
 ## Wanna be contributor?
 
