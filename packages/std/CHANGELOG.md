@@ -1,5 +1,11 @@
 # @rslike/std
 
+## 1.4.1
+
+### Patch Changes
+
+- 8fb74e8: Testing deno deployment
+
 ## 1.4.0
 
 ### Minor Changes
