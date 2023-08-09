@@ -22,9 +22,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-import { Errors } from './errors';
-import { None, Option, Some } from './option';
-import type { EqualLike } from './types';
+import { Errors } from './errors.ts';
+import { None, Option, Some } from './option.ts';
+import type { EqualLike } from './types.ts';
 
 enum Status {
   Ok,

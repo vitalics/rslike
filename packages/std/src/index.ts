@@ -22,10 +22,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-export { None, Option, Some } from './option';
-export { Err, Ok, Result } from './result';
-export type { CloneLike, EqualLike } from './types';
-export { Bind } from './bind';
-export { Errors } from './errors';
+export { None, Option, Some } from './option.ts';
+export { Err, Ok, Result } from './result.ts';
+export type { CloneLike, EqualLike } from './types.ts';
+export { Bind } from './bind.ts';
+export { Errors } from './errors.ts';
 
 export default { Bind, Err, Ok, Result, Some, None, Option };

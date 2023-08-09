@@ -1,4 +1,6 @@
 {
   "extends": "@tsconfig/node18",
-  "compilerOptions": {},
+  "compilerOptions": {
+    "allowImportingTsExtensions": true,
+  },
 }
