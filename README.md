@@ -38,6 +38,7 @@ Available by link: https://github.com/vitalics/rslike/wiki
 - github actions
 - jest
 - eslint
+- deno?
 
 ## Plans
 
