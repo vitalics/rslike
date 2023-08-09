@@ -1,5 +1,5 @@
 ---
-@rslike/std: patch
+"@rslike/std": patch
 ---
 
 Testing deno deployment
