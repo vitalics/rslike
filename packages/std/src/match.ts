@@ -51,11 +51,12 @@ type ErrCb<I, R> = I extends Option<unknown> ? () => R : I extends Result<unknow
  * }, (e) => {
  *  console.log('Error:', e)
  * })
+ * console.log(json) // YOUR JSON data from backend.
  * 
  * @export
  * @template R
  * @template I
- * @param {I} optOrRes
+ * @param {I} optOrRes `Option` or `Result` instance.
  * @param {OkCb<I, R>} okOrSomeCb calls when result is `Ok` or `Some`.
  * @param {ErrCb<I, R>} errOrNoneCb calls when result is `Err` or `None`.
  * @return {*}  {R}

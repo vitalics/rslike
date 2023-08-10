@@ -52,6 +52,33 @@ Available by link: https://github.com/vitalics/rslike/wiki
 
 ## API
 
+## Match
+
+Matches the `Option` or `Result` and calls callback functions.
+
+1 callback function will be executed for `Ok` or `Some` result.
+
+2 callback function will be executed for `Err` or `None` result.
+
+If incoming arguments is not `Option` or `Result` or callback functions is not a functions then it throws an `UndefinedBehavior` error.
+
+``` ts
+
+const resFromBackend = Bind(async () => return (await fetch('<args>')).json())
+
+const json = match(resFromBackend, (res) => {
+   return match(res, (unwrapped) => {
+     console.log('JSON is:', unwrapped)
+   }, () => {
+     console.log('JSON is None')
+   })
+}, (e) => {
+ console.log('Error:', e)
+})
+
+console.log(json); // YOUR JSON from Backend
+```
+
 ## Bind
 
 Function decorator. Combines Result and Option modules. Make the function safe to execute.
