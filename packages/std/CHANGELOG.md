@@ -1,5 +1,11 @@
 # @rslike/std
 
+## 1.4.3
+
+### Patch Changes
+
+- c7672d2: Add mod.ts file for Deno
+
 ## 1.4.2
 
 ### Patch Changes
