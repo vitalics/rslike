@@ -22,10 +22,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-import { Errors } from './errors';
-import { Option, } from './option';
-import { Result } from './result';
-
+import { Errors } from './errors.ts';
+import { Option, } from './option.ts';
+import { Result } from './result.ts';
 
 type OkCb<I, R> = I extends Option<infer Some> ? (value: Some) => R : I extends Result<infer Ok, unknown> ? (value: Ok) => R : never
 type ErrCb<I, R> = I extends Option<unknown> ? () => R : I extends Result<unknown, infer E> ? (error: E) => R : never
