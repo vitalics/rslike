@@ -69,7 +69,7 @@ import { Result, Err, Ok } from './result.ts';
  * @param {(This | undefined)} [thisArg=undefined]
  * @return {*}  {(...args: A) => Result<Option<T>, E>}
  */
-export function Bind<T, E = unknown, A extends unknown[] = [], This = void>(fn: (this: This, ...args: A) => T | Promise<T>, thisArg: This | undefined = undefined): (...args: A) => T extends Promise<infer P> ? Promise<Result<Option<P>, E>> : Result<Option<T>, E> {
+export function Bind<T, E = unknown, A extends unknown[] = [], This = void>(fn: (this: This, ...args: A) => T, thisArg: This | undefined = undefined): (...args: A) => T extends Promise<infer P> ? Promise<Result<Option<P>, E>> : Result<Option<T>, E> {
   if (typeof fn !== 'function') {
     throw new Errors.UndefinedBehavior(`"Bind" function expect to pass function as 1 argument`, { cause: { value: fn, type: typeof fn } })
   }
