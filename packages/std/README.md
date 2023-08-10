@@ -9,7 +9,9 @@ Make Javascript without undefined behavior. Forgot about `try/catch/finally` whi
 3. JSDoc with examples.
 4. Typescript ready - d.ts types are generated with tsc.
 5. first-class `CJS` and `ESM` support.
-6. Deno?
+6. Zero dependencies.
+7. `2kB` for min+gzip and `7.6kB` for minified. See in [bundlefobia](https://bundlephobia.com/package/@rslike/std@1.4.2).
+8. Deno?
 
 ## Installation
 

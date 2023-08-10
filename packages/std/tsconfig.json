@@ -12,6 +12,7 @@
       "jest",
     ],
     "skipLibCheck": true,
+    "allowImportingTsExtensions": true
   },
   "exclude": [
     "__tests__"
