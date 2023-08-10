@@ -1,5 +1,11 @@
 # @rslike/std
 
+## 1.5.0
+
+### Minor Changes
+
+- 944e32d: new function: `match`. Match helps to unwrap result in safety way via callbacks.
+
 ## 1.4.3
 
 ### Patch Changes
