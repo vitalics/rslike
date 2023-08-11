@@ -22,45 +22,22 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-import { None, Option, Some, Err, Ok, Result, Bind } from './index';
+import { defineConfig } from 'tsup'
 
-type NoneFn = typeof None;
-type OptionCtor = typeof Option;
-type SomeFn = typeof Some;
-
-type ErrFn = typeof Err;
-type OkFn = typeof Ok;
-type ResultCtor = typeof Result;
-
-type BindFn = typeof Bind;
-
-// eslint-disable-next-line @typescript-eslint/no-namespace
-declare namespace globalThis {
-  let Some: SomeFn;
-  let None: NoneFn;
-  let Option: OptionCtor;
-  let Err: ErrFn;
-  let Ok: OkFn;
-  let Result: ResultCtor;
-  let Bind: BindFn
-}
-
-declare global {
-  let Some: SomeFn;
-  let None: NoneFn;
-  let Option: OptionCtor;
-  let Err: ErrFn;
-  let Ok: OkFn;
-  let Result: ResultCtor;
-  let Bind: BindFn
-}
-
-globalThis.Ok = Ok;
-globalThis.None = None;
-globalThis.Option = Option;
-
-globalThis.Some = Some;
-globalThis.Err = Err;
-globalThis.Result = Result;
-
-globalThis.Bind = Bind;
+export default defineConfig(() => ({
+  entry: ['src/index.ts', 'src/globals.ts'],
+  format: ['cjs', 'esm'],
+  external: ['./index'],
+  splitting: false,
+  clean: true,
+  cjsInterop: true,
+  dts: true,
+  target: ['node18'],
+  shims: true,
+  tsconfig: './tsconfig.json',
+  outExtension({ format }) {
+    return {
+      js: format === 'cjs' ? '.cjs' : format === 'esm' ? `.mjs` : '.js',
+    }
+  },
+}));
