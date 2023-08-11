@@ -37,7 +37,7 @@ export default defineConfig(() => ({
   tsconfig: './tsconfig.json',
   outExtension({ format }) {
     return {
-      js: format === 'cjs' ? '.cjs' : format === 'esm' ? `.${format}.js` : '.js',
+      js: format === 'cjs' ? '.cjs' : format === 'esm' ? `.mjs` : '.js',
     }
   },
 }));
