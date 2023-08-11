@@ -1,5 +1,11 @@
 # @rslike/std
 
+## 1.6.0
+
+### Minor Changes
+
+- 8a1d9c4: implement `Async` API. Mark as global usable.
+
 ## 1.5.1
 
 ### Patch Changes
