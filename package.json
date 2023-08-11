@@ -6,6 +6,7 @@
   "scripts": {
     "test": "pnpm run -r --stream --parallel --color test",
     "build": "pnpm run -r --stream --parallel --color build",
+    "docs": "pnpm run -r --stream --parallel --color docs",
     "lint": "eslint packages/**/src --ext .ts --cache",
     "lint:fix": "pnpm lint --fix",
     "ci:version": "changeset version && pnpm install --no-frozen-lockfile",
