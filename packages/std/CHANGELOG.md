@@ -1,5 +1,12 @@
 # @rslike/std
 
+## 1.5.1
+
+### Patch Changes
+
+- 90b3776: Build: migrate from esbuild to tsup package
+  Package: fix output file extension from `.esm.js` to `mjs` for esm compiling
+
 ## 1.5.0
 
 ### Minor Changes
