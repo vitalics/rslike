@@ -21,5 +21,3 @@ jobs:
         run: pnpm it
       - name: Generate build
         run: pnpm build
-      - name: Generate docs
-        run: pnpm run docs
