@@ -22,6 +22,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+/* eslint-disable @typescript-eslint/no-unused-vars */
+
+import { Async } from './async.ts';
+import { match } from './match.ts';
 import { Errors } from './errors.ts';
 import { Option, Some } from './option.ts'
 import { Result, Err, Ok } from './result.ts';
@@ -36,7 +40,9 @@ import { Result, Err, Ok } from './result.ts';
  * Function `result` will be mapped into `Ok(Some(result))`.
  * 
  * `undefined` funtion result will mapped into `Ok(None())`.
- *
+ * 
+ * @see {@link Async} if you would like to resolve `Promise` or value, not a whole function.
+ * @see {@link match} if you would like to unwrap `Result` or `Option` successfully.
  * @example
  * const fn = (a: number) => a + 2;
  * const newFn = Bind(fn);

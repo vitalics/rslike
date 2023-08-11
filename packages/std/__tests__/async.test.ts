@@ -22,48 +22,29 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-import { None, Option, Some, Err, Ok, Result, Bind, Async } from './index';
+import { Async } from '../src/async'
 
-type NoneFn = typeof None;
-type OptionCtor = typeof Option;
-type SomeFn = typeof Some;
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 
-type ErrFn = typeof Err;
-type OkFn = typeof Ok;
-type ResultCtor = typeof Result;
-type BindFn = typeof Bind;
-type AsyncFn = typeof Async;
+test('Async should resolves undefined as Ok(None())', async () => {
+  const a = await Async(undefined);
 
-// eslint-disable-next-line @typescript-eslint/no-namespace
-declare namespace globalThis {
-  let Some: SomeFn;
-  let None: NoneFn;
-  let Option: OptionCtor;
-  let Err: ErrFn;
-  let Ok: OkFn;
-  let Result: ResultCtor;
-  let Bind: BindFn;
-  let Async: AsyncFn;
-}
+  expect(a.isOk()).toBeTruthy();
+  expect(a.unwrap().isNone()).toBeTruthy();
+});
 
-declare global {
-  let Some: SomeFn;
-  let None: NoneFn;
-  let Option: OptionCtor;
-  let Err: ErrFn;
-  let Ok: OkFn;
-  let Result: ResultCtor;
-  let Bind: BindFn;
-  let Async: AsyncFn;
-}
 
-globalThis.Ok = Ok;
-globalThis.None = None;
-globalThis.Option = Option;
+test('Async should resolves Promise.resolve(undefined) as Ok(None())', async () => {
+  const a = await Async(Promise.resolve(undefined));
 
-globalThis.Some = Some;
-globalThis.Err = Err;
-globalThis.Result = Result;
+  expect(a.isOk()).toBeTruthy();
+  expect(a.unwrap().isNone()).toBeTruthy();
+});
 
-globalThis.Bind = Bind;
-globalThis.Async = Async;
+
+test('Async should resolves Promise.reject(undefined) as Err("undefined")', async () => {
+  const a = await Async(Promise.reject(undefined));
+
+  expect(a.isErr()).toBeTruthy();
+  expect(a.unwrapErr()).toBe(undefined);
+});
