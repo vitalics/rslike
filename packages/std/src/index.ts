@@ -22,6 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+import { Async } from './async.ts';
 import { Bind } from './bind.ts';
 import { Errors } from './errors.ts';
 import { match } from './match.ts'
@@ -29,5 +30,5 @@ import { None, Option, Some } from './option.ts';
 import { Err, Ok, Result } from './result.ts';
 import type { CloneLike, EqualLike } from './types.ts';
 
-export default { Bind, Err, Ok, Result, Some, None, Option, Errors, match };
-export { Bind, Err, Ok, Result, Some, None, Option, Errors, CloneLike, EqualLike, match };
+export default { Async, Bind, Err, Ok, Result, Some, None, Option, Errors, match };
+export { Async, Bind, Err, Ok, Result, Some, None, Option, Errors, CloneLike, EqualLike, match };
