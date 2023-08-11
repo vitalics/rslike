@@ -50,8 +50,5 @@
   "bugs": {
     "url": "https://github.com/vitalics/rslike/issues",
     "email": "vitalicset@yandex.ru"
-  },
-  "devDependencies": {
-    "@tsconfig/node18": "18.2.0"
   }
 }

@@ -58,11 +58,7 @@ importers:
         specifier: 7.2.3
         version: 7.2.3
 
-  packages/std:
-    devDependencies:
-      '@tsconfig/node18':
-        specifier: 18.2.0
-        version: 18.2.0
+  packages/std: {}
 
 packages:
 
