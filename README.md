@@ -32,7 +32,7 @@ Available by link: https://github.com/vitalics/rslike/wiki
 ## Tech Stack
 
 - pnpm
-- esbuild
+- tsup
 - typescript
 - changeset
 - husky

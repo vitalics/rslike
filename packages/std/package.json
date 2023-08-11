@@ -6,26 +6,30 @@
   "main": "./dist/index.cjs",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "build:base": "esbuild --bundle --tree-shaking=true",
-    "build:package:types": "tsc",
-    "build:package:globals:cjs": "pnpm build:base ./src/globals.ts --external:./index --outfile=dist/globals.cjs --format=cjs",
-    "build:package:globals:esm": "pnpm build:base ./src/globals.ts --external:./index --outfile=dist/globals.esm.cjs --format=esm",
-    "build:package:cjs": "pnpm build:base ./src/index.ts --outfile=dist/index.cjs --format=cjs",
-    "build:package:esm": "pnpm build:base ./src/index.ts --outfile=dist/index.esm.js --format=esm",
-    "build:package": "pnpm run '/^build:package:.*/'",
+    "build": "tsup",
     "docs": "pnpm typedoc src/index.ts",
     "test": "jest"
   },
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.esm.js",
-      "require": "./dist/index.cjs"
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.esm.js"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.cjs"
+      }
     },
     "./globals": {
-      "types": "./dist/globals.d.ts",
-      "import": "./dist/globals.esm.js",
-      "require": "./dist/globals.cjs"
+      "import": {
+        "types": "./dist/globals.d.mts",
+        "default": "./dist/globals.esm.js"
+      },
+      "require": {
+        "types": "./dist/globals.d.ts",
+        "default": "./dist/globals.cjs"
+      }
     }
   },
   "keywords": [
@@ -46,5 +50,8 @@
   "bugs": {
     "url": "https://github.com/vitalics/rslike/issues",
     "email": "vitalicset@yandex.ru"
+  },
+  "devDependencies": {
+    "@tsconfig/node18": "18.2.0"
   }
 }
