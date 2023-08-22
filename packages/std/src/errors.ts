@@ -24,6 +24,7 @@ SOFTWARE.
 
 /**
  * Common error. Usually throws when something is not defined.
+ * @see {@link https://github.com/vitalics/rslike/wiki/UndefinedBehaviorError Wiki}
  */
 export class UndefinedBehaviorError extends Error {
   constructor(message: string, options?: ErrorOptions) {

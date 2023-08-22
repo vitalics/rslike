@@ -26,8 +26,8 @@ import { UndefinedBehaviorError } from './errors.ts';
 import { Option, } from './option.ts';
 import { Result } from './result.ts';
 
-type OkCb<I, R> = I extends Option<infer Some> ? (value: Some) => R : I extends Result<infer Ok, unknown> ? (value: Ok) => R : never
-type ErrCb<I, R> = I extends Option<unknown> ? () => R : I extends Result<unknown, infer E> ? (error: E) => R : never
+type OkCb<I, R> = I extends Option<infer Some> ? (value: Some) => R : I extends Result<infer Ok, unknown> ? (value: Ok) => R : I extends boolean ? (value: true) => R : never
+type ErrCb<I, R> = I extends Option<unknown> ? () => R : I extends Result<unknown, infer E> ? (error: E) => R : I extends boolean ? (value: false) => R : never
 
 /**
  * matches the `Option` or `Result` and calls callback functions.
@@ -38,6 +38,7 @@ type ErrCb<I, R> = I extends Option<unknown> ? () => R : I extends Result<unknow
  *
  * If incoming arguments is not `Option` or `Result` or callback functions is not a functions then it throws an `UndefinedBehavior` error.
  * 
+ * @see {@link https://github.com/vitalics/rslike/wiki/Match Wiki}
  * @example
  * const resFromBackend = Bind(async () => return await (await fetch('<args>')).json())
  * 
@@ -55,29 +56,33 @@ type ErrCb<I, R> = I extends Option<unknown> ? () => R : I extends Result<unknow
  * @export
  * @template R
  * @template I
- * @param {I} optOrRes `Option` or `Result` instance.
+ * @param {I} value `Option` or `Result` instance.
  * @param {OkCb<I, R>} okOrSomeCb calls when result is `Ok` or `Some`.
  * @param {ErrCb<I, R>} errOrNoneCb calls when result is `Err` or `None`.
  * @return {*}  {R}
  */
-export function match<R, I extends Option<unknown> | Result<unknown, unknown>>(optOrRes: I, okOrSomeCb: OkCb<I, R>, errOrNoneCb: ErrCb<I, R>): R {
-  if (!(optOrRes instanceof Option) && !(optOrRes instanceof Result)) {
-    throw new UndefinedBehaviorError('only instance of Option or Result are allowed for match function', { cause: { value: optOrRes } });
-  }
+export function match<R, I extends Option<unknown> | Result<unknown, unknown> | boolean>(value: I, okOrSomeCb: OkCb<I, R>, errOrNoneCb: ErrCb<I, R>): R {
   if (typeof okOrSomeCb !== 'function') {
     throw new UndefinedBehaviorError(`match function expects to provide a function.`, { cause: { value: okOrSomeCb, type: typeof okOrSomeCb } })
   }
   if (typeof errOrNoneCb !== 'function') {
     throw new UndefinedBehaviorError(`match function expects to provide a function.`, { cause: { value: okOrSomeCb, type: typeof okOrSomeCb } })
   }
-  if (optOrRes instanceof Option) {
-    if (optOrRes.isSome()) {
-      return okOrSomeCb(optOrRes.unwrap());
+  if (typeof value === 'boolean') {
+    if (value === true) {
+      return okOrSomeCb(true);
+    }
+    return errOrNoneCb(false);
+  } else if (value instanceof Option) {
+    if (value.isSome()) {
+      return (okOrSomeCb as OkCb<Option<unknown>, R>)(value.unwrap());
     }
     return errOrNoneCb(undefined as never);
+  } else if (value instanceof Result) {
+    if (value.isOk()) {
+      return (okOrSomeCb as OkCb<Result<unknown, unknown>, R>)(value.unwrap());
+    }
+    return (errOrNoneCb as OkCb<Result<unknown, unknown>, R>)(value.unwrapErr());
   }
-  if (optOrRes.isOk()) {
-    return okOrSomeCb(optOrRes.unwrap());
-  }
-  return errOrNoneCb(optOrRes.unwrapErr());
+  throw new UndefinedBehaviorError(`only boolean type, Option or Result instance are allowed`, { cause: { value, type: typeof value, ctor: (value as object).constructor?.name } })
 }

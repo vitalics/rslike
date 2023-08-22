@@ -26,11 +26,11 @@ SOFTWARE.
 
 import { Ordering, maxBy, minBy } from '../src/cmp';
 
-import { Errors } from '@rslike/std';
+import { UndefinedBehaviorError } from '@rslike/std';
 
 test('minBy should throws an error for not a function', () => {
   // @ts-expect-error
-  expect(() => minBy(1, '2', 123)).toThrow(Errors.UndefinedBehavior);
+  expect(() => minBy(1, '2', 123)).toThrow(UndefinedBehaviorError);
 });
 
 test('minBy should return seconds argument when returns 1 or greater', () => {
@@ -42,7 +42,7 @@ test('minBy should return seconds argument when returns 1 or greater', () => {
 
 test('minBy should return should throw an error when function returns not a number', () => {
   // @ts-expect-error
-  expect(() => minBy(1, '2', () => "str")).toThrow(Errors.UndefinedBehavior);
+  expect(() => minBy(1, '2', () => "str")).toThrow(UndefinedBehaviorError);
 });
 
 test('minBy should return seconds argument when returns 1 or greater', () => {
@@ -54,13 +54,13 @@ test('minBy should return seconds argument when returns 1 or greater', () => {
 
 test('maxBy should throws an error for not a function', () => {
   // @ts-expect-error
-  expect(() => maxBy(1, '2', 123)).toThrow(Errors.UndefinedBehavior);
+  expect(() => maxBy(1, '2', 123)).toThrow(UndefinedBehaviorError);
 });
 
 
 test('maxBy should throws an error for a function which is returns string', () => {
   // @ts-expect-error
-  expect(() => maxBy(1, '2', () => 'some string')).toThrow(Errors.UndefinedBehavior);
+  expect(() => maxBy(1, '2', () => 'some string')).toThrow(UndefinedBehaviorError);
 });
 
 test('partialEq should returns boolean result', () => {
@@ -81,9 +81,8 @@ test('eq should thows an error for non Ordering class', () => {
   const a = Ordering.Equal;
 
   // @ts-expect-error
-  expect(() => a.eq(123)).toThrow(Errors.UndefinedBehavior);
+  expect(() => a.equals(123)).toThrow(UndefinedBehaviorError);
 });
-
 
 test('eq should return euqlity for Equal, Equal pair', () => {
   const a = Ordering.Equal;

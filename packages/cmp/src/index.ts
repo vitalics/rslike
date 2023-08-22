@@ -22,13 +22,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-import { Ordering, maxBy, minBy } from './cmp.ts';
-
-import { Eq, Ord, PartialEq, PartialOrd } from './types.ts';
-
-export * as Errors from './errors.ts';
+export * from './cmp.ts';
+export * from './errors.ts';
+export type { Eq, Ord, PartialEq, PartialOrd } from './types.ts';
 export * from './utils.ts';
 
 export default { Ordering };
-export type { Eq, Ord, PartialEq, PartialOrd };
-export { Ordering, maxBy, minBy };

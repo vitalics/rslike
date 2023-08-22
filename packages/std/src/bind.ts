@@ -41,6 +41,7 @@ import { Result, Err, Ok } from './result.ts';
  * 
  * `undefined` funtion result will mapped into `Ok(None())`.
  * 
+ * @see {@link https://github.com/vitalics/rslike/wiki/Bind Wiki}
  * @see {@link Async} if you would like to resolve `Promise` or value, not a whole function.
  * @see {@link match} if you would like to unwrap `Result` or `Option` successfully.
  * @example

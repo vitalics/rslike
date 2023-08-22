@@ -61,7 +61,11 @@ export function isPartialOrd(arg: unknown): arg is PartialOrd {
 }
 
 export function isEquals(arg: unknown): arg is Eq {
-  if (isPartialEquals(arg) && 'equals' in arg && typeof arg.equals === 'function') {
+  if (
+    isPartialEquals(arg) &&
+    'equals' in arg &&
+    typeof arg.equals === 'function'
+  ) {
     return true;
   }
   return false;

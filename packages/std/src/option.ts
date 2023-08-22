@@ -42,6 +42,7 @@ enum Status {
  * 
  * `Options` are commonly paired with pattern matching to query the presence of a value and take action, always accounting for the `None` case.
  *
+ * @see {@link https://github.com/vitalics/rslike/wiki/Option WIKI}
  * @export
  * @class Option
  * @implements {CloneLike<Option<T>>}

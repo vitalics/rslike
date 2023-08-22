@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-import { Errors, Option, Some } from '@rslike/std';
+import { UndefinedBehaviorError, Option, Some } from '@rslike/std';
 
 import { CompareError } from './errors';
 import { Eq, PartialEq, Ord, PartialOrd } from './types.ts';
@@ -63,7 +63,7 @@ export class Ordering implements Eq<Ordering>, PartialEq<Ordering>, Ord<Ordering
    * Transform `unknown` value into {@link Ordering} instance
    *
    * ## Throws
-   * - {@link Errors.UndefinedBehaviorError} if value cannot be transforms into `Ordering` instance
+   * - {@link UndefinedBehaviorError} if value cannot be transforms into `Ordering` instance
    * @static
    * @param {unknown} value
    * @return {*} Ordering instance
@@ -72,7 +72,7 @@ export class Ordering implements Eq<Ordering>, PartialEq<Ordering>, Ord<Ordering
   static from(value: unknown): Ordering {
     const asNumber = Number(value);
     if (Number.isNaN(asNumber)) {
-      throw new Errors.UndefinedBehaviorError(`Cannot transform NaN to Ordering instance.`, { cause: { value, type: typeof value } })
+      throw new UndefinedBehaviorError(`Cannot transform NaN to Ordering instance.`, { cause: { value, type: typeof value } })
     }
     if (asNumber >= 1) {
       return Ordering.Greater;
@@ -89,7 +89,7 @@ export class Ordering implements Eq<Ordering>, PartialEq<Ordering>, Ord<Ordering
   }
   equals(other: Ordering): boolean {
     if (!Ordering.is(other)) {
-      throw new Errors.UndefinedBehaviorError(`"equals" expected argument instance of Ordering`, { cause: { value: other, type: typeof other, ctor: other.constructor?.name } })
+      throw new UndefinedBehaviorError(`"equals" expected argument instance of Ordering`, { cause: { value: other, type: typeof other, ctor: other.constructor?.name } })
     }
     return this.valueOf() === other.valueOf();
   }
@@ -108,31 +108,31 @@ export class Ordering implements Eq<Ordering>, PartialEq<Ordering>, Ord<Ordering
   }
   lt(other: Ordering): boolean {
     if (!Ordering.is(other)) {
-      throw new Errors.UndefinedBehaviorError(`"lt" expected argument instance of Ordering`, { cause: { value: other, type: typeof other, ctor: typeof other === 'object' ? other.constructor : undefined } })
+      throw new UndefinedBehaviorError(`"lt" expected argument instance of Ordering`, { cause: { value: other, type: typeof other, ctor: typeof other === 'object' ? other.constructor : undefined } })
     }
     return this.valueOf() < other.valueOf();
   }
   le(other: Ordering): boolean {
     if (!Ordering.is(other)) {
-      throw new Errors.UndefinedBehaviorError(`"le" expected argument instance of Ordering`, { cause: { value: other, type: typeof other, ctor: typeof other === 'object' ? other.constructor : undefined } })
+      throw new UndefinedBehaviorError(`"le" expected argument instance of Ordering`, { cause: { value: other, type: typeof other, ctor: typeof other === 'object' ? other.constructor : undefined } })
     }
     return this.valueOf() <= other.valueOf();
   }
   gt(other: Ordering): boolean {
     if (!Ordering.is(other)) {
-      throw new Errors.UndefinedBehaviorError(`"gt" expected argument instance of Ordering`, { cause: { value: other, type: typeof other, ctor: typeof other === 'object' ? other.constructor : undefined } })
+      throw new UndefinedBehaviorError(`"gt" expected argument instance of Ordering`, { cause: { value: other, type: typeof other, ctor: typeof other === 'object' ? other.constructor : undefined } })
     }
     return this.valueOf() > other.valueOf();
   }
   ge(other: Ordering): boolean {
     if (!Ordering.is(other)) {
-      throw new Errors.UndefinedBehaviorError(`"ge" expected argument instance of Ordering`, { cause: { value: other, type: typeof other, ctor: typeof other === 'object' ? other.constructor : undefined } })
+      throw new UndefinedBehaviorError(`"ge" expected argument instance of Ordering`, { cause: { value: other, type: typeof other, ctor: typeof other === 'object' ? other.constructor : undefined } })
     }
     return this.valueOf() >= other.valueOf();
   }
   compare(other: Ordering): Ordering {
     if (!Ordering.is(other)) {
-      throw new Errors.UndefinedBehaviorError(`"cmp" expected argument instance of Ordering`, { cause: { value: other, type: typeof other, ctor: typeof other === 'object' ? other.constructor : undefined } })
+      throw new UndefinedBehaviorError(`"cmp" expected argument instance of Ordering`, { cause: { value: other, type: typeof other, ctor: typeof other === 'object' ? other.constructor : undefined } })
     }
     const diff = this.valueOf() - other.valueOf();
     if (diff > 0) {
@@ -144,20 +144,20 @@ export class Ordering implements Eq<Ordering>, PartialEq<Ordering>, Ord<Ordering
   }
   max(other: Ordering): Ordering {
     if (!Ordering.is(other)) {
-      throw new Errors.UndefinedBehaviorError(`"max" expected argument instance of Ordering`, { cause: { value: other, type: typeof other, ctor: typeof other === 'object' ? other.constructor : undefined } })
+      throw new UndefinedBehaviorError(`"max" expected argument instance of Ordering`, { cause: { value: other, type: typeof other, ctor: typeof other === 'object' ? other.constructor : undefined } })
     }
     const diff = this.valueOf() - other.valueOf()
     if (diff > 0) {
       return this;
     }
     if (other.valueOf() > 2 || other.valueOf() < -2) {
-      throw new Errors.UndefinedBehaviorError(`"max" can accepts only instance of ordering or numbers between -1 and 1`);
+      throw new UndefinedBehaviorError(`"max" can accepts only instance of ordering or numbers between -1 and 1`);
     }
     return new Ordering(other.valueOf());
   }
   min(other: Ordering): Ordering {
     if (!Ordering.is(other)) {
-      throw new Errors.UndefinedBehaviorError(`"max" expected argument instance of Ordering`, { cause: { value: other, type: typeof other, ctor: typeof other === 'object' ? other.constructor : undefined } })
+      throw new UndefinedBehaviorError(`"max" expected argument instance of Ordering`, { cause: { value: other, type: typeof other, ctor: typeof other === 'object' ? other.constructor : undefined } })
     }
     const diff = this.valueOf() - other.valueOf()
     if (diff < 0) {
@@ -167,10 +167,10 @@ export class Ordering implements Eq<Ordering>, PartialEq<Ordering>, Ord<Ordering
   }
   clamp(min: Ordering, max: Ordering): Ordering {
     if (!Ordering.is(min)) {
-      throw new Errors.UndefinedBehaviorError(`Method "clamp" should accepts instance of Ordering`, { cause: { value: min, type: typeof min, ctor: min?.constructor?.name } });
+      throw new UndefinedBehaviorError(`Method "clamp" should accepts instance of Ordering`, { cause: { value: min, type: typeof min, ctor: min?.constructor?.name } });
     }
     if (!Ordering.is(max)) {
-      throw new Errors.UndefinedBehaviorError(`Method "clamp" should accepts instance of Ordering`, { cause: { value: max, type: typeof max, ctor: max?.constructor?.name } });
+      throw new UndefinedBehaviorError(`Method "clamp" should accepts instance of Ordering`, { cause: { value: max, type: typeof max, ctor: max?.constructor?.name } });
     }
     if (min.valueOf() > max.valueOf()) {
       throw new RangeError(``);
@@ -306,7 +306,7 @@ export class Ordering implements Eq<Ordering>, PartialEq<Ordering>, Ord<Ordering
    * Returns `this` when it’s not `Equal`. Otherwise returns `other`.
    * 
    * ## Throws
-   * @see {@link Errors.UndefinedBehaviorError} if argument is not instance of `Ordering`
+   * @see {@link UndefinedBehaviorError} if argument is not instance of `Ordering`
    * @example
    * const result = Ordering.Equal.then(Ordering.Less);
    * result === Ordering.Less // true
@@ -316,7 +316,7 @@ export class Ordering implements Eq<Ordering>, PartialEq<Ordering>, Ord<Ordering
    */
   then(other: Ordering): Ordering {
     if (!Ordering.is(other)) {
-      throw new Errors.UndefinedBehaviorError(`"then" expected argument instance of Ordering`, { cause: { value: other, type: typeof other, ctor: typeof other === 'object' ? other.constructor : undefined } })
+      throw new UndefinedBehaviorError(`"then" expected argument instance of Ordering`, { cause: { value: other, type: typeof other, ctor: typeof other === 'object' ? other.constructor : undefined } })
     }
     if (this.state !== State.Equal) {
       return this;
@@ -340,11 +340,11 @@ export class Ordering implements Eq<Ordering>, PartialEq<Ordering>, Ord<Ordering
       return this;
     }
     if (typeof f !== 'function') {
-      throw new Errors.UndefinedBehaviorError(`"thenWith" argument expected to be a function`, { cause: { value: f, type: typeof f, } })
+      throw new UndefinedBehaviorError(`"thenWith" argument expected to be a function`, { cause: { value: f, type: typeof f, } })
     }
     const res = f();
     if (!Ordering.is(res)) {
-      throw new Errors.UndefinedBehaviorError(`"thenWith" function result expected to be instance of Ordering`, { cause: { value: res, type: typeof res, ctor: res?.constructor?.name } })
+      throw new UndefinedBehaviorError(`"thenWith" function result expected to be instance of Ordering`, { cause: { value: res, type: typeof res, ctor: res?.constructor?.name } })
     }
     return res;
   }
@@ -362,7 +362,7 @@ export class Ordering implements Eq<Ordering>, PartialEq<Ordering>, Ord<Ordering
  * 
  * Returns the second argument if the comparison determines them more or equal.
  * ## Throws
- * @see {@link Errors.UndefinedBehaviorError} - if compare argument is not a function or function not returns {@link Ordering} instance or `number`.
+ * @see {@link UndefinedBehaviorError} - if compare argument is not a function or function not returns {@link Ordering} instance or `number`.
  * @example
  * maxBy(-2, 1,(x,y) => x-y > 0 ? Ordering.Greater : Ordering.Less) // 1
  * maxBy(-2, 1,(x,y) => x-y) // 1
@@ -374,7 +374,7 @@ export class Ordering implements Eq<Ordering>, PartialEq<Ordering>, Ord<Ordering
  */
 export function maxBy<T>(v1: T, v2: T, compare: (v1: T, v2: T) => Ordering): T {
   if (typeof compare !== 'function') {
-    throw new Errors.UndefinedBehaviorError(`"maxBy" function exepected 3rd argument as a function`, { cause: { value: compare, type: typeof compare } });
+    throw new UndefinedBehaviorError(`"maxBy" function exepected 3rd argument as a function`, { cause: { value: compare, type: typeof compare } });
   }
   const result = compare(v1, v2);
   if (Ordering.is(result) || typeof result === 'number') {
@@ -384,7 +384,7 @@ export function maxBy<T>(v1: T, v2: T, compare: (v1: T, v2: T) => Ordering): T {
       return v1;
     }
   }
-  throw new Errors.UndefinedBehaviorError(`"maxBy" compare function exepect returns instance of Ordering or typeof number`, { cause: { value: result, type: typeof result, ctor: result?.constructor?.name } });
+  throw new UndefinedBehaviorError(`"maxBy" compare function exepect returns instance of Ordering or typeof number`, { cause: { value: result, type: typeof result, ctor: result?.constructor?.name } });
 }
 
 /**
@@ -393,7 +393,7 @@ export function maxBy<T>(v1: T, v2: T, compare: (v1: T, v2: T) => Ordering): T {
  * Returns the first argument if the comparison determines them less or equal.
  * 
  * ## Throws
- * @see {@link Errors.UndefinedBehaviorError} - if compare argument is not a function or funciton not returns {@link Ordering} instance or `number`.
+ * @see {@link UndefinedBehaviorError} - if compare argument is not a function or funciton not returns {@link Ordering} instance or `number`.
  * @example
  * minBy(-2, 1,(x,y) => x-y > 0 ? Ordering.Less : Ordering.Greater) // -2
  * minBy(-2, 1,(x,y) => x-y) // -2
@@ -407,7 +407,7 @@ export function maxBy<T>(v1: T, v2: T, compare: (v1: T, v2: T) => Ordering): T {
  */
 export function minBy<T>(v1: T, v2: T, compare: (v1: T, v2: T) => Ordering | number): T {
   if (typeof compare !== 'function') {
-    throw new Errors.UndefinedBehaviorError(`"minBy" function exepected 3rd argument as a function`, { cause: { value: compare, type: typeof compare } });
+    throw new UndefinedBehaviorError(`"minBy" function exepected 3rd argument as a function`, { cause: { value: compare, type: typeof compare } });
   }
   const result = compare(v1, v2);
   if (Ordering.is(result) || typeof result === 'number') {
@@ -417,5 +417,5 @@ export function minBy<T>(v1: T, v2: T, compare: (v1: T, v2: T) => Ordering | num
       return v2;
     }
   }
-  throw new Errors.UndefinedBehaviorError(`"minBy" compare function exepect returns instance of Ordering or typeof number`, { cause: { value: result, type: typeof result, ctor: result?.constructor?.name } });
+  throw new UndefinedBehaviorError(`"minBy" compare function exepect returns instance of Ordering or typeof number`, { cause: { value: result, type: typeof result, ctor: result?.constructor?.name } });
 }

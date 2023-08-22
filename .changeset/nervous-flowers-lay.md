@@ -3,7 +3,13 @@
 "@rslike/cmp": major
 ---
 
-# New Package
+# std
+
+Reexport `UndefinedBehaviorError` by new way(instead of `Errors` object).
+
+`match` now can accepts `boolean` type.
+
+# cmp
 
 `cmp` - comparison package. Provides interfaces, types and new class `Ordering`.
 
@@ -37,4 +43,10 @@ class MyStructure implements Eq {
 - `Ord` - type for ordering
 - `PartialOrd` - type for partial ordering
 
-More details on [WIKI](https://github.com/vitalics/rslike/wiki)
+More details on [WIKI](https://github.com/vitalics/rslike/wiki/Eq)
+
+## Classes
+
+`Ordering` - Ordering is a class which allows to order item and have 3 possible values: `Greater`, `Less` or `Equals`.
+
+This class has a private constructor, and if you would like to transform numeric-like value - use `Ordering.from` method.

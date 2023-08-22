@@ -24,7 +24,7 @@ SOFTWARE.
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
-import { Option, Errors } from '@rslike/std';
+import { Option, UndefinedBehaviorError } from '@rslike/std';
 
 import { CompareError, OrderingError } from './errors.ts';
 import { Ordering } from './cmp.ts';
@@ -176,7 +176,7 @@ export type Ord<T = unknown> = PartialOrd<T> & {
    *
    * By convention, `this.compare(other)` returns the ordering matching the expression `self <operator> other` if `true`.
    * ## Best practicies
-   * - throw {@link Errors.UndefinedBehavior} in case of `other` argument is not that your method expects
+   * - throw {@link UndefinedBehaviorError} in case of `other` argument is not that your method expects
    * - throw {@link OrderingError} in case of `other` and `self` are not comparable between each others.
    * @param {T} other
    * @return {*}  {Ordering}
@@ -188,7 +188,7 @@ export type Ord<T = unknown> = PartialOrd<T> & {
    * 
    * Returns the second argument if the comparison determines them to be equal.
    * ## Best practicies
-   * - throw {@link Errors.UndefinedBehavior} in case of `other` argument is not that your method expects.
+   * - throw {@link UndefinedBehaviorError} in case of `other` argument is not that your method expects.
    * @example
    * (1).max(2) === 2 // true
    * (2).max(2) === 2 // true
@@ -202,7 +202,7 @@ export type Ord<T = unknown> = PartialOrd<T> & {
    * 
    * Returns the first argument if the comparison determines them to be equal.
    * ## Best practicies
-   * - throw {@link Errors.UndefinedBehavior} in case of `other` argument is not that your method expects.
+   * - throw {@link UndefinedBehaviorError} in case of `other` argument is not that your method expects.
    * @example
    * (1).min(2) === 1 // true
    * (2).min(2) === 2 // true
@@ -215,7 +215,7 @@ export type Ord<T = unknown> = PartialOrd<T> & {
    * 
    * Returns `max` if self is greater than max, and `min` if self is less than min. Otherwise this returns `this`.
    * ## Best practices
-   * - throw {@link Errors.UndefinedBehavior} in case of `min` or `max` argument is not that your method expects.
+   * - throw {@link UndefinedBehaviorError} in case of `min` or `max` argument is not that your method expects.
    * - throw {@link RangeError} in case of `min` argument is more than `max` argument
    * @example
    * (-3).clamp(-2, 1) === -2
@@ -265,7 +265,7 @@ export type PartialEq<T = unknown> = {
    * **NOTE:** other always will be `unknown`. Generic `T` only helps when use with typescript. Perform checks on your side.
    *
    * ## Best practice
-   * accept `other` as `unknown` type and make less checks than {@link Eq.equals} does.
+   * accept `other` as `unknown` type and make less checks than `Eq.equals` does.
    * 
    * @param {T} other
    * @return {*}  {boolean}
