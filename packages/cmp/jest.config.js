@@ -22,22 +22,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-/**
- * interface for `Clonable` classes
- * 
- * @experimantal
- * Defered for now
- */
-export type CloneLike<T> = {
-  clone(): T;
-}
-
-export type EqualLike = {
-  /**
-   * Check does other is same type, instance and has same values
-   *
-   * @param {unknown} other
-   * @return {*}  {boolean}
-   */
-  equal(other: unknown): boolean;
-}
+/** @type {import('ts-jest').JestConfigWithTsJest} */
+module.exports = {
+  preset: 'ts-jest',
+  testEnvironment: 'node',
+  collectCoverage: true,
+  collectCoverageFrom: ['src/**/*.ts', '!src/errors.ts', '!src/*.d.ts', '!src/globals.ts', '!src/index.ts']
+};

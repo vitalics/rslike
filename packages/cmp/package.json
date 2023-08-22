@@ -1,0 +1,62 @@
+{
+  "name": "@rslike/cmp",
+  "version": "1.6.0",
+  "description": "JavaScript Standard library without udndefined behavior!",
+  "private": false,
+  "main": "./dist/index.cjs",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsup",
+    "docs": "pnpm typedoc src/index.ts",
+    "test": "jest"
+  },
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./globals": {
+      "import": {
+        "types": "./dist/globals.d.mts",
+        "default": "./dist/globals.mjs"
+      },
+      "require": {
+        "types": "./dist/globals.d.ts",
+        "default": "./dist/globals.cjs"
+      }
+    }
+  },
+  "keywords": [
+    "std",
+    "standard",
+    "undefined behavior",
+    "rust like",
+    "rust",
+    "compare",
+    "comparator",
+    "comparing",
+    "ordering",
+    "partial compare",
+    "partial ordering",
+    "Eq",
+    "PartialEq",
+    "Ord",
+    "PartialOrd"
+  ],
+  "author": "Vitali Haradkou",
+  "license": "MIT",
+  "homepage": "https://github.com/vitalics/rslike/blob/main/packages/cmp/README.md",
+  "bugs": {
+    "url": "https://github.com/vitalics/rslike/issues",
+    "email": "vitalicset@yandex.ru"
+  },
+  "dependencies": {
+    "@rslike/std": "workspace:*"
+  }
+}

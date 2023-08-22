@@ -22,12 +22,20 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-import { Async } from './async.ts';
-import { Bind } from './bind.ts';
-import * as Errors from './errors.ts';
-import { match } from './match.ts'
-import { None, Option, Some } from './option.ts';
-import { Err, Ok, Result } from './result.ts';
+/**
+ * Helper error. Can be useful when use it for ordering.
+ *
+ * @export
+ * @class CompareError
+ * @extends {Error}
+ */
+export class OrderingError extends Error { }
 
-export default { Async, Bind, Err, Ok, Result, Some, None, Option, Errors, match };
-export { Async, Bind, Err, Ok, Result, Some, None, Option, Errors, match };
+/**
+ * Helper error. Can be useful when use it for comparing.
+ *
+ * @export
+ * @class CompareError
+ * @extends {Error}
+ */
+export class CompareError extends Error { }

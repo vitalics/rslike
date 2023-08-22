@@ -27,11 +27,11 @@ SOFTWARE.
 import { Bind } from '../src/bind';
 import { Option } from '../src/option';
 import { Result } from '../src/result';
-import { Errors } from '../src/errors'
+import { UndefinedBehaviorError } from '../src/errors'
 
 test('Bind should throw undefined behavior when not a function is provided', () => {
   // @ts-expect-error
-  expect(() => Bind(123)).toThrow(Errors.UndefinedBehavior);
+  expect(() => Bind(123)).toThrow(UndefinedBehaviorError);
 });
 
 test('Bind should returns a new function', () => {

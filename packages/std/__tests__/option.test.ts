@@ -24,7 +24,7 @@ SOFTWARE.
 
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 
-import { Errors } from '../src/errors';
+import { UndefinedBehaviorError } from '../src/errors';
 import { None, Some, Option } from '../src/option';
 import { Result } from '../src/result';
 
@@ -294,7 +294,7 @@ test('and should return None Option for (None,None) pair', () => {
 test('and should throw if provided argument is not an Option isntance', () => {
   const a = Some(5);
   // @ts-expect-error
-  expect(() => a.and(4)).toThrow(Errors.UndefinedBehavior);
+  expect(() => a.and(4)).toThrow(UndefinedBehaviorError);
 });
 
 test('andThen should not have been called if 1 Option is None', () => {
@@ -311,13 +311,13 @@ test('andThen should throw an "UndefinedBehavior" when arguemnt is not a functio
   const a = Some(5);
 
   // @ts-expect-error
-  expect(() => a.andThen(123)).toThrow(Errors.UndefinedBehavior);
+  expect(() => a.andThen(123)).toThrow(UndefinedBehaviorError);
 });
 
 test('andThen should calls function when argument is Some', () => {
   const a = Some(5);
   // @ts-expect-error
-  expect(() => a.andThen(() => 5)).toThrow(Errors.UndefinedBehavior);
+  expect(() => a.andThen(() => 5)).toThrow(UndefinedBehaviorError);
 });
 
 test('andThen should calls function', () => {
@@ -430,7 +430,7 @@ test('xor should throws an "UndefinedBehavior" error for non Option instance', (
   const a = None<number>();
 
   // @ts-expect-error
-  expect(() => a.xor(10)).toThrow(Errors.UndefinedBehavior);
+  expect(() => a.xor(10)).toThrow(UndefinedBehaviorError);
 });
 
 test('insert should mutate original Some value', () => {
@@ -495,7 +495,7 @@ test('zip should throw an "UndefinedBehavior" error for non Option instance', ()
   const a = Some(5);
 
   // @ts-expect-error
-  expect(() => a.zip(123)).toThrow(Errors.UndefinedBehavior);
+  expect(() => a.zip(123)).toThrow(UndefinedBehaviorError);
 });
 
 test('zip should None for (None, None) pair', () => {
@@ -508,7 +508,7 @@ test('zip should None for (None, None) pair', () => {
 test('zipWith should throws error when called for non-Option value', () => {
   const a = Some(1);
   // @ts-expect-error
-  expect(() => a.zipWith(123, () => { })).toThrow(Errors.UndefinedBehavior);
+  expect(() => a.zipWith(123, () => { })).toThrow(UndefinedBehaviorError);
 });
 
 test('zipWith should returns None if given Option is None', () => {
@@ -609,7 +609,7 @@ test('getOrInsert should throws an "UdndefinedBehavior" error when call undefine
   const a = None<number>();
 
   // @ts-expect-error
-  expect(() => a.getOrInsert(undefined)).toThrow(Errors.UndefinedBehavior);
+  expect(() => a.getOrInsert(undefined)).toThrow(UndefinedBehaviorError);
 });
 
 test('getOrInsert should returns same value for Some self result', () => {
@@ -623,13 +623,13 @@ test('getOrInsertWith should throws an "UndefinedBehavior" when pass not a funct
   const a = None<number>();
 
   // @ts-expect-error
-  expect(() => a.getOrInsertWith(123)).toThrow(Errors.UndefinedBehavior);
+  expect(() => a.getOrInsertWith(123)).toThrow(UndefinedBehaviorError);
 });
 
 test('getOrInsertWith should throws an "UndefinedBehavior" for function which returns undefiend', () => {
   const a = None<number | undefined>();
 
-  expect(() => a.getOrInsertWith(() => undefined)).toThrow(Errors.UndefinedBehavior);
+  expect(() => a.getOrInsertWith(() => undefined)).toThrow(UndefinedBehaviorError);
 });
 
 test('getOrInsertWith should returns self value for Some', () => {
@@ -652,7 +652,7 @@ test('or should throws an "UndefinedBehavior" error for non Option instance', ()
   const a = None<number>();
 
   // @ts-expect-error
-  expect(() => a.or(123)).toThrow(Errors.UndefinedBehavior);
+  expect(() => a.or(123)).toThrow(UndefinedBehaviorError);
 });
 
 test('or should returns self value for Some result', () => {
@@ -681,13 +681,13 @@ test('orElse should returns self value for Some result', () => {
 test('orElse should throws an "UndefinedBehavior" error for non function argument', () => {
   const a = None<number>();
   // @ts-expect-error
-  expect(() => a.orElse(123)).toThrow(Errors.UndefinedBehavior);
+  expect(() => a.orElse(123)).toThrow(UndefinedBehaviorError);
 });
 
 test('orElse should throws an "UndefinedBehavior" error for function which returns non Option instance', () => {
   const a = None<number>();
   // @ts-expect-error
-  expect(() => a.orElse(() => 5)).toThrow(Errors.UndefinedBehavior);
+  expect(() => a.orElse(() => 5)).toThrow(UndefinedBehaviorError);
 });
 
 test('orElse should returns Option instance', () => {

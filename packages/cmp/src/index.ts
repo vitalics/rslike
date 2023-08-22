@@ -22,12 +22,13 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-import { Async } from './async.ts';
-import { Bind } from './bind.ts';
-import * as Errors from './errors.ts';
-import { match } from './match.ts'
-import { None, Option, Some } from './option.ts';
-import { Err, Ok, Result } from './result.ts';
+import { Ordering, maxBy, minBy } from './cmp.ts';
 
-export default { Async, Bind, Err, Ok, Result, Some, None, Option, Errors, match };
-export { Async, Bind, Err, Ok, Result, Some, None, Option, Errors, match };
+import { Eq, Ord, PartialEq, PartialOrd } from './types.ts';
+
+export * as Errors from './errors.ts';
+export * from './utils.ts';
+
+export default { Ordering };
+export type { Eq, Ord, PartialEq, PartialOrd };
+export { Ordering, maxBy, minBy };

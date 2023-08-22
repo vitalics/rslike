@@ -22,12 +22,17 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-import { Async } from './async.ts';
-import { Bind } from './bind.ts';
-import * as Errors from './errors.ts';
-import { match } from './match.ts'
-import { None, Option, Some } from './option.ts';
-import { Err, Ok, Result } from './result.ts';
+import { Ordering } from './index.ts';
 
-export default { Async, Bind, Err, Ok, Result, Some, None, Option, Errors, match };
-export { Async, Bind, Err, Ok, Result, Some, None, Option, Errors, match };
+type OrderingCtor = typeof Ordering;
+
+// eslint-disable-next-line @typescript-eslint/no-namespace
+declare namespace globalThis {
+  let Ordering: OrderingCtor;
+}
+
+declare global {
+  let Ordering: OrderingCtor;
+}
+
+globalThis.Ordering = Ordering;

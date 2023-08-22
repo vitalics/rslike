@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-import { Errors } from './errors.ts';
+import { UndefinedBehaviorError } from './errors.ts';
 import { Option, } from './option.ts';
 import { Result } from './result.ts';
 
@@ -62,13 +62,13 @@ type ErrCb<I, R> = I extends Option<unknown> ? () => R : I extends Result<unknow
  */
 export function match<R, I extends Option<unknown> | Result<unknown, unknown>>(optOrRes: I, okOrSomeCb: OkCb<I, R>, errOrNoneCb: ErrCb<I, R>): R {
   if (!(optOrRes instanceof Option) && !(optOrRes instanceof Result)) {
-    throw new Errors.UndefinedBehavior('only instance of Option or Result are allowed for match function', { cause: { value: optOrRes } });
+    throw new UndefinedBehaviorError('only instance of Option or Result are allowed for match function', { cause: { value: optOrRes } });
   }
   if (typeof okOrSomeCb !== 'function') {
-    throw new Errors.UndefinedBehavior(`match function expects to provide a function.`, { cause: { value: okOrSomeCb, type: typeof okOrSomeCb } })
+    throw new UndefinedBehaviorError(`match function expects to provide a function.`, { cause: { value: okOrSomeCb, type: typeof okOrSomeCb } })
   }
   if (typeof errOrNoneCb !== 'function') {
-    throw new Errors.UndefinedBehavior(`match function expects to provide a function.`, { cause: { value: okOrSomeCb, type: typeof okOrSomeCb } })
+    throw new UndefinedBehaviorError(`match function expects to provide a function.`, { cause: { value: okOrSomeCb, type: typeof okOrSomeCb } })
   }
   if (optOrRes instanceof Option) {
     if (optOrRes.isSome()) {

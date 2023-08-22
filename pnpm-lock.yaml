@@ -58,6 +58,16 @@ importers:
         specifier: 7.2.3
         version: 7.2.3
 
+  packages/boolean: {}
+
+  packages/cmp:
+    dependencies:
+      '@rslike/std':
+        specifier: workspace:*
+        version: link:../std
+
+  packages/primitives: {}
+
   packages/std: {}
 
 packages:

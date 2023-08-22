@@ -22,9 +22,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-import type { EqualLike } from './types.ts';
 import { Err, Ok, Result } from './result.ts';
-import { Errors } from './errors.ts';
+import { UndefinedBehaviorError } from './errors.ts';
 
 enum Status {
   None,
@@ -50,8 +49,9 @@ enum Status {
  * @implements {OptionLike<T>}
  * @template T
  */
-export class Option<T> implements EqualLike {
+export class Option<T> {
   private constructor(protected status: Status, protected value?: T) { }
+
   /**
    * Returns the contained `Some` value, consuming the self value.
    * @example
@@ -259,7 +259,7 @@ export class Option<T> implements EqualLike {
       return None();
     }
     if (!(optb instanceof Option)) {
-      throw new Errors.UndefinedBehavior(`Method "and" should accepts instance of Option`, { cause: { value: optb, } });
+      throw new UndefinedBehaviorError(`Method "and" should accepts instance of Option`, { cause: { value: optb, } });
     }
     return optb;
   }
@@ -285,7 +285,7 @@ export class Option<T> implements EqualLike {
     assertArgument('andThen', f, 'function')
     const res = f(this.value as T);
     if (!(res instanceof Option)) {
-      throw new Errors.UndefinedBehavior('callback for Method "andThen" expects to returns instance of Option. Use "None" or "Some" funtions', { cause: { value: res } })
+      throw new UndefinedBehaviorError('callback for Method "andThen" expects to returns instance of Option. Use "None" or "Some" funtions', { cause: { value: res } })
     }
     return res;
   }
@@ -331,7 +331,7 @@ export class Option<T> implements EqualLike {
       return this;
     }
     if (!(optb instanceof Option)) {
-      throw new Errors.UndefinedBehavior(`Method "xor" should accepts instance of Option`, { cause: { value: optb } });
+      throw new UndefinedBehaviorError(`Method "xor" should accepts instance of Option`, { cause: { value: optb } });
     }
     return optb;
   }
@@ -406,7 +406,7 @@ export class Option<T> implements EqualLike {
    */
   zip<U>(other: Option<U>): Option<[T, U]> {
     if (!(other instanceof Option)) {
-      throw new Errors.UndefinedBehavior(`Method "zip" should accepts instance of Option`, { cause: { value: other } });
+      throw new UndefinedBehaviorError(`Method "zip" should accepts instance of Option`, { cause: { value: other } });
     }
     if (this.status === Status.Some && other.status === Status.Some) {
       return new Option(Status.Some, [this.value, other.value]) as Option<[T, U]>;
@@ -438,7 +438,7 @@ export class Option<T> implements EqualLike {
    */
   zipWith<U, R>(other: Option<U>, fn: (value: T, other: U) => R): Option<R> {
     if (!(other instanceof Option)) {
-      throw new Errors.UndefinedBehavior(`Method "zipWith" should accepts instance of Option`, { cause: { value: other } });
+      throw new UndefinedBehaviorError(`Method "zipWith" should accepts instance of Option`, { cause: { value: other } });
     }
     assertArgument("zipWith", fn, 'function');
     if (this.status === Status.Some && other.status === Status.Some) {
@@ -573,7 +573,7 @@ export class Option<T> implements EqualLike {
   getOrInsert(value: T): T {
     if (this.status === Status.None) {
       if (value === undefined) {
-        throw new Errors.UndefinedBehavior(`Method "getOrInsert" should provide non "undefined" value.`);
+        throw new UndefinedBehaviorError(`Method "getOrInsert" should provide non "undefined" value.`);
       }
       return this.insert(value).unwrap();
     }
@@ -596,7 +596,7 @@ export class Option<T> implements EqualLike {
       assertArgument('getOrInsertWith', callback, 'function');
       const res = callback();
       if (res === undefined) {
-        throw new Errors.UndefinedBehavior("Callback for method 'getOrInsertWith' should returns non 'undefined' value.")
+        throw new UndefinedBehaviorError("Callback for method 'getOrInsertWith' should returns non 'undefined' value.")
       }
       return this.insert(res).unwrap();
     }
@@ -632,7 +632,7 @@ export class Option<T> implements EqualLike {
       return this;
     }
     if (!(optb instanceof Option)) {
-      throw new Errors.UndefinedBehavior(`Method "or" should accepts isntance of Option`, { cause: { value: optb } });
+      throw new UndefinedBehaviorError(`Method "or" should accepts isntance of Option`, { cause: { value: optb } });
     }
     return optb;
   }
@@ -658,7 +658,7 @@ export class Option<T> implements EqualLike {
     assertArgument('orElse', callback, 'function');
     const result = callback();
     if (!(result instanceof Option)) {
-      throw new Errors.UndefinedBehavior(`Callback result for method "orElse" should returns instance of Option. Use Some or None.`, { cause: { value: result } })
+      throw new UndefinedBehaviorError(`Callback result for method "orElse" should returns instance of Option. Use Some or None.`, { cause: { value: result } })
     }
     return result;
   }
@@ -695,6 +695,6 @@ type TypeofResult = "string" | "number" | "bigint" | "boolean" | "symbol" | "und
 
 const assertArgument = (method: Methods, value: unknown, expectedType: TypeofResult) => {
   if (typeof value !== expectedType) {
-    throw new Errors.UndefinedBehavior(`Method "${String(method)}" should accepts ${expectedType}`, { cause: { value: value, type: typeof value, } });
+    throw new UndefinedBehaviorError(`Method "${String(method)}" should accepts ${expectedType}`, { cause: { value: value, type: typeof value, } });
   }
 }

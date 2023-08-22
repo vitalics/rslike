@@ -26,7 +26,7 @@ SOFTWARE.
 
 import { Result, Ok, Err } from '../src/result';
 import { Option } from '../src/option';
-import { Errors } from '../src/errors';
+import { UndefinedBehaviorError } from '../src/errors';
 
 test('isOk should returns true for Ok value', () => {
   const a = Ok(12);
@@ -392,7 +392,7 @@ test('andThen should throw if function returns not Result instance', () => {
 
   const fn = jest.fn((x: number) => x * 2);
   // @ts-expect-error
-  expect(() => a.andThen(fn)).toThrow(Errors.UndefinedBehavior);
+  expect(() => a.andThen(fn)).toThrow(UndefinedBehaviorError);
 
   expect(fn).toBeCalled();
 });
@@ -464,14 +464,14 @@ test('orElse should throw an "UndefinedBehavior" error when status is Err and ar
   const e = Err(4);
 
   // @ts-expect-error
-  expect(() => e.orElse(2)).toThrow(Errors.UndefinedBehavior);
+  expect(() => e.orElse(2)).toThrow(UndefinedBehaviorError);
 })
 
 test('orElse should throw an "UndefinedBehavior" error when status is Err and function returns non Result isntance', () => {
   const e = Err(4);
 
   // @ts-expect-error
-  expect(() => e.orElse(() => 3)).toThrow(Errors.UndefinedBehavior);
+  expect(() => e.orElse(() => 3)).toThrow(UndefinedBehaviorError);
 });
 
 test('orElse should returns function result for Err status', () => {
