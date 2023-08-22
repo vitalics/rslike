@@ -26,5 +26,3 @@ export * from './cmp.ts';
 export * from './errors.ts';
 export type { Eq, Ord, PartialEq, PartialOrd } from './types.ts';
 export * from './utils.ts';
-
-export default { Ordering };
