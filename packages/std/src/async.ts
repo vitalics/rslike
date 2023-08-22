@@ -31,13 +31,14 @@ import { Option, Some } from './option.ts';
 
 /**
  * Tries to resolve async value into `Result<Option<T>,E>`.
- * 
+ *
  * **NOTE:** Returned promise will never calls `catch` function, since `Promise` always resolved as success, whenever error or not.
  * 
  * `Promise` result will be mapped into `Ok(Some(result))`
  * 
  * `undefined` will be mapped into `Ok(None())`
  * 
+ * @see {@link https://github.com/vitalics/rslike/wiki/Async Wiki}
  * @see {@link Bind} - If you want to bind whole (`async` or not) function, not a `Promise`.
  * @see {@link match} if you would like to unwrap `Result` or `Option` successfully.
  * @example

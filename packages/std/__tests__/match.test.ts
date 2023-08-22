@@ -25,7 +25,7 @@ SOFTWARE.
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 
 import { match } from '../src/match';
-import { Errors } from '../src/errors';
+import { UndefinedBehaviorError } from '../src/errors';
 import { Err, Ok } from '../src/result';
 import { Some, None, Option } from '../src/option';
 import { Bind } from '../src/bind';
@@ -34,18 +34,18 @@ import { Bind } from '../src/bind';
 
 test('match should throw an error for non option and non Result instance', () => {
   // @ts-expect-error
-  expect(() => match(4, () => 2, () => 3)).toThrow(Errors.UndefinedBehavior);
+  expect(() => match(4, () => 2, () => 3)).toThrow(UndefinedBehaviorError);
 });
 
 test('match should throw an error for non function Ok callback', () => {
   // @ts-expect-error
-  expect(() => match(Some(5), 2, 3)).toThrow(Errors.UndefinedBehavior);
+  expect(() => match(Some(5), 2, 3)).toThrow(UndefinedBehaviorError);
 });
 
 
 test('match should throw an error for non function Err callback', () => {
   // @ts-expect-error
-  expect(() => match(Some(5), () => 2, 3)).toThrow(Errors.UndefinedBehavior);
+  expect(() => match(Some(5), () => 2, 3)).toThrow(UndefinedBehaviorError);
 });
 
 test('match should return ok funtion result for Ok', () => {

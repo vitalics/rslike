@@ -22,9 +22,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-import { Errors } from './errors.ts';
+import { UndefinedBehaviorError } from './errors.ts';
 import { None, Option, Some } from './option.ts';
-import type { EqualLike } from './types.ts';
 
 enum Status {
   Ok,
@@ -42,12 +41,13 @@ enum Status {
  * @template T
  * @template E
  */
-export class Result<T, E> implements EqualLike {
+export class Result<T, E> {
   private constructor(protected readonly status: Status, protected readonly value: T | null | undefined, protected readonly error: E | null) {
     if (error) {
       this.status = Status.Err;
     }
   }
+
   /**
    * Returns the contained `Ok` value, consuming the self value.
    * 
@@ -392,7 +392,7 @@ export class Result<T, E> implements EqualLike {
    */
   and<U>(res: Result<U, E>): Result<U, E> {
     if (!(res instanceof Result)) {
-      throw new Errors.UndefinedBehavior(`Method "and" should accepts isntance of Result`, { cause: { value: res } });
+      throw new UndefinedBehaviorError(`Method "and" should accepts isntance of Result`, { cause: { value: res } });
     }
     if (this.status === Status.Err) {
       return Err(this.error as E);
@@ -422,7 +422,7 @@ export class Result<T, E> implements EqualLike {
       if (res instanceof Result) {
         return res;
       }
-      throw new Errors.UndefinedBehavior('Function result expected to be instance of Result.', { cause: res })
+      throw new UndefinedBehaviorError('Function result expected to be instance of Result.', { cause: res })
     }
     return Err(this.error as E);
   }
@@ -453,7 +453,7 @@ export class Result<T, E> implements EqualLike {
    */
   or<F>(res: Result<T, F>): Result<T, F> {
     if (!(res instanceof Result)) {
-      throw new Errors.UndefinedBehavior(`Operator "or" expect to pass instance of Result`, { cause: { value: res } });
+      throw new UndefinedBehaviorError(`Operator "or" expect to pass instance of Result`, { cause: { value: res } });
     }
     if (this.status === Status.Err) {
       return res;
@@ -482,7 +482,7 @@ export class Result<T, E> implements EqualLike {
       assertArgument('orElse', fn, 'function');
       const res = fn(this.error as E);
       if (!(res instanceof Result)) {
-        throw new Errors.UndefinedBehavior('Operator "orElse" expected to return instance of Result. Use "Ok" or "Err" function to define them.', { cause: { value: res, type: typeof res } })
+        throw new UndefinedBehaviorError('Operator "orElse" expected to return instance of Result. Use "Ok" or "Err" function to define them.', { cause: { value: res, type: typeof res } })
       }
       return res;
     }
@@ -558,6 +558,6 @@ type TypeofResult = "string" | "number" | "bigint" | "boolean" | "symbol" | "und
 function assertArgument(method: ResultMethods, value: unknown, expectedType: TypeofResult): asserts value {
   const type = typeof value;
   if (type !== expectedType) {
-    throw new Errors.UndefinedBehavior(`Method "${String(method)}" should accepts or returns ${expectedType}`, { cause: { value, type, } });
+    throw new UndefinedBehaviorError(`Method "${String(method)}" should accepts or returns ${expectedType}`, { cause: { value, type, } });
   }
 }

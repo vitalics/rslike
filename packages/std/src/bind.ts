@@ -26,7 +26,7 @@ SOFTWARE.
 
 import { Async } from './async.ts';
 import { match } from './match.ts';
-import { Errors } from './errors.ts';
+import { UndefinedBehaviorError } from './errors.ts';
 import { Option, Some } from './option.ts'
 import { Result, Err, Ok } from './result.ts';
 
@@ -41,6 +41,7 @@ import { Result, Err, Ok } from './result.ts';
  * 
  * `undefined` funtion result will mapped into `Ok(None())`.
  * 
+ * @see {@link https://github.com/vitalics/rslike/wiki/Bind Wiki}
  * @see {@link Async} if you would like to resolve `Promise` or value, not a whole function.
  * @see {@link match} if you would like to unwrap `Result` or `Option` successfully.
  * @example
@@ -77,7 +78,7 @@ import { Result, Err, Ok } from './result.ts';
  */
 export function Bind<T, E = unknown, A extends unknown[] = [], This = void>(fn: (this: This, ...args: A) => T, thisArg: This | undefined = undefined): (...args: A) => T extends Promise<infer P> ? Promise<Result<Option<P>, E>> : Result<Option<T>, E> {
   if (typeof fn !== 'function') {
-    throw new Errors.UndefinedBehavior(`"Bind" function expect to pass function as 1 argument`, { cause: { value: fn, type: typeof fn } })
+    throw new UndefinedBehaviorError(`"Bind" function expect to pass function as 1 argument`, { cause: { value: fn, type: typeof fn } })
   }
   return function (...args: A) {
     try {
@@ -85,7 +86,7 @@ export function Bind<T, E = unknown, A extends unknown[] = [], This = void>(fn: 
       if (result instanceof Promise) {
         return result.then(v => Ok(Some(v))).catch(e => Err(e));
       }
-      // if result === undefined. Some will be automatically transformed into None automatically
+      // if result === undefined. Some will be automatically transformed into None
       return Ok(Some(result));
     } catch (e) {
       return Err(e as E);

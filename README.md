@@ -27,21 +27,23 @@ Available by link: https://github.com/vitalics/rslike/wiki
 
 ## Packages
 
-- [std](./packages/std/README.md). Standard library. Includes `Result` and `Option`
+- [std](./packages/std/README.md). Standard library. Includes `Result`, `Option`, `match`, `Bind`, `Async`.
+- [cmp](./packages/cmp/README.md). Comparison package. Exporting `Ordering` class and `Eq`, `PartialEq`, `Ord`, `PartialOrd` types.
 
 ## Tech Stack
 
-- pnpm
-- tsup
-- typescript
-- changeset
-- husky
-- github actions
-- jest
-- eslint
+- [pnpm](https://pnpm.io)
+- [tsup](https://tsup.egoist.dev/)
+- [typescript](https://www.typescriptlang.org/)
+- [changeset](https://github.com/changesets/changesets)
+- [husky](https://www.npmjs.com/package/husky)
+- [github actions](https://github.com/features/actions)
+- [jest](https://jestjs.io/)
+- [eslint](https://eslint.org/)
 
 ## Plans
 
-- [] Promise
-- [] Node.js API
-- [] Web API
+- [] Primitives
+- [] extendign built-ins collections
+- [] Extend Collections (Hashset, Hashmap, MapReduce)
+- [] make `match` tc39 proposal compatable.

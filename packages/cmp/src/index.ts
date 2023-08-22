@@ -22,12 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-import { Async } from './async.ts';
-import { Bind } from './bind.ts';
-import { UndefinedBehaviorError } from './errors.ts';
-import { match } from './match.ts'
-import { None, Option, Some } from './option.ts';
-import { Err, Ok, Result } from './result.ts';
-
-export default { Async, Bind, Err, Ok, Result, Some, None, Option, UndefinedBehaviorError, match };
-export { Async, Bind, Err, Ok, Result, Some, None, Option, UndefinedBehaviorError, match };
+export * from './cmp.ts';
+export * from './errors.ts';
+export type { Eq, Ord, PartialEq, PartialOrd } from './types.ts';
+export * from './utils.ts';

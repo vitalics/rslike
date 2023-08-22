@@ -22,12 +22,12 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-class UndefinedBehaviorError extends Error {
+/**
+ * Common error. Usually throws when something is not defined.
+ * @see {@link https://github.com/vitalics/rslike/wiki/UndefinedBehaviorError Wiki}
+ */
+export class UndefinedBehaviorError extends Error {
   constructor(message: string, options?: ErrorOptions) {
     super(message, options);
   }
-}
-
-export const Errors = {
-  UndefinedBehavior: UndefinedBehaviorError,
 }
