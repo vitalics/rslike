@@ -28,6 +28,10 @@ import '@rslike/cmp/globals';
 
 Available by link: https://github.com/vitalics/rslike/wiki
 
+## Related packages
+
+- [std](https://www.npmjs.com/package/@rslike/std)
+
 ## API
 
 ### Ordering
