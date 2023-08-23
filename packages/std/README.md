@@ -50,6 +50,10 @@ import '@rslike/std/globals';
 
 Available by link: https://github.com/vitalics/rslike/wiki
 
+## Related packages
+
+- [cmp](https://www.npmjs.com/package/@rslike/cmp)
+
 ## API
 
 ## Match
