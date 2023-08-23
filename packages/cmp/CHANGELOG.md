@@ -1,5 +1,11 @@
 # @rslike/cmp
 
+## 2.0.1
+
+### Patch Changes
+
+- ff7e732: Fix readme file and description in package.json
+
 ## 2.0.0
 
 ### Major Changes
