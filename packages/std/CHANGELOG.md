@@ -1,5 +1,11 @@
 # @rslike/std
 
+## 2.0.1
+
+### Patch Changes
+
+- 0360cdc: add related block for readme file
+
 ## 2.0.0
 
 ### Major Changes
