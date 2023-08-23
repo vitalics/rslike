@@ -1,7 +1,7 @@
 {
   "name": "@rslike/cmp",
   "version": "2.0.0",
-  "description": "JavaScript Standard library without udndefined behavior!",
+  "description": "JavaScript Comparison package without undefined behavior!",
   "private": false,
   "main": "./dist/index.cjs",
   "types": "./dist/index.d.ts",
