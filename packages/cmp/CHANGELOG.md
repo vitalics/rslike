@@ -1,5 +1,13 @@
 # @rslike/cmp
 
+## 2.0.2
+
+### Patch Changes
+
+- 0360cdc: add related block for readme file
+- Updated dependencies [0360cdc]
+  - @rslike/std@2.0.1
+
 ## 2.0.1
 
 ### Patch Changes
