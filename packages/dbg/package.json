@@ -36,8 +36,5 @@
   "bugs": {
     "url": "https://github.com/vitalics/rslike/issues",
     "email": "vitalicset@yandex.ru"
-  },
-  "devDependencies": {
-    "@rslike/std": "workspace:*"
   }
 }

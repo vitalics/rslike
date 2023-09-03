@@ -22,10 +22,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
-import { Err, None, Ok, Some } from '@rslike/std';
-
 import { dbg, DEFAULT_PREFIX } from '../src/debug'
 
 /* eslint-disable @typescript-eslint/ban-ts-comment */
@@ -205,41 +201,6 @@ test('dbg should throws when given argument is not a function', () => {
 
   // @ts-expect-error
   expect(() => dbg(a)).toThrow(Error);
-})
-
-test('dbg should print information about Some Option', () => {
-  const a = Some(123);
-  const log = jest.spyOn(console, "log").mockImplementation();
-  dbg(() => a);
-
-  expect(log).toBeCalledTimes(1);
-  expect(log).toBeCalledWith(`${DEFAULT_PREFIX}a: {"status":1,"value":123}`);
-})
-
-test('dbg should print information about Some Option', () => {
-  const a = None<number>();
-  const log = jest.spyOn(console, "log").mockImplementation();
-  dbg(() => a);
-
-  expect(log).toBeCalledTimes(1);
-  expect(log).toBeCalledWith(`${DEFAULT_PREFIX}a: {"status":0}`);
-})
-
-test('dbg should print information about Ok Result', () => {
-  const a = Ok<number>(123);
-  const log = jest.spyOn(console, "log").mockImplementation();
-  dbg(() => a);
-
-  expect(log).toBeCalledTimes(1);
-  expect(log).toBeCalledWith(`${DEFAULT_PREFIX}a: {"status":1,"value":123,"error":null}`);
-})
-test('dbg should print information about Err Result', () => {
-  const a = Err<number>(123);
-  const log = jest.spyOn(console, "log").mockImplementation();
-  dbg(() => a);
-
-  expect(log).toBeCalledTimes(1);
-  expect(log).toBeCalledWith(`${DEFAULT_PREFIX}a: {"status":-1,"value":null,"error":123}`);
 })
 
 test('dbg should prints for build-in object', () => {

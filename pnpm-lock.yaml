@@ -64,11 +64,7 @@ importers:
         specifier: workspace:*
         version: link:../std
 
-  packages/dbg:
-    devDependencies:
-      '@rslike/std':
-        specifier: workspace:*
-        version: link:../std
+  packages/dbg: {}
 
   packages/std:
     dependencies:
