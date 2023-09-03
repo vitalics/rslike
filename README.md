@@ -29,6 +29,7 @@ Available by link: https://github.com/vitalics/rslike/wiki
 
 - [std](./packages/std/README.md). Standard library. Includes `Result`, `Option`, `match`, `Bind`, `Async`.
 - [cmp](./packages/cmp/README.md). Comparison package. Exporting `Ordering` class and `Eq`, `PartialEq`, `Ord`, `PartialOrd` types.
+- [dbg](./packages/dbg/README.md). Prints debug information about given variable.
 
 ## Tech Stack
 

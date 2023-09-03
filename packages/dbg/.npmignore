@@ -1,0 +1,7 @@
+src
+.husky
+tsconfig.json
+jest.config.js
+__tests__
+coverage
+docs

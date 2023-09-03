@@ -1,7 +1,7 @@
 {
-  "name": "@rslike/std",
+  "name": "@rslike/dbg",
   "version": "2.0.1",
-  "description": "JavaScript Standard library without udndefined behavior!",
+  "description": "Never use console.log to debug again!",
   "private": false,
   "main": "./dist/index.cjs",
   "types": "./dist/index.d.ts",
@@ -20,38 +20,24 @@
         "types": "./dist/index.d.ts",
         "default": "./dist/index.cjs"
       }
-    },
-    "./globals": {
-      "import": {
-        "types": "./dist/globals.d.mts",
-        "default": "./dist/globals.mjs"
-      },
-      "require": {
-        "types": "./dist/globals.d.ts",
-        "default": "./dist/globals.cjs"
-      }
     }
   },
   "keywords": [
     "std",
     "standard",
     "undefined behavior",
-    "try",
-    "try/catch",
-    "try/catch/finally",
-    "rust like",
-    "rust",
-    "option",
-    "result"
+    "debug",
+    "dbg",
+    "inspection"
   ],
   "author": "Vitali Haradkou",
   "license": "MIT",
-  "homepage": "https://github.com/vitalics/rslike/blob/main/packages/std/README.md",
+  "homepage": "https://github.com/vitalics/rslike/blob/main/packages/dbg/README.md",
   "bugs": {
     "url": "https://github.com/vitalics/rslike/issues",
     "email": "vitalicset@yandex.ru"
   },
-  "dependencies": {
-    "chalk": "5.3.0"
+  "devDependencies": {
+    "@rslike/std": "workspace:*"
   }
 }
