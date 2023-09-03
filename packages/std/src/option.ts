@@ -663,6 +663,15 @@ export class Option<T> {
     }
     return result;
   }
+
+  toJSON() {
+    return {
+      status: this.status,
+      value: this.value,
+    }
+  }
+
+
   /**
    * @protected
    */

@@ -31,6 +31,7 @@ Available by link: https://github.com/vitalics/rslike/wiki
 ## Related packages
 
 - [std](https://www.npmjs.com/package/@rslike/std)
+- [dbg](https://www.npmjs.com/package/@rslike/dbg)
 
 ## API
 

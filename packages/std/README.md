@@ -53,6 +53,7 @@ Available by link: https://github.com/vitalics/rslike/wiki
 ## Related packages
 
 - [cmp](https://www.npmjs.com/package/@rslike/cmp)
+- [dbg](https://www.npmjs.com/package/@rslike/dbg)
 
 ## API
 

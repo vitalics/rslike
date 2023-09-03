@@ -25,16 +25,17 @@ SOFTWARE.
 import { UndefinedBehaviorError } from './errors.ts';
 import { Option, } from './option.ts';
 import { Result } from './result.ts';
+import { Fn } from './types.ts';
 
-type OkCb<I, R> = I extends Option<infer Some> ? (value: Some) => R : I extends Result<infer Ok, unknown> ? (value: Ok) => R : I extends boolean ? (value: true) => R : never
-type ErrCb<I, R> = I extends Option<unknown> ? () => R : I extends Result<unknown, infer E> ? (error: E) => R : I extends boolean ? (value: false) => R : never
+type OkCb<I, R> = I extends Option<infer Some> ? Fn<R, [value: Some]> : I extends Result<infer Ok, unknown> ? Fn<R, [value: Ok]> : I extends boolean ? Fn<R, [true]> : never
+type ErrCb<I, R> = I extends Option<unknown> ? Fn<R> : I extends Result<unknown, infer E> ? Fn<R, [error: E]> : I extends boolean ? Fn<R, [false]> : never
 
 /**
- * matches the `Option` or `Result` and calls callback functions.
+ * matches the `boolean` or `Option` or `Result` and calls callback functions.
  * 
- * 1 callback function will be executed for `Ok` or `Some` result.
+ * 1 callback function will be executed for `true` or `Ok` or `Some` result.
  * 
- * 2 callback function will be executed for `Err` or `None` result.
+ * 2 callback function will be executed for `false` or `Err` or `None` result.
  *
  * If incoming arguments is not `Option` or `Result` or callback functions is not a functions then it throws an `UndefinedBehavior` error.
  * 

@@ -26,8 +26,8 @@ import { UndefinedBehaviorError } from './errors.ts';
 import { None, Option, Some } from './option.ts';
 
 enum Status {
-  Ok,
-  Err,
+  Ok = 1,
+  Err = -1,
 }
 
 /**
@@ -528,6 +528,15 @@ export class Result<T, E> {
       return false;
     }
     return false;
+  }
+
+
+  toJSON() {
+    return {
+      status: this.status,
+      value: this.value,
+      error: this.error,
+    }
   }
 
   /**

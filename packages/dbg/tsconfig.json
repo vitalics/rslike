@@ -1,0 +1,24 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "lib": [
+      "ES2023"
+    ],
+    "types": [
+      "node",
+      "jest",
+    ],
+    "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
+    "allowImportingTsExtensions": true
+  },
+  "exclude": [
+    "__tests__"
+  ],
+  "include": [
+    "src"
+  ]
+}
