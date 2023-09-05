@@ -664,6 +664,11 @@ export class Option<T> {
     return result;
   }
 
+  toString() {
+    const printFn = this.status === Status.None ? `None` : `Some`
+    return `${printFn}(${this.status === Status.None ? '' : this.value})`;
+  }
+
   toJSON() {
     return {
       status: this.status,
