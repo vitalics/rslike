@@ -157,7 +157,13 @@ export function dbg<
   } else {
     prefix = DEFAULT_PREFIX as Prefix;
   }
-  const outputFunction = options?.outputFunction ?? console.log;
+
+  let outputFunction;
+  if (options && options.outputFunction) {
+    outputFunction = options.outputFunction;
+  } else {
+    outputFunction = console.log;
+  }
 
   let value = originalValue;
 
