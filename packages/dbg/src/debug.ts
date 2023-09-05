@@ -144,8 +144,19 @@ export function dbg<
   const originalValue = f();
   const type = typeof originalValue;
 
-  const delimiter = options?.delimiter ?? DEFAULT_DELIMITER as Delimiter;
-  const prefix = options?.prefix ?? DEFAULT_PREFIX as Prefix;
+  let delimiter: Delimiter;
+  if (options && options.delimiter) {
+    delimiter = options.delimiter;
+  } else {
+    delimiter = DEFAULT_DELIMITER as Delimiter;
+  }
+
+  let prefix: Prefix;
+  if (options && options.prefix) {
+    prefix = options.prefix;
+  } else {
+    prefix = DEFAULT_PREFIX as Prefix;
+  }
   const outputFunction = options?.outputFunction ?? console.log;
 
   let value = originalValue;

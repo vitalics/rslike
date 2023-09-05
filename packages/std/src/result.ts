@@ -530,6 +530,10 @@ export class Result<T, E> {
     return false;
   }
 
+  toString() {
+    const printFn = this.status === Status.Err ? `Err` : `Ok`
+    return `${printFn}(${this.status === Status.Err ? this.error : this.value})`;
+  }
 
   toJSON() {
     return {
