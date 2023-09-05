@@ -1,5 +1,13 @@
 # @rslike/cmp
 
+## 2.1.1
+
+### Patch Changes
+
+- 9bfb757: make dbg package more reliable for external building
+- Updated dependencies [9bfb757]
+  - @rslike/std@2.1.1
+
 ## 2.1.0
 
 ### Minor Changes
