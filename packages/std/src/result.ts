@@ -22,7 +22,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-import { UndefinedBehaviorError } from "./errors.ts";
+import {
+  UndefinedBehaviorError,
+  assertArgument,
+  customInspectSymbol,
+} from "./utils.ts";
 import { None, Option, Some } from "./option.ts";
 
 /** Result possible status */
@@ -577,19 +581,62 @@ export class Result<const T, const E, const S extends Status = Status> {
   static Err<const V, const ErrorValue>(value: ErrorValue) {
     return new Result<V, ErrorValue, Status.Err>(Status.Err, null, value);
   }
-  static Status = Status;
 
-  equal(other: unknown): boolean {
+  /**
+   * Returns `true` if incoming `value` is instance of `Result`.
+   *
+   * @static
+   * @param {unknown} value
+   * @return {*}
+   * @memberof Ordering
+   */
+  static is(value: unknown): boolean {
+    return value instanceof Result;
+  }
+
+  static Status = Status;
+  static async fromPromise<const P, const E>(
+    promiseLike: P | Promise<P> | PromiseLike<P>,
+  ): Promise<Result<Awaited<P>, E>> {
+    try {
+      const v = await promiseLike;
+      return Ok(v);
+    } catch (e) {
+      return Err(e as E);
+    }
+  }
+
+  /**
+   * Compare Self and another value.
+   * You can pass your own function to compare
+   * @example
+   * const a = Ok(2)
+   * const b = 2
+   * const same = a.equal(b, (result, another) => {
+   * // result = Ok(2)
+   * // another = 2
+   *  return result.unwrap() === another
+   * })
+   * console.log(same) // true
+   * console.log(a.equal(b)) // false
+   * console.log(a.equal(Ok(2))) // true
+   * @param other another value
+   * @param [cmp=Object.is] compare function. Default - `Object.is`
+   */
+  equal<const U>(
+    other: U,
+    cmp: (value1: this, value2: U) => boolean = Object.is,
+  ): boolean {
     if (other instanceof Result) {
       if (this.status === Status.Ok && other.status === Status.Ok) {
-        return Object.is(this.value, other.value);
+        return cmp(this.value as never, other.value);
       }
       if (this.status === Status.Err && other.status === Status.Err) {
-        return Object.is(this.error, other.error);
+        return cmp(this.error as never, other.error);
       }
       return false;
     }
-    return false;
+    return cmp(this, other);
   }
 
   valueOf() {
@@ -729,6 +776,19 @@ export class Result<const T, const E, const S extends Status = Status> {
       },
     );
   }
+  [customInspectSymbol](depth: number, options: any, inspect: Function) {
+    const name = this.isOk() ? "Ok" : "Err";
+    const value = this.isOk() ? this.value : this.error;
+
+    if (depth < 0) {
+      return options.stylize(name, "special");
+    }
+    const newOptions = Object.assign({}, options, {
+      depth: options.depth === null ? null : options.depth - 1,
+    });
+    const inner = inspect(value, newOptions).replace(/\n/g, `\n$`);
+    return `${options.stylize(name, "special")}(${inner})`;
+  }
 }
 
 /**
@@ -809,28 +869,3 @@ Object.defineProperty(Err, Symbol.hasInstance, {
     return instance.isErr();
   },
 });
-
-type ResultMethods = keyof Result<undefined, undefined>;
-type TypeofResult =
-  | "string"
-  | "number"
-  | "bigint"
-  | "boolean"
-  | "symbol"
-  | "undefined"
-  | "object"
-  | "function";
-
-function assertArgument(
-  method: ResultMethods,
-  value: unknown,
-  expectedType: TypeofResult,
-): asserts value {
-  const type = typeof value;
-  if (type !== expectedType) {
-    throw new UndefinedBehaviorError(
-      `Method "${String(method)}" should accepts or returns ${expectedType}`,
-      { cause: { value, type } },
-    );
-  }
-}

@@ -23,7 +23,11 @@ SOFTWARE.
 */
 
 import { Err, Ok, Result } from "./result.ts";
-import { UndefinedBehaviorError } from "./errors.ts";
+import {
+  UndefinedBehaviorError,
+  assertArgument,
+  customInspectSymbol,
+} from "./utils.ts";
 
 /** Option possible statuses */
 enum Status {
@@ -458,17 +462,16 @@ export class Option<const T, const S extends Status = Status> {
    * @param {T} value
    * @return {*}  {Option<Value>}
    */
-  replace<const U>(
-    value: U,
-  ): U extends undefined
-    ? Option<U, Status.None>
-    : U extends null
-      ? Option<U, Status.None>
-      : Option<NonNullable<U>, Status.Some> {
-    const newValue = Some(value);
+  replace<const U>(value: U): this {
     const oldValue = Some(this.value);
-    this.value = newValue.value as never;
-    this.status = newValue.status as never;
+    const newValue = Some(value);
+    if (newValue.isSome()) {
+      this.value = newValue.unwrap() as never;
+      this.status = Status.Some as S;
+    } else {
+      this.value = newValue.valueOf() as never;
+      this.status = Status.None as S;
+    }
     return oldValue as never;
   }
   /**
@@ -530,7 +533,7 @@ export class Option<const T, const S extends Status = Status> {
    * @template R
    * @param {Option<U>} other
    * @param predicate
-   * @return {*}  {Option<R>}
+   * @return {*} {Option<R>}
    */
   zipWith<const U, const R, O extends Option<U>>(
     other: O,
@@ -599,9 +602,13 @@ export class Option<const T, const S extends Status = Status> {
   /**
    * Some value of type `T`.
    */
-  static Some<const T>(
-    value?: T | null | undefined,
-  ): Option<NonNullable<T>, Status.Some> {
+  static Some<const T = undefined>(
+    value: T = undefined as T,
+  ): T extends undefined
+    ? Option<undefined, Status.None>
+    : T extends null
+      ? Option<null, Status.None>
+      : Option<NonNullable<T>, Status.Some> {
     if (value === undefined || value === null) {
       return new Option(Status.None, value) as never;
     }
@@ -620,11 +627,43 @@ export class Option<const T, const S extends Status = Status> {
   }
   static Status = Status;
 
-  equal(other: unknown): boolean {
+  /**
+   * Returns `true` if incoming `value` is instance of `Option`.
+   *
+   * @static
+   * @param {unknown} value
+   * @return {*}
+   * @memberof Ordering
+   */
+  static is(value: unknown): boolean {
+    return value instanceof Option;
+  }
+
+  /**
+   * Compare Self and another value.
+   * You can pass your own function to compare
+   * @example
+   * const a = Some(2)
+   * const b = 2
+   * const same = a.equal(b, (result, another) => {
+   *   // result = Some(2)
+   *   // another = 2
+   *   return result.unwrap() === another
+   * })
+   * console.log(same) // true
+   * console.log(a.equal(b)) // false
+   * console.log(a.equal(Some(2))) // true
+   * @param other another value
+   * @param [cmp=Object.is] compare function. Default - `Object.is`
+   */
+  equal<const U>(
+    other: U,
+    cmp: (value1: this, value2: U) => boolean = Object.is,
+  ): boolean {
     if (other instanceof Option) {
-      return Object.is(other.value, this.value);
+      return cmp(this.value as never, other.value);
     }
-    return false;
+    return cmp(this, other);
   }
 
   /**
@@ -976,6 +1015,20 @@ export class Option<const T, const S extends Status = Status> {
       },
     );
   }
+  [customInspectSymbol](depth: number, options: any, inspect: Function) {
+    const name = this.isNone() ? "None" : "Some";
+    if (depth < 0) {
+      return options.stylize(name, "special");
+    }
+    const newOptions = Object.assign({}, options, {
+      depth: options.depth === null ? null : options.depth - 1,
+    });
+    const inner =
+      this.value !== undefined
+        ? inspect(this.value, newOptions).replace(/\n/g, `\n$`)
+        : "";
+    return `${options.stylize(name, "special")}(${inner})`;
+  }
 }
 
 /**
@@ -999,8 +1052,8 @@ export class Option<const T, const S extends Status = Status> {
  * }
  * ```
  */
-export function Some<const T>(value?: T | null) {
-  return Option.Some(value);
+export function Some<const T = undefined>(value: T = undefined as T) {
+  return Option.Some<T>(value);
 }
 
 Object.defineProperty(Some, Symbol.hasInstance, {
@@ -1036,7 +1089,7 @@ Object.defineProperty(Some, Symbol.hasInstance, {
  * }
  * ```
  */
-export function None<T>(value: null | undefined = undefined) {
+export function None<const T>(value: null | undefined = undefined) {
   return Option.None<T>(value);
 }
 
@@ -1050,27 +1103,3 @@ Object.defineProperty(None, Symbol.hasInstance, {
     return instance.isNone();
   },
 });
-
-type Methods = keyof Option<undefined>;
-type TypeofResult =
-  | "string"
-  | "number"
-  | "bigint"
-  | "boolean"
-  | "symbol"
-  | "undefined"
-  | "object"
-  | "function";
-
-const assertArgument = (
-  method: Methods,
-  value: unknown,
-  expectedType: TypeofResult,
-) => {
-  if (typeof value !== expectedType) {
-    throw new UndefinedBehaviorError(
-      `Method "${String(method)}" should accepts ${expectedType}`,
-      { cause: { value, type: typeof value } },
-    );
-  }
-};

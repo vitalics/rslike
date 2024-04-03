@@ -24,10 +24,11 @@ SOFTWARE.
 
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 import { setTimeout } from "node:timers/promises";
+import { inspect } from "node:util";
 
 import { Result, Ok, Err } from "../src/result";
 import { Option } from "../src/option";
-import { UndefinedBehaviorError } from "../src/errors";
+import { UndefinedBehaviorError } from "../src/utils";
 
 test("isOk should returns true for Ok value", () => {
   const a = Ok(12);
@@ -567,6 +568,26 @@ test("toJSON should be serializable for JSON.stringify", () => {
   expect(stringifyed).toBe('{"status":1,"value":3,"error":null}');
 });
 
+
+test("equal should returns true for custom comparator value", () => {
+  const a = Ok(5);
+
+  const equals = a.equal(5, (first, second) => {
+    return first.unwrap() === second;
+  });
+
+  expect(equals).toBeTruthy();
+});
+
+test("is should returns true for instanceof Result", () => {
+  const a = Ok(3);
+  expect(Result.is(a)).toBe(true);
+});
+
+test("is should returns false for not instanceof Result", () => {
+  expect(Result.is(3)).toBe(false);
+});
+
 test("[Symbol.iterator] should works", () => {
   const a = Ok([1, 2, 3]);
   let el = 1;
@@ -696,4 +717,44 @@ test("instanceof should be equal to Option and None", () => {
   expect(isInstanceOfOption).toBeTruthy();
   expect(isInstanceOfNumber).toBeFalsy();
   expect(isInstanceOfObject).toBeFalsy();
+});
+
+test("inspect.util should works", () => {
+  const a = Ok(4);
+  const ai = inspect(a);
+  expect(ai).toBe("Ok(4)");
+
+  const b = Err("qwe");
+  const bi = inspect(b);
+  expect(bi).toBe("Err('qwe')");
+
+  const c = Ok(null);
+  const ci = inspect(c);
+  expect(ci).toBe("Ok(null)");
+
+  const d = Ok(4);
+  const di = inspect(d, { depth: -3 });
+  expect(di).toBe("Ok");
+
+  const e = Ok({});
+  const ei = inspect(e, { depth: null });
+  expect(ei).toBe("Ok({})");
+});
+
+test("fromPromise should work for non promise value", async () => {
+  const a = await Result.fromPromise(2);
+  expect(a.isOk()).toBeTruthy();
+  expect(a.unwrap()).toBe(2);
+});
+
+test("fromPromise should work for promise value", async () => {
+  const a = await Result.fromPromise(Promise.resolve(2));
+  expect(a.isOk()).toBeTruthy();
+  expect(a.unwrap()).toBe(2);
+});
+
+test("fromPromise should work for promise reject value", async () => {
+  const a = await Result.fromPromise(Promise.reject(2));
+  expect(a.isErr()).toBeTruthy();
+  expect(a.unwrapErr()).toBe(2);
 });

@@ -24,8 +24,9 @@ SOFTWARE.
 
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 import { setTimeout } from "node:timers/promises";
+import { inspect } from "node:util";
 
-import { UndefinedBehaviorError } from "../src/errors";
+import { UndefinedBehaviorError } from "../src/utils";
 import { None, Some, Option } from "../src/option";
 import { Err, Ok, Result } from "../src/result";
 
@@ -482,6 +483,14 @@ test("replace should return swap instances for Some", () => {
   expect(b.unwrap()).toBe(1);
 });
 
+test("replace should return returns None for undefined", () => {
+  const a = Some(2);
+  const b = a.replace(undefined);
+
+  expect(a.isNone()).toBe(true);
+  expect(b.isSome()).toBe(true);
+});
+
 test("replace should return swap instances for None", () => {
   const a = None<number>();
   const b = a.replace(2);
@@ -605,6 +614,16 @@ test("equal should returns true for Option with same boxed value", () => {
   expect(equals).toBeTruthy();
 });
 
+test("equal should returns true for custom comparator value", () => {
+  const a = Some(5);
+
+  const equals = a.equal(5, (first, second) => {
+    return first.unwrap() === second;
+  });
+
+  expect(equals).toBeTruthy();
+});
+
 test("equal should returns false for non Option value", () => {
   const a = Some(5);
 
@@ -674,7 +693,7 @@ test("getOrInsertWith should returns value for None", () => {
 });
 test("getOrInsertWith should throws UndefinedBehaviorError for null", () => {
   const a = None<number>(null);
-  const b = Some<number>(null);
+  const b = Some<number | null>(null);
 
   // @ts-expect-error
   expect(() => a.getOrInsertWith(() => null)).toThrow(UndefinedBehaviorError);
@@ -789,6 +808,15 @@ test("instanceof should be equal to Option and None", () => {
   expect(isInstanceOfObject).toBeFalsy();
 });
 
+test("is should returns true for instanceof Option", () => {
+  const a = Some(3);
+  expect(Option.is(a)).toBe(true);
+});
+
+test("is should returns false for not instanceof Option", () => {
+  expect(Option.is(3)).toBe(false);
+});
+
 test("valueOf should returns Some value", () => {
   const a = Some(3);
   expect(a.valueOf()).toBe(3);
@@ -893,11 +921,11 @@ test("[Symbol.search] should throws error for not a string", () => {
 });
 
 test("[Symbol.asyncIterator] should works", async () => {
-  const delays = Some([
-    setTimeout(500, 1),
-    setTimeout(1300, 2),
-    setTimeout(3500, 3),
-  ]);
+  jest.useFakeTimers();
+  const first = setTimeout(500, 1);
+  const second = setTimeout(1300, 2);
+  const third = setTimeout(3500, 3);
+  const delays = Some([first, second, third]);
   let el = 1;
   for await (const delay of delays) {
     expect(delay).toBe(el);
@@ -914,4 +942,26 @@ test("[Symbol.asyncIterator] should throw for not iterable object", async () => 
     expect(e).toBeInstanceOf(Error);
     expect(e).toBeInstanceOf(UndefinedBehaviorError);
   }
+});
+
+test("inspect.util should works", () => {
+  const a = Some(4);
+  const ai = inspect(a);
+  expect(ai).toBe("Some(4)");
+
+  const b = None();
+  const bi = inspect(b);
+  expect(bi).toBe("None()");
+
+  const c = None(null);
+  const ci = inspect(c);
+  expect(ci).toBe("None(null)");
+
+  const d = Some(4);
+  const di = inspect(d, { depth: -3 });
+  expect(di).toBe("Some");
+
+  const e = Some({});
+  const ei = inspect(e, { depth: null });
+  expect(ei).toBe("Some({})");
 });

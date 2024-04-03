@@ -24,6 +24,8 @@ SOFTWARE.
 
 export type Fn<R = unknown, A extends unknown[] = [], This = void> = (this: This, ...args: A) => R;
 
+export type AsyncFn<R = unknown, A extends unknown[] = [], This = void> = (this: This, ...args: A) => Promise<R>;
+
 export type Box<T> = {
   expect(reason: string): T;
   unwrap(): T;

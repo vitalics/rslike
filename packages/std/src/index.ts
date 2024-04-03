@@ -24,7 +24,7 @@ SOFTWARE.
 
 import { Async } from './async.ts';
 import { Bind } from './bind.ts';
-import { UndefinedBehaviorError } from './errors.ts';
+import { UndefinedBehaviorError } from './utils.ts';
 import { match } from './match.ts'
 import { None, Option, Some } from './option.ts';
 import { Err, Ok, Result } from './result.ts';

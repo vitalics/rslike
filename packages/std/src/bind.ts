@@ -26,45 +26,45 @@ SOFTWARE.
 
 import { Async } from './async.ts';
 import { match } from './match.ts';
-import { UndefinedBehaviorError } from './errors.ts';
+import { UndefinedBehaviorError } from './utils.ts';
 import { Option, Some } from './option.ts'
 import { Result, Err, Ok } from './result.ts';
 
 /**
  * Function decorator. Combines `Option` and `Result` classes.
- * 
+ *
  * Binds function and return a new callable function.
- * 
+ *
  * Result of this function will be mapped into `Result<Option<T>,E>`.
- * 
+ *
  * Function `result` will be mapped into `Ok(Some(result))`.
- * 
+ *
  * `undefined` funtion result will mapped into `Ok(None())`.
- * 
+ *
  * @see {@link https://github.com/vitalics/rslike/wiki/Bind Wiki}
  * @see {@link Async} if you would like to resolve `Promise` or value, not a whole function.
  * @see {@link match} if you would like to unwrap `Result` or `Option` successfully.
  * @example
  * const fn = (a: number) => a + 2;
  * const newFn = Bind(fn);
- * 
+ *
  * const res = newFn(1);
  * res.unwrap().unwrap() // 3
  * newFn(10).unwrap().unwrap() // 12
- * 
+ *
  * const thrower = () => {throw new Error('shit happens :)')};
  * const func = Bind(thrower);
  * func().isErr() // true
  * const err = func().unwrapErr();
  * console.log(err) // {message: 'shit happens :)'}
  * err instanceof Error // true
- * 
+ *
  * // async example
  * const asyncFn = () => Promise.resolve(123);
  * const fn = Bind(asyncFn);
- * 
+ *
  * const r = await fn();
- * 
+ *
  * r.isOk() // true
  * r.unwrap() // 123
  * @export

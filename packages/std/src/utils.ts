@@ -31,3 +31,29 @@ export class UndefinedBehaviorError extends Error {
     super(message, options);
   }
 }
+
+/** Node.js inspection symbol */
+export const customInspectSymbol = Symbol.for("nodejs.util.inspect.custom");
+
+type TypeofResult =
+  | "string"
+  | "number"
+  | "bigint"
+  | "boolean"
+  | "symbol"
+  | "undefined"
+  | "object"
+  | "function";
+
+export const assertArgument = <Methods extends string>(
+  method: Methods,
+  value: unknown,
+  expectedType: TypeofResult,
+) => {
+  if (typeof value !== expectedType) {
+    throw new UndefinedBehaviorError(
+      `Method "${String(method)}" should accepts ${expectedType}`,
+      { cause: { value, type: typeof value } },
+    );
+  }
+};
