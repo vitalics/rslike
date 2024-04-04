@@ -22,11 +22,20 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-export type Fn<R = unknown, A extends unknown[] = [], This = void> = (this: This, ...args: A) => R;
+export type Fn<R = unknown, A extends unknown[] = [], This = void> = (
+  this: This,
+  ...args: A
+) => R;
 
-export type AsyncFn<R = unknown, A extends unknown[] = [], This = void> = (this: This, ...args: A) => Promise<R>;
+export type AsyncFn<R = unknown, A extends unknown[] = [], This = void> = Fn<
+  Promise<R>,
+  A,
+  This
+>;
 
 export type Box<T> = {
   expect(reason: string): T;
   unwrap(): T;
-}
+};
+
+export type IsPromise<T> = T extends Promise<any> ? true : false;

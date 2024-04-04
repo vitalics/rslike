@@ -944,7 +944,7 @@ test("[Symbol.asyncIterator] should throw for not iterable object", async () => 
   }
 });
 
-test("inspect.util should works", () => {
+test("Symbol.inspect should works", () => {
   const a = Some(4);
   const ai = inspect(a);
   expect(ai).toBe("Some(4)");

@@ -86,7 +86,7 @@ test("match should return value funtion result for None", () => {
   expect(fn).toBeCalledTimes(1);
 });
 
-test("match should work with bind with double unwrapping", async () => {
+test("match should work with bind without double unwrapping", async () => {
   const asyncFn = jest.fn(async (v: number) => v * v);
 
   const safeFn = Bind(asyncFn);

@@ -797,23 +797,18 @@ export class Result<const T, const E, const S extends Status = Status> {
  * @param input a value that does not extend the `Error` type.
  * @returns {Result<T, E>}
  * @example
- * ```ts
- * function divide(left: number, right: number): Result<number, Error> {
+ * function divide(left: number, right: number): Result<number, string> {
  *   if (right === 0) return Err("Divided by zero");
  *
  *   return Ok(left / right);
  * }
  *
- * ```
- *
  * @example
- * ```ts
  * const foo = Ok("Foo!");
  *
  * if (foo instanceof Ok) {
  *  // Do something
  * }
- * ```
  */
 export function Ok<const T, const E = unknown>(
   value?: T | null,
@@ -837,15 +832,11 @@ Object.defineProperty(Ok, Symbol.hasInstance, {
  *
  * @param input a value that conaints `Error` type.
  * @example
- * ```ts
  * function divide(left: number, right: number): Result<number, string> {
  *   if (right === 0) return Err("Divided by zero");
  *
  *   return Ok(left / right);
  * }
- *
- * ```
- *
  * @example
  * const foo = Err(new Error("Foo!"));
  *

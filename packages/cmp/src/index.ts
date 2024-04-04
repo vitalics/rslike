@@ -22,7 +22,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-export * from './cmp.ts';
-export * from './errors.ts';
-export type { Eq, Ord, PartialEq, PartialOrd } from './types.ts';
-export * from './utils.ts';
+// patch Symbol instance
+import "./globals.ts";
+
+export * from "./symbols.ts";
+export type { Eq, Ord, PartialEq } from "./types.ts";
