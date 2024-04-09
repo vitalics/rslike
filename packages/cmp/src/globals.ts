@@ -22,7 +22,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-import { UndefinedBehaviorError } from "@rslike/std";
 import { kCompare, kEquals, kPartialEquals } from "./symbols";
 
 declare global {
@@ -31,10 +30,9 @@ declare global {
      * Type for equality comparisons which are equivalence relations.
      *
      * **NOTE:** other always will be `unknown`. Generic `T` only helps when use with typescript. Perform checks on your side.
+     *
      * ## Best practicies
-     * - create more checks especially for incoming argument, it's type and expectations.
-     * - throws {@link CompareError} if you cannot compare `self` with `other`.
-     * - throws {@link UndefinedBehaviorError} if your incoming type are not expected.
+     * - always return "boolean" type without throwing an error
      * @param other
      * @returns {boolean} true if `this` and `other` are equals, and is used like `===` (without type lossenes), otherwise it returns `false`.
      */
@@ -43,9 +41,13 @@ declare global {
      * This method tests for `this` and `other` values to be equal, and is used by `==` (with type lossenes).
      *
      * **NOTE:** other always will be `unknown`. Generic `T` only helps when use with typescript. Perform checks on your side.
+     * 
+     * **NOTE:** `partialEquals` function uses `this` to binds self result.
      *
      * ## Best practice
      * accept `other` as `unknown` type and make less checks than `Eq.equals` does.
+     * 
+     * use function declaration for `this` binding if you need to use original object to compare
      */
     readonly partialEquals: typeof kPartialEquals;
 
@@ -70,146 +72,10 @@ declare global {
     readonly [Symbol.partialEquals]: unique symbol;
   }
   var Symbol: SymbolConstructor;
-
-  interface BooleanConstructor {
-    [Symbol.partialEquals](
-      another: boolean | { [Symbol.partialEquals](another: unknown): boolean },
-    ): boolean;
-    [Symbol.equals](
-      another: boolean | { [Symbol.equals](another: unknown): boolean },
-    ): boolean;
-    [Symbol.compare](
-      another: boolean | { [Symbol.compare](another: unknown): number },
-    ): number;
-  }
-  interface Boolean {
-    [Symbol.partialEquals](
-      another: boolean | { [Symbol.partialEquals](another: unknown): boolean },
-    ): boolean;
-    [Symbol.equals](
-      another: boolean | { [Symbol.equals](another: unknown): boolean },
-    ): boolean;
-    [Symbol.compare](
-      another: boolean | { [Symbol.compare](another: unknown): number },
-    ): number;
-  }
-
-  interface NumberConstructor {
-    [Symbol.partialEquals](
-      another: number | { [Symbol.partialEquals](another: unknown): boolean },
-    ): boolean;
-
-    [Symbol.equals](
-      another: number | { [Symbol.equals](another: unknown): boolean },
-    ): boolean;
-
-    [Symbol.compare](
-      another: number | { [Symbol.compare](another: unknown): number },
-    ): number;
-  }
-  interface Number {
-    [Symbol.partialEquals](
-      another: number | { [Symbol.partialEquals](another: unknown): boolean },
-    ): boolean;
-
-    [Symbol.equals](
-      another: number | { [Symbol.equals](another: unknown): boolean },
-    ): boolean;
-
-    [Symbol.compare](
-      another: number | { [Symbol.compare](another: unknown): number },
-    ): number;
-  }
-
-  interface StringConstructor {
-    [Symbol.partialEquals](
-      another: string | { [Symbol.partialEquals](another: unknown): boolean },
-    ): boolean;
-
-    [Symbol.equals](
-      another: string | { [Symbol.equals](another: unknown): boolean },
-    ): boolean;
-
-    [Symbol.compare](
-      another: string,
-      locales?: string | string[],
-      opts?: Intl.CollatorOptions,
-    ): number;
-    [Symbol.compare](another: {
-      [Symbol.compare](another: unknown): number;
-    }): number;
-  }
-  interface String {
-    [Symbol.partialEquals](
-      another: string | { [Symbol.partialEquals](another: unknown): boolean },
-    ): boolean;
-
-    [Symbol.equals](
-      another: string | { [Symbol.equals](another: unknown): boolean },
-    ): boolean;
-
-    [Symbol.compare](
-      another: string,
-      locales?: string | string[],
-      opts?: Intl.CollatorOptions,
-    ): number;
-    [Symbol.compare](another: {
-      [Symbol.compare](another: unknown): number;
-    }): number;
-  }
-
-  interface DateConstructor {
-    [Symbol.partialEquals](
-      another:
-        | Date
-        | string
-        | number
-        | { [Symbol.partialEquals](another: unknown): boolean },
-    ): boolean;
-
-    [Symbol.equals](
-      another:
-        | Date
-        | string
-        | number
-        | { [Symbol.equals](another: unknown): boolean },
-    ): boolean;
-
-    [Symbol.compare](
-      another:
-        | Date
-        | string
-        | number
-        | { [Symbol.compare](another: unknown): number },
-    ): number;
-  }
-  interface Date {
-    [Symbol.partialEquals](
-      another:
-        | Date
-        | string
-        | number
-        | { [Symbol.partialEquals](another: unknown): boolean },
-    ): boolean;
-
-    [Symbol.equals](
-      another:
-        | Date
-        | string
-        | number
-        | { [Symbol.equals](another: unknown): boolean },
-    ): boolean;
-
-    [Symbol.compare](
-      another:
-        | Date
-        | string
-        | number
-        | { [Symbol.compare](another: unknown): number },
-    ): number;
-  }
 }
 
+(Symbol as any).compare = kCompare;
+(Symbol as any).partialEquals = kPartialEquals;
+(Symbol as any).equals = kEquals;
+
 import "./primitives.ts";
-import "./collections.ts";
-import "./typed.ts";

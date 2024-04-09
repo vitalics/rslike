@@ -25,7 +25,7 @@ SOFTWARE.
 import { UndefinedBehaviorError, assertArgument } from "./utils.ts";
 import { Option } from "./option.ts";
 import { Result } from "./result.ts";
-import { AsyncFn, Fn, IsPromise, Return } from "./types.ts";
+import { Fn } from "./types.ts";
 
 type OkCb<I, R> =
   I extends Promise<infer V>
@@ -95,7 +95,7 @@ export function match<
 >(
   value: I,
   okOrSomeCb: OkCb<I, R>,
-  errOrNoneCb: ErrCb<I, R>
+  errOrNoneCb: ErrCb<I, R>,
 ): I extends Promise<any> ? Promise<R> : R {
   assertArgument("match", okOrSomeCb, "function");
   assertArgument("match", errOrNoneCb, "function");
