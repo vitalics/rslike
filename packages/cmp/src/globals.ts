@@ -22,6 +22,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+import { UndefinedBehaviorError } from '@rslike/std'
+
 import { kCompare, kEquals, kPartialEquals } from "./symbols";
 
 declare global {
@@ -29,8 +31,9 @@ declare global {
     /**
      * Type for equality comparisons which are equivalence relations.
      *
-     * **NOTE:** other always will be `unknown`. Generic `T` only helps when use with typescript. Perform checks on your side.
-     *
+     * ## Notes
+     * - other always will be `unknown`. Generic `T` only helps when use with typescript. Perform checks on your side.
+     * - built-in objects will throw {@link UndefinedBehaviorError} error for object with `[Symbol.equals]` trait implementation but returns not a boolean type
      * ## Best practicies
      * - always return "boolean" type without throwing an error
      * @param other
@@ -42,12 +45,12 @@ declare global {
      *
      * **NOTE:** other always will be `unknown`. Generic `T` only helps when use with typescript. Perform checks on your side.
      * 
-     * **NOTE:** `partialEquals` function uses `this` to binds self result.
-     *
+     * ## Notes
+     * - `partialEquals` function uses `this` to binds self result.
+     * - built-in objects can throw {@link UndefinedBehaviorError} error for object with `[Symbol.partialEquals]` trait implementation but returns not a boolean type
      * ## Best practice
-     * accept `other` as `unknown` type and make less checks than `Eq.equals` does.
-     * 
-     * use function declaration for `this` binding if you need to use original object to compare
+     * - accept `other` as `unknown` type and make less checks than `Eq.equals` does.
+     * - use function declaration for `this` binding if you need to use original object to compare
      */
     readonly partialEquals: typeof kPartialEquals;
 
@@ -60,6 +63,8 @@ declare global {
      * - `Greater` === `1`
      *
      * By convention, `this.compare(other)` returns the ordering matching the expression `self <operator> other` if `true`.
+     * ## Notes
+     * - built-in objects will throw {@link UndefinedBehaviorError} error for object with `[Symbol.partialEquals]` trait implementation but returns not a boolean type
      * ## Best practicies
      * - throw {@link UndefinedBehaviorError} in case of `other` argument is not that your method expects
      */
@@ -78,4 +83,5 @@ declare global {
 (Symbol as any).partialEquals = kPartialEquals;
 (Symbol as any).equals = kEquals;
 
+// patch primitives
 import "./primitives.ts";

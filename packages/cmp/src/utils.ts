@@ -1,26 +1,49 @@
 import { UndefinedBehaviorError } from "@rslike/std";
 
+import { kCompare, kEquals, kPartialEquals } from "./symbols.ts";
+
 type CompareFn = (a: unknown, b: unknown) => number;
 
 export function compare(
-  a: { [Symbol.compare](another: unknown): number },
-  b: { [Symbol.compare](another: unknown): number },
+  a: { [kCompare](another: unknown): number },
+  b: { [kCompare](another: unknown): number },
 ): number;
 export function compare(
-  a: { [Symbol.compare](another: unknown): number },
+  a: { [kCompare](another: unknown): number },
   b: unknown,
 ): number;
 export function compare(
   a: unknown,
-  b: { [Symbol.compare](another: unknown): number },
+  b: { [kCompare](another: unknown): number },
 ): number;
 export function compare(a: unknown, b: unknown, compareFn: CompareFn): number;
+/**
+ * Called `Symbol.compare` to compare 2 arguments between each others and returns number.
+ *
+ * In Most cases it returns 4 possible numeric values and can be interpretate:
+ * - result is `>=1` - first argument is more than incoming
+ * - result is `0` - arguments are the same
+ * - result is `<=-1` - second argument is more than incoming
+ * - result is `NaN` - argument have same types but uncomparable between each other (e.g. comparing `NaN` with `NaN` gives `NaN`, since we cannot compare 2 `NaN`s)
+ *
+ * If neigther of arguments not implemnting `Symbol.compare` trait - `compareFn`(3rd argument) will be called.
+ *
+ * @throws UndefinedBehaviorError if `compareFn` is not defined and neigther of arguments implements `Symbol.compare` trait
+ * @throws UndefinedBehaviorError if `compareFn` is not a function
+ * @throws UndefinedBehaviorError if `compareFn` returns not a number type
+ *
+ * @export
+ * @param {unknown} a
+ * @param {unknown} b
+ * @param compareFn function that will be called if neighter of incoming arguments implements `Symbol.compare` trait.
+ * @return {*}  {number}
+ */
 export function compare(a: any, b: any, compareFn?: CompareFn): number {
-  if (typeof a[Symbol.compare] === "function") {
-    return a[Symbol.compare](b);
+  if (typeof a[kCompare] === "function") {
+    return a[kCompare](b);
   }
-  if (typeof b[Symbol.compare] === "function") {
-    return b[Symbol.compare](a);
+  if (typeof b[kCompare] === "function") {
+    return b[kCompare](a);
   }
   if (compareFn) {
     if (typeof compareFn !== "function") {
@@ -50,16 +73,16 @@ export function compare(a: any, b: any, compareFn?: CompareFn): number {
 type EqualityFn = (a: unknown, b: unknown) => boolean;
 
 export function partialEquals(
-  a: { [Symbol.partialEquals](another: unknown): boolean },
-  b: { [Symbol.partialEquals](another: unknown): boolean },
+  a: { [kPartialEquals](another: unknown): boolean },
+  b: { [kPartialEquals](another: unknown): boolean },
 ): boolean;
 export function partialEquals(
-  a: { [Symbol.partialEquals](another: unknown): boolean },
+  a: { [kPartialEquals](another: unknown): boolean },
   b: unknown,
 ): boolean;
 export function partialEquals(
   a: unknown,
-  b: { [Symbol.partialEquals](another: unknown): boolean },
+  b: { [kPartialEquals](another: unknown): boolean },
 ): boolean;
 export function partialEquals(
   a: unknown,
@@ -70,7 +93,7 @@ export function partialEquals(
 /**
  * Partial equals. Same as `==`(type loose comparison)
  *
- * @throws UndefinedBehaviorError for a and b objects without implementation "Symbol.partialEquals" trait or if "Symbol.partialEquals" returns not boolean type.
+ * @throws UndefinedBehaviorError for a and b objects without implementation `Symbol.partialEquals` trait or if `Symbol.partialEquals` trait returns not boolean type.
  * @export
  * @param a
  * @param b
@@ -82,8 +105,8 @@ export function partialEquals(
   b: any,
   equalityFn?: EqualityFn,
 ): boolean {
-  if (typeof a[Symbol.partialEquals] === "function") {
-    const res = Reflect.apply(a[Symbol.partialEquals], a, [b]);
+  if (typeof a[kPartialEquals] === "function") {
+    const res = Reflect.apply(a[kPartialEquals], a, [b]);
     if (typeof res === "boolean") {
       return res;
     }
@@ -103,8 +126,8 @@ export function partialEquals(
       },
     );
   }
-  if (typeof b[Symbol.partialEquals] === "function") {
-    const res = Reflect.apply(b[Symbol.partialEquals], b, [a]);
+  if (typeof b[kPartialEquals] === "function") {
+    const res = Reflect.apply(b[kPartialEquals], b, [a]);
     if (typeof res === "boolean") {
       return res;
     }
@@ -148,18 +171,18 @@ export function partialEquals(
 }
 
 export function equals(
-  a: { [Symbol.equals](another: unknown): boolean },
-  b: { [Symbol.equals](another: unknown): boolean },
+  a: { [kEquals](another: unknown): boolean },
+  b: { [kEquals](another: unknown): boolean },
   equalityFn?: EqualityFn,
 ): boolean;
 export function equals(
-  a: { [Symbol.equals](another: unknown): boolean },
+  a: { [kEquals](another: unknown): boolean },
   b: unknown,
   equalityFn?: EqualityFn,
 ): boolean;
 export function equals(
   a: unknown,
-  b: { [Symbol.equals](another: unknown): boolean },
+  b: { [kEquals](another: unknown): boolean },
   equalityFn?: EqualityFn,
 ): boolean;
 export function equals(
@@ -169,13 +192,17 @@ export function equals(
 ): boolean;
 
 /**
- * equals. Same as `===`(type looseness comparison)
+ * Equals. Same as `===`(type looseness comparison).
  *
- * @throws UndefinedBehaviorError for a and b objects without implementation "Symbol.equals" trait or if "Symbol.equals" returns not boolean type.
- * @export
- * @param a
- * @param b
- * @param [equalityFn] function that will be called if neighter of incoming arguments implements `Symbol.equals` trait. By default this function uses type loose comparison (`===`)
+ * Called [Symbol.equals] implementation for first or another argument.
+ * If neither of the arguments implements `[Symbol.equals]` trait
+ * then `equalityFn` argument will be called. Else - {@link UndefinedBehaviorError} will be throws
+ *
+ * @throws `UndefinedBehaviorError` for a and b objects without implementation "Symbol.equals" trait
+ * @throws `UndefinedBehaviorError` if `[Symbol.equals]` trait returns not boolean type.
+ * @param a first argument to compare
+ * @param b second argument to compare
+ * @param [equalityFn] function that will be called if neighter of incoming arguments implements `Symbol.equals` trait. By default this function uses type looseness comparison (`===`)
  * @return {*}  {boolean}
  */
 export function equals(
@@ -186,10 +213,10 @@ export function equals(
   if (
     typeof a == "object" &&
     a !== null &&
-    Symbol.equals in a &&
-    typeof a[Symbol.equals] === "function"
+    kEquals in a &&
+    typeof a[kEquals] === "function"
   ) {
-    const res = Reflect.apply((a as any)[Symbol.equals], a, [b]);
+    const res = Reflect.apply((a as any)[kEquals], a, [b]);
     if (typeof res === "boolean") {
       return res;
     }
@@ -212,10 +239,10 @@ export function equals(
   if (
     typeof b == "object" &&
     b !== null &&
-    Symbol.equals in b &&
-    typeof b[Symbol.equals] === "function"
+    kEquals in b &&
+    typeof b[kEquals] === "function"
   ) {
-    const res = Reflect.apply((b as any)[Symbol.equals], b, [a]);
+    const res = Reflect.apply((b as any)[kEquals], b, [a]);
     if (typeof res === "boolean") {
       return res;
     }

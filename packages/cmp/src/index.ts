@@ -23,7 +23,8 @@ SOFTWARE.
 */
 
 // patch Symbol instance
-import "./globals.ts";
+// import "./globals.ts";
 
 export * from "./symbols.ts";
 export type { Eq, Ord, PartialEq } from "./types.ts";
+export { compare, equals, partialEquals } from "./utils.ts";

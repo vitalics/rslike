@@ -9,7 +9,7 @@
     ],
     "types": [
       "node",
-      "jest",
+      "jest"
     ],
     "skipLibCheck": true,
     "allowImportingTsExtensions": true

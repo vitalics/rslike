@@ -7,7 +7,6 @@
   "types": "./dist/index.d.ts",
   "scripts": {
     "build": "tsup",
-    "docs": "pnpm typedoc src/index.ts",
     "test": "jest"
   },
   "exports": {
@@ -30,6 +29,16 @@
         "types": "./dist/globals.d.ts",
         "default": "./dist/globals.cjs"
       }
+    },
+    "./symbols": {
+      "import": {
+        "types": "./dist/symbols.d.mts",
+        "default": "./dist/symbols.mjs"
+      },
+      "require": {
+        "types": "./dist/symbols.d.ts",
+        "default": "./dist/symbols.cjs"
+      }
     }
   },
   "keywords": [
@@ -43,11 +52,9 @@
     "comparing",
     "ordering",
     "partial compare",
-    "partial ordering",
     "Eq",
     "PartialEq",
-    "Ord",
-    "PartialOrd"
+    "Ord"
   ],
   "author": "Vitali Haradkou",
   "license": "MIT",

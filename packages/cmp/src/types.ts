@@ -26,6 +26,8 @@ SOFTWARE.
 
 import { UndefinedBehaviorError } from "@rslike/std";
 
+import { kCompare, kEquals, kPartialEquals } from "./symbols";
+
 /**
  * Type for equality comparisons which are equivalence relations.
  *
@@ -49,8 +51,6 @@ import { UndefinedBehaviorError } from "@rslike/std";
  * }
  */
 export type Eq = {
-  [Symbol.equals](another: unknown): boolean;
-
   /**
    * Type for equality comparisons which are equivalence relations.
    *
@@ -61,7 +61,7 @@ export type Eq = {
    * @param other
    * @returns {boolean} true if `this` and `other` are equals, and is used like `===` (without type lossenes), otherwise it returns `false`.
    */
-  equals<const V>(other: V): boolean;
+  [kEquals]<const V>(another: V): boolean;
 };
 
 /**
@@ -108,7 +108,6 @@ export type Eq = {
  * It’s easy to accidentally make `compare` and `partialCompare` disagree by deriving some of the traits and manually implementing others.
  */
 export type Ord = {
-  [Symbol.compare](another: unknown): number;
   /**
    * Compare 2 items. `this` with `other` and return numeric value
    *
@@ -123,7 +122,7 @@ export type Ord = {
    * @param another
    * @return {*}  {Ordering}
    */
-  compare<const V>(another: V): number;
+  [kCompare]<const V>(another: V): number;
 };
 
 /**
@@ -168,6 +167,5 @@ export type PartialEq = {
    * @param {T} other
    * @return {*}  {boolean}
    */
-  partialEquals<const V>(other: V): boolean;
-  [Symbol.partialEquals](another: unknown): boolean;
+  [kPartialEquals]<const V>(another: V): boolean;
 };
