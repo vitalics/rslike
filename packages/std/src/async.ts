@@ -23,21 +23,22 @@ SOFTWARE.
 */
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { Bind } from './bind.ts';
-import { match } from './match.ts'
-import { Result, Ok, Err } from './result.ts';
-import { Option, Some } from './option.ts';
+import { Bind } from "./bind.ts";
+import { match } from "./match.ts";
+import { Result, Ok, Err } from "./result.ts";
+import { Option, Some } from "./option.ts";
 
-
+type OptionStatus = (typeof Option)["Status"];
+type ResultStatus = (typeof Result)["Status"];
 /**
  * Tries to resolve async value into `Result<Option<T>,E>`.
  *
  * **NOTE:** Returned promise will never calls `catch` function, since `Promise` always resolved as success, whenever error or not.
- * 
+ *
  * `Promise` result will be mapped into `Ok(Some(result))`
- * 
+ *
  * `undefined` will be mapped into `Ok(None())`
- * 
+ *
  * @see {@link https://github.com/vitalics/rslike/wiki/Async Wiki}
  * @see {@link Bind} - If you want to bind whole (`async` or not) function, not a `Promise`.
  * @see {@link match} if you would like to unwrap `Result` or `Option` successfully.
@@ -48,27 +49,32 @@ import { Option, Some } from './option.ts';
  *    rej('Argument should be odd');
  *  })
  * }
- * 
+ *
  * const result = await Async(unsafePromise(2))
  * result.unwrap().unwrap() // 2
  * const resultErr = await Async(unsafePromise(3))
  * resule.unwrapErr() // Argument should be odd
- * 
+ *
+ * await Async(Promise.reject(3)) // Err(3)
  * await Async(undefined) // Ok(None())
  * await Async(Promise.resolve(undefiend)) // Ok(None())
  * await Async(Promise.resolve(123)) // Ok(Some(123))
- * 
- * 
+ *
+ *
  * @export
  * @template T
  * @template E
  * @param {(T | PromiseLike<T>)} value `Promise` object
  * @return {*}  {Promise<Result<T, E>>}
  */
-export async function Async<T, E = unknown>(value?: T | PromiseLike<T>): Promise<Result<Option<T>, E>> {
+export async function Async<const T, const E = unknown>(
+  value?: T | PromiseLike<T> | Promise<T>,
+): Promise<Result<Option<Awaited<T>>, E>> {
   try {
-    return Ok(Some(await value));
+    const awaited = await value;
+    const res = Ok(Some(awaited));
+    return res as never;
   } catch (e) {
-    return Err<Option<T>, E>(e as E);
+    return Err(e as E);
   }
 }

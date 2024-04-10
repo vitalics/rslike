@@ -23,19 +23,37 @@ SOFTWARE.
 */
 
 /**
- * Helper error. Can be useful when use it for ordering.
- *
- * @export
- * @class CompareError
- * @extends {Error}
+ * Common error. Usually throws when something is not defined.
+ * @see {@link https://github.com/vitalics/rslike/wiki/UndefinedBehaviorError Wiki}
  */
-export class OrderingError extends Error { }
+export class UndefinedBehaviorError extends Error {
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
+  }
+}
 
-/**
- * Helper error. Can be useful when use it for comparing.
- *
- * @export
- * @class CompareError
- * @extends {Error}
- */
-export class CompareError extends Error { }
+/** Node.js inspection symbol */
+export const customInspectSymbol = Symbol.for("nodejs.util.inspect.custom");
+
+type TypeofResult =
+  | "string"
+  | "number"
+  | "bigint"
+  | "boolean"
+  | "symbol"
+  | "undefined"
+  | "object"
+  | "function";
+
+export const assertArgument = <Methods extends string>(
+  method: Methods,
+  value: unknown,
+  expectedType: TypeofResult,
+) => {
+  if (typeof value !== expectedType) {
+    throw new UndefinedBehaviorError(
+      `Method "${String(method)}" should accepts ${expectedType}`,
+      { cause: { value, type: typeof value } },
+    );
+  }
+};

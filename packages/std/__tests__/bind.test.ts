@@ -27,7 +27,7 @@ SOFTWARE.
 import { Bind } from '../src/bind';
 import { Option } from '../src/option';
 import { Result } from '../src/result';
-import { UndefinedBehaviorError } from '../src/errors'
+import { UndefinedBehaviorError } from '../src/utils'
 
 test('Bind should throw undefined behavior when not a function is provided', () => {
   // @ts-expect-error
@@ -97,4 +97,3 @@ test('Bind should not throw an error', () => {
 
   expect(res.isErr()).toBe(true);
 })
-

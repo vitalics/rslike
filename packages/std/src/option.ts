@@ -22,9 +22,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-import { Err, Ok, Result } from './result.ts';
-import { UndefinedBehaviorError } from './errors.ts';
+import { Err, Ok, Result } from "./result.ts";
+import {
+  UndefinedBehaviorError,
+  assertArgument,
+  customInspectSymbol,
+} from "./utils.ts";
 
+/** Option possible statuses */
 enum Status {
   None,
   Some,
@@ -39,7 +44,7 @@ enum Status {
  * - Optional function arguments
  * - Nullable values
  * - Swapping things out of difficult situations
- * 
+ *
  * `Options` are commonly paired with pattern matching to query the presence of a value and take action, always accounting for the `None` case.
  *
  * @see {@link https://github.com/vitalics/rslike/wiki/Option WIKI}
@@ -50,64 +55,89 @@ enum Status {
  * @implements {OptionLike<T>}
  * @template T
  */
-export class Option<T> {
-  private constructor(protected status: Status, protected value?: T) { }
+export class Option<const T, const S extends Status = Status> {
+  private constructor(
+    protected status: S,
+    protected value?: T | null,
+  ) {}
 
   /**
    * Returns the contained `Some` value, consuming the self value.
    * @example
    * const x = Some("value");
    * x.expect("fruits are healthy") === "value"; // true
-   * 
+   *
    * const y: Option<string> = None();
    * y.expect("fruits are healthy"); // throws with `fruits are healthy`
-   * @param {string} message
+   * @param {string} reason error message
+   * @throws `Error` if value is `null` or `undefined`
    * @return {*}  {Value}
    */
-  expect(reason: string): T {
-    assertArgument('expect', reason, 'string');
-    if (this.status === Status.None) {
-      throw new Error(reason, { cause: "Option have 'None' status" })
+  expect(reason: string): NonNullable<T> {
+    assertArgument("expect", reason, "string");
+    if (
+      this.status === Status.None ||
+      this.value === null ||
+      this.value === undefined
+    ) {
+      throw new Error(reason, {
+        cause: {
+          message: "Option have 'None' status",
+          value: this.value,
+          type: typeof this.value,
+          status: this.status,
+        },
+      });
     }
-    return this.value as T;
+    return this.value!;
   }
   /**
    * Returns the contained `Some` value, consuming the self value.
-   * 
+   *
    * Because this function may throws, its use is generally discouraged. Instead, prefer to use pattern matching and handle the None case explicitly, or call `unwrapOr`, `unwrapOrElse`, or `unwrapOrDefault`.
    *
-   * Throws an error when value is `None`
-   * 
+   * @throws `Error` when value is `None`, `null` or `undefined`
+   *
    * @example
    * const x = Some("air");
    * x.unwrap() === "air";
-   * 
+   *
    * const x: Option<string> = None();
    * x.unwrap() // fails
-   * @return {*}  {Value}
-  */
-  unwrap(): T {
-    if (this.status === Status.None) {
-      throw new Error("Unwrap error. Option have 'None' status", { cause: { status: this.status, value: this.value } })
+   * @return {*}
+   */
+  unwrap(): NonNullable<T> {
+    if (
+      this.status === Status.None ||
+      this.value === null ||
+      this.value === undefined
+    ) {
+      throw new Error("Unwrap error. Option have 'None' status", {
+        cause: { status: this.status, value: this.value },
+      });
     }
-    return this.value as T;
+    return this.value!;
   }
   /**
    * Returns the contained `Some` value or a provided default.
    * @example
    * const x = Some("air");
    * x.unwrapOr("another") === "air";
-   * 
+   *
    * const x: Option<string> = None();
    * x.unwrapOr("another") === 'another'
-   * @param {T} another
-   * @return {*}  {Value}
+   * @param {T} fallback fallback value
+   * @return {*} {Value}
    */
-  unwrapOr(fallback: T): T {
-    if (this.status === Status.None) {
-      return fallback;
+  unwrapOr<const U>(fallback: U): S extends Status.Some ? T : U {
+    if (
+      this.status === Status.None ||
+      this.value === null ||
+      this.value === undefined
+    ) {
+      return fallback as never;
     }
-    return this.value as T;
+    return this.value as never;
   }
 
   /**
@@ -116,15 +146,16 @@ export class Option<T> {
    * const k = 10;
    * Some(4).unwrapOrElse(() => 2 * k) === 4
    * None().unwrap_or_else(() => 2 * k) === 20
-   * @param {() => T} predicate
-   * @return {*}  {Value}
+   * @param predicate function to call when `Option` is `None`
+   * @throws `UndefinedBehaviorError` if `predicate` is not a function
+   * @return Unwrapped value or prdicate result
    */
-  unwrapOrElse(fn: () => T): T {
+  unwrapOrElse<const U>(predicate: () => U): S extends Status.Some ? T : U {
     if (this.status === Status.None) {
-      assertArgument('unwrapOrElse', fn, 'function');
-      return fn();
+      assertArgument("unwrapOrElse", predicate, "function");
+      return predicate() as never;
     }
-    return this.value as T;
+    return this.unwrap() as never;
   }
 
   /**
@@ -134,19 +165,28 @@ export class Option<T> {
    * const maybeSomeString = Some("Hello, World!");
    * const maybeSomeLen = maybeSomeString.map(s => s.length);
    * maybeSomeLen === Some(13));
-   * 
+   *
    * const x: Option<string> = None();
    * x.map(s => s.length) === None();
    * @template U
-   * @param {(value: T) => U} fn
-   * @return {*}  {Option<U>}
+   * @param predicate function to evaluate when `Option` have `Some` value
+   * @throws `UndefinedBehaviorError` if `predicate` is not a function
+   * @return `Option` instance
    */
-  map<U>(fn: (value: T) => U): Option<U> {
+  map<const U>(
+    predicate: (value: T) => U,
+  ): S extends Status.Some
+    ? U extends null
+      ? Option<U, Status.None>
+      : U extends undefined
+        ? Option<U, Status.None>
+        : Option<NonNullable<U>, Status.Some>
+    : Option<U, Status.None> {
     if (this.status === Status.Some) {
-      assertArgument('map', fn, 'function');
-      return Some(fn(this.value as T));
+      assertArgument("map", predicate, "function");
+      return Some(predicate(this.value as T)) as never;
     }
-    return None();
+    return None() as never;
   }
 
   /**
@@ -157,20 +197,23 @@ export class Option<T> {
    * @example
    * const x = Some("foo");
    * x.mapOr(42, v => v.length) === 3;
-   * 
+   *
    * const x: Option<string> = None();
    * x.mapOr(42, v => v.len() === 42;
-   * @template U
-   * @param {U} value
-   * @param {(value: T) => U} predicate
-   * @return {*}  {U}
+   * @param {U} fallback fallback value returns when `Option` have `None` status
+   * @param predicate function to evaluate when `Option` have `Some` status
+   * @throws `UndefinedBehaviorError` if `predicate` is not a function
+   * @return
    */
-  mapOr<U>(value: U, predicate: (value: T) => U): U {
+  mapOr<const U>(
+    fallback: U,
+    predicate: (value: T) => U,
+  ): S extends Status.None ? U : T {
     if (this.status === Status.None) {
-      return value;
+      return fallback as never;
     }
-    assertArgument('mapOr', predicate, 'function')
-    return predicate(this.value as T);
+    assertArgument("mapOr", predicate, "function");
+    return predicate(this.value as T) as never;
   }
 
   /**
@@ -178,18 +221,20 @@ export class Option<T> {
    *
    * @example
    * const k = 21;
-   * 
+   *
    * const x = Some("foo");
    * x.mapOrElse(() => 2 * k, v => v.length) === 3;
-   * 
+   *
    * const x: Option<string> = None();
    * x.mapOrElse(() => 2 * k, v => v.length) === 42;
    * @template U
+   * @throws `UndefinedBehaviorError` if `noneFn` is not a function
+   * @throws `UndefinedBehaviorError` if `someFn` is not a function
    * @return {*}  {U}
    */
-  mapOrElse<U>(noneFn: () => U, someFn: (value: T) => U): U {
-    assertArgument('mapOrElse', noneFn, 'function');
-    assertArgument('mapOrElse', someFn, 'function');
+  mapOrElse<const U>(noneFn: () => U, someFn: (value: T) => U): U {
+    assertArgument("mapOrElse", noneFn, "function");
+    assertArgument("mapOrElse", someFn, "function");
     if (this.status === Status.None) {
       return noneFn();
     }
@@ -197,17 +242,17 @@ export class Option<T> {
   }
   /**
    * Transforms the `Option<T>` into a `Result<T, E>`, mapping `Some(v)` to `Ok(v)` and None to `Err(err)`.
-   * 
+   *
    * Arguments passed to `okOr` are eagerly evaluated; if you are passing the result of a function call, it is recommended to use `okOrElse`, which is lazily evaluated.
-   * 
+   *
    * @example
    * const x = Some("foo");
    * String(x.okOr(0)) === String(Ok("foo"));
-   * 
+   *
    * const y: Option<string> = None();
    * y.okOr(0) === Err(0);
    */
-  okOr<Err>(err: Err): Result<T, Err> {
+  okOr<const Err>(err: Err): Result<T, Err> {
     if (this.status === Status.None) {
       return Err(err);
     }
@@ -220,14 +265,14 @@ export class Option<T> {
    * @example
    * const x = Some("foo");
    * console.assert(x.okOrElse(() => 0) === Ok("foo"));
-   * 
+   *
    * let y: Option<string> = None();
    * console.assert(y.okOrElse(() => 0) === Err(0));
    * @return {*}  {Value}
    */
-  okOrElse<Err = unknown>(err: () => Err): Result<T, Err> {
+  okOrElse<const Err = unknown>(err: () => Err): Result<T, Err> {
     if (this.status === Status.None) {
-      assertArgument('okOrElse', err, 'function')
+      assertArgument("okOrElse", err, "function");
       return Err(err()) as Result<T, Err>;
     }
     return Ok(this.value) as Result<T, Err>;
@@ -235,9 +280,9 @@ export class Option<T> {
 
   /**
    * Returns `None` if the option is `None`, otherwise returns `optb`.
-   * 
-   * Arguments passed to and are eagerly evaluated; if you are passing the result of a function call, it is recommended to use `andThen`, which is lazily evaluated.
    *
+   * Arguments passed to and are eagerly evaluated; if you are passing the result of a function call, it is recommended to use `andThen`, which is lazily evaluated.
+   * @throws `UndefinedBehaviorError` if `optb` is not an instance of `Option`
    * @example
    * const x = Some(2);
    * const y: Option<string> = None();
@@ -255,19 +300,24 @@ export class Option<T> {
    * let y: Option<string> = None();
    * console.assert(x.and(y) === None());
    */
-  and<U>(optb: Option<U>): Option<U> {
+  and<const U, const O extends Option<U, any>>(
+    optb: O,
+  ): S extends Status.None ? Option<T, Status.None> : O {
     if (this.status === Status.None) {
-      return None();
+      return None() as never;
     }
     if (!(optb instanceof Option)) {
-      throw new UndefinedBehaviorError(`Method "and" should accepts instance of Option`, { cause: { value: optb, } });
+      throw new UndefinedBehaviorError(
+        `Method "and" should accepts instance of Option`,
+        { cause: { value: optb, type: typeof optb } },
+      );
     }
-    return optb;
+    return optb as never;
   }
 
   /**
    * Returns `None` if the option is `None`, otherwise calls `f` with the wrapped value and returns the result.
-   * 
+   *
    * Some languages call this operation flatmap.
    *
    * @example
@@ -277,16 +327,23 @@ export class Option<T> {
    * console.assert(Some(2).andThen(toString) === Some(2.toString()));
    * console.assert(None().andThen(toString) === None());
    * @template U
+   * @throws `UndefinedBehaviorError` if `predicate` is not a function
+   * @throws `UndefinedBehaviorError` if return type of `predicate` is not an instance of `Option`
    * @return {*}  {Option<U>}
    */
-  andThen<U>(f: (value: T) => Option<U>): Option<U> {
+  andThen<const U, O extends Option<U, any>>(
+    predicate: (value: T) => O,
+  ): S extends Status.None ? Option<U, Status.None> : O {
     if (this.status === Status.None) {
-      return None();
+      return None() as never;
     }
-    assertArgument('andThen', f, 'function')
-    const res = f(this.value as T);
+    assertArgument("andThen", predicate, "function");
+    const res = predicate(this.value as T);
     if (!(res instanceof Option)) {
-      throw new UndefinedBehaviorError('callback for Method "andThen" expects to returns instance of Option. Use "None" or "Some" funtions', { cause: { value: res } })
+      throw new UndefinedBehaviorError(
+        'callback for Method "andThen" expects to returns instance of Option. Use "None" or "Some" funtions',
+        { cause: { value: res, type: typeof res } },
+      );
     }
     return res;
   }
@@ -304,44 +361,58 @@ export class Option<T> {
    * console.assert(None().filter(isEven) === None());
    * console.assert(Some(3).filter(isEven) === None());
    * console.assert(Some(4).filter(isEven) === Some(4));
-   * 
-   * @param {(value: T) => boolean} predicate
+   * @throws `UndefinedBehaviorError` if `predicate` is not a function
+   * @throws `UndefinedBehaviorError` if return type of `predicate` function is not a `boolean`
+   * @param predicate
    * @return {*}  {Option<Value>}
    */
-  filter(predicate: (value: T) => boolean): Option<T> {
+  filter(
+    predicate: (value: T) => boolean,
+  ): S extends Status.None ? Option<T, Status.None> : Option<T, Status> {
     if (this.status === Status.None) {
-      return None();
+      return None() as never;
     }
-    assertArgument('filter', predicate, 'function');
+    assertArgument("filter", predicate, "function");
     const success = predicate(this.value as T);
-    assertArgument('filter', success, 'boolean');
+    assertArgument("filter", success, "boolean");
     if (success) {
-      return Some(this.value);
+      return Some(this.value) as never;
     }
-    return None();
+    return None() as never;
   }
 
   /**
    * Returns `Some` if exactly one of self, optb is `Some`, otherwise returns `None`.
-   *
-   * @param {Option<T>} optb
+   * @throws `UndefinedBehaviorError` if `optb` is not an instance of `Option`
+   * @param optb
    * @return {*}  {Option<Value>}
    */
-  xor(optb: Option<T>): Option<T> {
+  xor<const U, O extends Option<U>>(
+    optb: O,
+  ): S extends Status.Some
+    ? this
+    : O extends Option<any, infer OS extends Status>
+      ? OS extends Status.Some
+        ? O
+        : Option<any, Status.None>
+      : Option<any, Status.None> {
     if (this.status === Status.Some) {
-      return this;
+      return this as never;
     }
     if (!(optb instanceof Option)) {
-      throw new UndefinedBehaviorError(`Method "xor" should accepts instance of Option`, { cause: { value: optb } });
+      throw new UndefinedBehaviorError(
+        `Method "xor" should accepts instance of Option`,
+        { cause: { value: optb } },
+      );
     }
-    return optb;
+    return optb as never;
   }
 
   /**
    * Inserts value into the option, then returns a mutable reference to it.
-   * 
+   *
    * If the option already contains a value, the old value is dropped.
-   * 
+   *
    * See also `getOrInsert`, which doesn’t update the value if the option already contains `Some`.
    *
    * @example
@@ -352,19 +423,28 @@ export class Option<T> {
    * // another example
    * const val = opt.insert(2);
    * console.assert(val === 2);
-   * 
-   * @param {T} value
+   *
+   * @param value
    * @return {*}  {Option<Value>}
    */
-  insert(value: T): Option<T> {
+  insert<const U>(
+    value?: U | null,
+  ): U extends undefined
+    ? Option<U, Status.None>
+    : U extends null
+      ? Option<U, Status.None>
+      : Option<NonNullable<U>, Status.Some> {
     if (value === undefined) {
-      this.status = Status.None;
+      this.status = Status.None as S;
       this.value = undefined;
+    } else if (value === null) {
+      this.status = Status.None as S;
+      this.value = null;
     } else {
-      this.status = Status.Some;
-      this.value = value;
+      this.status = Status.Some as S;
+      this.value = value as never;
     }
-    return this;
+    return this as never;
   }
   /**
    * Replaces the actual value in the option by the value given in parameter, returning the old value if present, leaving a `Some` in its place without deinitializing either one.
@@ -382,41 +462,58 @@ export class Option<T> {
    * @param {T} value
    * @return {*}  {Option<Value>}
    */
-  replace(value: T): Option<T> {
-    const newValue = Some(value);
+  replace<const U>(value: U): this {
     const oldValue = Some(this.value);
-    this.value = newValue.value;
-    this.status = newValue.status;
-    return oldValue;
+    const newValue = Some(value);
+    if (newValue.isSome()) {
+      this.value = newValue.unwrap() as never;
+      this.status = Status.Some as S;
+    } else {
+      this.value = newValue.valueOf() as never;
+      this.status = Status.None as S;
+    }
+    return oldValue as never;
   }
   /**
    * Zips self with another Option.
-   * 
+   *
    * If self is `Some(s)` and other is `Some(o)`, this method returns `Some((s, o))`. Otherwise, `None` is returned.
    *
    * @example
    * const x = Some(1);
    * const y = Some("hi");
    * const z = None<number>();
-   * 
+   *
    * x.zip(y) === Some((1, "hi"));
    * x.zip(z) === None();
    * @template U
    * @param {Option<U>} other
+   * @throws `UndefinedBehaviorError` if `other` is not an instance of `Option`
    * @return {*}  {Option<[Value, U]>}
    */
-  zip<U>(other: Option<U>): Option<[T, U]> {
+  zip<const U, O extends Option<U>>(
+    other: O,
+  ): O extends Option<infer V, infer OS>
+    ? OS extends Status.Some
+      ? S extends Status.Some
+        ? Option<[T, V], Status.Some>
+        : Option<[T, V], Status.None>
+      : Option<[T, V], Status.None>
+    : Option<[T, never], Status.None> {
     if (!(other instanceof Option)) {
-      throw new UndefinedBehaviorError(`Method "zip" should accepts instance of Option`, { cause: { value: other } });
+      throw new UndefinedBehaviorError(
+        `Method "zip" should accepts instance of Option`,
+        { cause: { value: other } },
+      );
     }
     if (this.status === Status.Some && other.status === Status.Some) {
-      return new Option(Status.Some, [this.value, other.value]) as Option<[T, U]>;
+      return new Option(Status.Some, [this.value, other.value]) as never;
     }
-    return None();
+    return None() as never;
   }
   /**
    * Zips self and another Option with function `f`.
-   * 
+   *
    * If self is `Some(s)` and other is `Some(o)`, this method returns `Some(f(s, o))`. Otherwise, `None` is returned.
    *
    * @example
@@ -428,28 +525,41 @@ export class Option<T> {
    * }
    * const x = Some(17.5);
    * const y = Some(42.7);
-   * 
+   *
    * x.zipWith(y, Point.create) === Some({ x: 17.5, y: 42.7 })
-   * 
+   * @throws `UndefinedBehaviorError` if `other` is not an instance of `Option`
+   * @throws `UndefinedBehaviorError` if `predicate` is not a function
    * @template U
    * @template R
    * @param {Option<U>} other
-   * @param {(value: T, other: U) => R} fn
-   * @return {*}  {Option<R>}
+   * @param predicate
+   * @return {*} {Option<R>}
    */
-  zipWith<U, R>(other: Option<U>, fn: (value: T, other: U) => R): Option<R> {
+  zipWith<const U, const R, O extends Option<U>>(
+    other: O,
+    predicate: (value: T, other: O extends Option<infer V> ? V : U) => R,
+  ): O extends Option<any, infer OS>
+    ? OS extends Status.Some
+      ? S extends Status.Some
+        ? Option<R, Status.Some>
+        : Option<R, Status.None>
+      : Option<R, Status.None>
+    : Option<R, Status.None> {
     if (!(other instanceof Option)) {
-      throw new UndefinedBehaviorError(`Method "zipWith" should accepts instance of Option`, { cause: { value: other } });
+      throw new UndefinedBehaviorError(
+        `Method "zipWith" should accepts instance of Option`,
+        { cause: { value: other, type: typeof other } },
+      );
     }
-    assertArgument("zipWith", fn, 'function');
+    assertArgument("zipWith", predicate, "function");
     if (this.status === Status.Some && other.status === Status.Some) {
-      return Some(fn(this.value as T, other.value as U));
+      return Some(predicate(this.value as T, other.value as never)) as never;
     }
-    return None();
+    return None() as never;
   }
   /**
    * Unzips an option containing a tuple of two options.
-   * 
+   *
    * If self is `Some((a, b))` this method returns `(Some(a), Some(b))`. Otherwise, `(None, None)` is returned.
    *
    * @example
@@ -458,11 +568,13 @@ export class Option<T> {
    * console.assert(x.unzip() === [Some(1), Some("hi")]);
    * console.assert(y.unzip() === [None(), None()]);
    */
-  unzip(): T extends readonly [infer A, infer B] ? [Option<A>, Option<B>] : [Option<unknown>, Option<unknown>] {
+  unzip(): T extends readonly [infer A, infer B]
+    ? [Option<A, S>, Option<B, S>]
+    : [Option<unknown, S>, Option<unknown, S>] {
     if (Array.isArray(this.value) && this.value.length === 2) {
-      return [Some(this.value.at(0)), Some(this.value.at(1))] as T extends readonly [infer A, infer B] ? [Option<A>, Option<B>] : [Option<unknown>, Option<unknown>]
+      return [Some(this.value.at(0)), Some(this.value.at(1))] as never;
     }
-    return [None(), None()] as T extends readonly [infer A, infer B] ? [Option<A>, Option<B>] : [Option<unknown>, Option<unknown>];
+    return [None(), None()] as never;
   }
 
   /**
@@ -470,144 +582,222 @@ export class Option<T> {
    * @example
    * const x: Option<Option<number>> = Some(Some(6));
    * Some(6) === x.flatten();
-   * 
+   *
    * const x: Option<Option<number>> = Some(None());
    * None() === x.flatten();
-   * 
+   *
    * const x: Option<Option<number>> = None();
    * None() === x.flatten()
    * @return {*}  {Value extends Option<infer Sub> ? Option<Sub> : Option<Value>}
    */
-  flatten(): T extends Option<infer T> ? Option<T> : Option<T> {
+  flatten(): T extends Option<infer Sub, infer SubStatus extends Status>
+    ? Option<Sub, SubStatus>
+    : Option<T, S> {
     if (this.value instanceof Option) {
-      return Some(this.value.value) as T extends Option<infer T> ? Option<T> : Option<never>;
+      return Some(this.value.value) as never;
     }
-    return Some(this.value) as T extends Option<infer T> ? Option<T> : Option<T>;
+    return Some(this.value) as never;
   }
 
   /**
    * Some value of type `T`.
    */
-  static Some<T>(value?: T | null | undefined) {
-    if (value === undefined) {
-      return new Option(Status.None, undefined);
+  static Some<const T = undefined>(
+    value: T = undefined as T,
+  ): T extends undefined
+    ? Option<undefined, Status.None>
+    : T extends null
+      ? Option<null, Status.None>
+      : Option<NonNullable<T>, Status.Some> {
+    if (value === undefined || value === null) {
+      return new Option(Status.None, value) as never;
     }
-    return new Option(Status.Some, value);
+    return new Option<T, Status.Some>(Status.Some, value!) as never;
   }
+
   /**
    * No value.
    *
    * @static
    * @template T
-   * @return {*}  {Option<Value>}
    * @memberof Option
    */
-  static None<T = undefined>(): Option<T> {
-    return new Option<T>(Status.None, undefined);
+  static None<T = undefined>(value: undefined | null = undefined) {
+    return new Option<T, Status.None>(Status.None, value as T);
   }
-  equal(other: unknown): boolean {
+  static Status = Status;
+
+  /**
+   * Returns `true` if incoming `value` is instance of `Option`.
+   *
+   * @static
+   * @param {unknown} value
+   * @return {*}
+   * @memberof Ordering
+   */
+  static is(value: unknown): boolean {
+    return value instanceof Option;
+  }
+
+  /**
+   * Compare Self and another value.
+   * You can pass your own function to compare
+   * @example
+   * const a = Some(2)
+   * const b = 2
+   * const same = a.equal(b, (result, another) => {
+   *   // result = Some(2)
+   *   // another = 2
+   *   return result.unwrap() === another
+   * })
+   * console.log(same) // true
+   * console.log(a.equal(b)) // false
+   * console.log(a.equal(Some(2))) // true
+   * @param other another value
+   * @param [cmp=Object.is] compare function. Default - `Object.is`
+   */
+  equal<const U>(
+    other: U,
+    cmp: (value1: this, value2: U) => boolean = Object.is,
+  ): boolean {
     if (other instanceof Option) {
-      return Object.is(other.value, this.value);
+      return cmp(this.value as never, other.value);
     }
-    return false;
+    return cmp(this, other);
   }
 
   /**
    * Returns `true` if the option is a `Some` value.
-   * 
+   *
    * @example
    * const x: Option<number> = Some(2);
    * x.isSome() === true // true
-   * 
+   *
    * const x: Option<number> = None();
    * x.isSome() === false // true
    * @return {*}  {boolean}
    */
 
-  isSome(): boolean {
-    return this.status === Status.Some;
+  isSome(): S extends Status.None
+    ? false
+    : S extends Status.Some
+      ? true
+      : boolean {
+    return (this.status === Status.Some) as never;
   }
 
   /**
    * Returns true if the option is a `None` value.
    *
    * @return {*}  {boolean}
-  */
-  isNone(): boolean {
-    return this.status === Status.None;
+   */
+  isNone(): S extends Status.None
+    ? true
+    : S extends Status.Some
+      ? false
+      : boolean {
+    return (this.status === Status.None) as never;
   }
 
   /**
    * Returns `true` if the option is a `Some` and the value inside of it matches a predicate.
+   * @throws `UndefinedBehaviorError` if predicate is not a function
+   * @throws `UndefinedBehaviorError` if predicate return type is not a `boolean`
    * @example
    * const x: Option<number> = Some(2);
    * x.isSomeAnd(x => x > 1) === true // true
-   * 
+   *
    * const x: Option<number> = Some(0);
    * x.isSomeAnd(x => x > 1 ) === false // true
-   * 
+   *
    * const x: Option<number> = None();
    * x.isSomeAnd(x => x > 1 ) === false // true
-  */
+   * @param predicate
+   */
   isSomeAnd(predicate: (value: T) => boolean) {
-    assertArgument('isSomeAnd', predicate, 'function');
+    assertArgument("isSomeAnd", predicate, "function");
     if (this.status === Status.Some) {
       const res = predicate(this.value as T);
-      assertArgument('isSomeAnd', res, 'boolean');
+      assertArgument("isSomeAnd", res, "boolean");
       return res;
     }
     return false;
   }
 
   /**
-   * Inserts value into the option if it is `None`, then returns a mutable reference to the contained value. 
-   * 
+   * Inserts value into the option if it is `None`, then returns a mutable reference to the contained value.
+   *
    * See also `insert`, which updates the value even if the option already contains `Some`.
+   * @see {@link Option.insert insert method}
+   * @throws `UndefinedBehaviorError` if incoming `value` is `null` or `undefined`
    * @example
    * const x = None<number>();
    * const y = x.getOrInsert(7);
-   * 
+   *
    * y === 7 // true
    * @param {T} value
    * @return {*}  {Value}
    */
-  getOrInsert(value: T): T {
+  getOrInsert<const U>(value: NonNullable<U>): S extends Status.None ? U : T {
     if (this.status === Status.None) {
       if (value === undefined) {
-        throw new UndefinedBehaviorError(`Method "getOrInsert" should provide non "undefined" value.`);
+        throw new UndefinedBehaviorError(
+          `Method "getOrInsert" should provide non "undefined" value.`,
+        );
+      } else if (value === null) {
+        throw new UndefinedBehaviorError(
+          `Method "getOrInsert" should provide non "null" value.`,
+        );
       }
-      return this.insert(value).unwrap();
+      return this.insert(value).unwrap() as never;
     }
-    return this.value as T;
+    return this.value as never;
   }
 
   /**
-   * Inserts a value computed from f into the option if it is `None`, then returns the contained value.
+   * Inserts a value computed from `predicate` into the option if it is `None`, then returns the contained value.
+   * @throws `UndefinedBehaviorError` if incoming `predicate` type is not a function
+   * @throws `UndefinedBehaviorError` if incoming `predicate` returns `null` or `undefined`
    * @example
    * const x = None<number>();
    * const y = x.getOrInsertWith(() => 5);
-   * 
+   *
    * y === 5 // true
-   * 
-   * @param {() => T} predicate
+   *
+   * @param predicate
    * @return {*}  {Value}
    */
-  getOrInsertWith(callback: () => T): T {
+  getOrInsertWith<const U>(
+    predicate: () => NonNullable<U>,
+  ): S extends Status.None
+    ? U extends undefined
+      ? never
+      : U extends null
+        ? never
+        : U
+    : T {
     if (this.status === Status.None) {
-      assertArgument('getOrInsertWith', callback, 'function');
-      const res = callback();
+      assertArgument("getOrInsertWith", predicate, "function");
+      const res = predicate();
       if (res === undefined) {
-        throw new UndefinedBehaviorError("Callback for method 'getOrInsertWith' should returns non 'undefined' value.")
+        throw new UndefinedBehaviorError(
+          "Callback for method 'getOrInsertWith' should returns non 'undefined' value.",
+        );
+      } else if (res === null) {
+        throw new UndefinedBehaviorError(
+          "Callback for method 'getOrInsertWith' should returns non 'null' value.",
+        );
       }
-      return this.insert(res).unwrap();
+      return this.insert(res).unwrap() as never;
     }
-    return this.value as T;
+    return this.value as never;
   }
 
   /**
    * Returns the `Option` if it contains a value, otherwise returns `optb`.
    * Arguments passed to or are eagerly evaluated; if you are passing the result of a function call, it is recommended to use `orElse`, which is lazily evaluated.
    *
+   * @throws `UndefinedBehaviorError` if incoming `optb` is not an instance of `Option`
    * @example
    * const x = Some(2);
    * const y = None();
@@ -624,58 +814,100 @@ export class Option<T> {
    * const x: Option<number> = None();
    * const y = None();
    * console.assert(x.or(y) === None());
-   * 
+   *
    * @param {Option<T>} optb
    * @return {*}  {Option<Value>}
    */
-  or(optb: Option<T>): Option<T> {
+  or<const U, const O extends Option<U>>(
+    optb: O,
+  ): S extends Status.None ? O : this {
     if (this.status === Status.Some) {
-      return this;
+      return this as never;
     }
     if (!(optb instanceof Option)) {
-      throw new UndefinedBehaviorError(`Method "or" should accepts isntance of Option`, { cause: { value: optb } });
+      throw new UndefinedBehaviorError(
+        `Method "or" should accepts isntance of "Option"`,
+        { cause: { value: optb, type: typeof optb } },
+      );
     }
-    return optb;
+    return optb as never;
   }
 
   /**
    * Returns the `Option` if it contains a value, otherwise calls `f` and returns the result.
    *
+   * @throws `UndefinedBehaviorError` if incoming `predicate` is not a function
+   * @throws `UndefinedBehaviorError` if incoming `predicate` returns not an isntance of `Option`
    * @example
    * function nobody(): Option<string> { return None() }
    * function vikings(): Option<string> { return Some("vikings") }
-   * 
+   *
    * Some("barbarians").orElse(vikings) === Some("barbarians"); // true
    * None().orElse(vikings) === Some("vikings"); // true
    * None().orElse(nobody) === None(); // true
-   * 
-   * @param {() => Option<T>} predicate
+   *
+   * @param predicate
    * @return {*}  {Option<Value>}
    */
-  orElse(callback: () => Option<T>): Option<T> {
+  orElse<const U, const O extends Option<U>>(
+    predicate: () => O,
+  ): S extends Status.None ? O : this {
     if (this.status === Status.Some) {
-      return this;
+      return this as never;
     }
-    assertArgument('orElse', callback, 'function');
-    const result = callback();
+    assertArgument("orElse", predicate, "function");
+    const result = predicate();
     if (!(result instanceof Option)) {
-      throw new UndefinedBehaviorError(`Callback result for method "orElse" should returns instance of Option. Use Some or None.`, { cause: { value: result } })
+      throw new UndefinedBehaviorError(
+        `Callback result for method "orElse" should returns instance of Option. Use "Some" or "None".`,
+        { cause: { value: result, type: typeof result } },
+      );
     }
-    return result;
+    return result as never;
+  }
+
+  /**
+   * Transposes an `Option` of a `Result` into a Result of an Option.
+   *
+   * `None` will be mapped to `Ok(None)`.
+   * `Some(Ok(_))` and `Some(Err(_))` will be mapped to `Ok(Some(_))` and `Err(_)`.
+   * @throws `UndefinedBehaviorError` if unwrapped value is not an instance of `Result`
+   */
+  transpose(): T extends Result<infer OK, infer ERR>
+    ? Result<Option<OK, S>, ERR>
+    : S extends Status.None
+      ? Result<Option<T, S>, unknown>
+      : never {
+    if (this.isNone()) {
+      return Ok(None()) as never;
+    }
+    const value = this.unwrap() as unknown as Result<any, any>;
+    if (value instanceof Result) {
+      if (value.isOk()) {
+        return Ok(Some(value.unwrap())) as never;
+      }
+      return value as never;
+    }
+    throw new UndefinedBehaviorError(
+      `no method named "transpose" found for class "Result<${typeof this.value}, _>" in the current scope`,
+    );
+  }
+
+  valueOf() {
+    return this.value;
   }
 
   toString() {
-    const printFn = this.status === Status.None ? `None` : `Some`
-    return `${printFn}(${this.status === Status.None ? '' : this.value})`;
+    const printFn = this.status === Status.None ? `None` : `Some`;
+    return `${printFn}(${this.status === Status.None ? "" : this.value})`;
   }
 
   toJSON() {
     return {
       status: this.status,
       value: this.value,
-    }
+    };
   }
-
 
   /**
    * @protected
@@ -687,29 +919,187 @@ export class Option<T> {
    * @protected
    */
   get [Symbol.toStringTag]() {
-    return 'Option';
+    return "Option";
+  }
+
+  /**
+   * @protected
+   * Iterator support for `Option`.
+   *
+   * _Note: This method will only yeild if the Option is Some._
+   */
+  [Symbol.iterator]<
+    Arr = T extends Iterable<infer V> ? V : never,
+  >(): Arr extends never ? never : Iterator<Arr> {
+    if (
+      this.isSome() &&
+      typeof this.value === "object" &&
+      this.value !== null &&
+      typeof (this.value as any)[Symbol.iterator] === "function"
+    ) {
+      return (this.value as any)[Symbol.iterator]();
+    }
+    throw new UndefinedBehaviorError(
+      `[Symbol.iterator] can applies only for Some(<Iterable>) value`,
+      {
+        cause: {
+          value: this.value,
+          type: typeof this.value,
+          status: this.status,
+        },
+      },
+    );
+  }
+  [Symbol.split](string: string, limit?: number) {
+    if (
+      this.isSome() &&
+      (typeof this.value === "string" ||
+        (typeof this.value === "object" &&
+          this.value &&
+          this.value.constructor.name === "RegExp"))
+    ) {
+      return string.split(this.value as string | RegExp, limit);
+    }
+    throw new UndefinedBehaviorError(
+      `[Symbol.split] can applies only for Some(<string | RegExp>) value`,
+      {
+        cause: {
+          value: this.value,
+          type: typeof this.value,
+          status: this.status,
+        },
+      },
+    );
+  }
+  [Symbol.search](string: string) {
+    if (this.isSome() && typeof this.value === "string") {
+      return string.indexOf(this.value);
+    }
+    throw new UndefinedBehaviorError(
+      `[Symbol.search] can applies only for Some(<string>) value`,
+      {
+        cause: {
+          value: this.value,
+          type: typeof this.value,
+          status: this.status,
+        },
+      },
+    );
+  }
+
+  /**
+   * @protected
+   * Iterator support for `Option`.
+   *
+   * _Note: This method will only yeild if the Option is Some._
+   */
+  async *[Symbol.asyncIterator]<
+    Arr = T extends Iterable<infer V> ? Awaited<V> : never,
+  >(): AsyncIterator<Arr> {
+    if (
+      this.isSome() &&
+      typeof this.value === "object" &&
+      this.value !== null &&
+      typeof (this.value as any)[Symbol.iterator] === "function"
+    ) {
+      return (this.value as any)[Symbol.iterator]();
+    }
+    throw new UndefinedBehaviorError(
+      `[Symbol.iterator] can applies only for Some(<Iterable>) value`,
+      {
+        cause: {
+          value: this.value,
+          type: typeof this.value,
+          status: this.status,
+        },
+      },
+    );
+  }
+  [customInspectSymbol](depth: number, options: any, inspect: Function) {
+    const name = this.isNone() ? "None" : "Some";
+    if (depth < 0) {
+      return options.stylize(name, "special");
+    }
+    const newOptions = Object.assign({}, options, {
+      depth: options.depth === null ? null : options.depth - 1,
+    });
+    const inner =
+      this.value !== undefined
+        ? inspect(this.value, newOptions).replace(/\n/g, `\n$`)
+        : "";
+    return `${options.stylize(name, "special")}(${inner})`;
   }
 }
 
 /**
- * Some value of type `T`.
+ * Construct an `Option` from a value other than `None`.
+ * @example
+ * ```ts
+ * function divide(left: number, right: number): Option<number> {
+ *   if (right === 0) return None();
+ *
+ *   return Some(left / right);
+ * }
+ *
+ * ```
+ *
+ * @example
+ * ```ts
+ * const foo = Some("Value");
+ *
+ * if (foo instanceof Some) {
+ *  // Do something
+ * }
+ * ```
  */
-export function Some<T>(value?: T | null): Option<T> {
-  return Option.Some(value) as Option<T>;
+export function Some<const T = undefined>(value: T = undefined as T) {
+  return Option.Some<T>(value);
 }
+
+Object.defineProperty(Some, Symbol.hasInstance, {
+  value: <T>(instance: Option<T>) => {
+    if (typeof instance !== "object") return false;
+    const instanceOfOption = instance instanceof Option;
+    if (instanceOfOption === false) {
+      return false;
+    }
+    return instance.isSome();
+  },
+});
 
 /**
- * No value.
+ * Construct the None variant of Option.
+ *
+ * Can be initialized as `undefined` or `null` for optimization purpuses.
+ * @default undefined
+ * @example
+ * ```ts
+ *  function divide(left: number, right: number): Option<number> {
+ *   if (right === 0) return None();
+ *
+ *   return Some(left / right);
+ * }
+ * ```
+ * @example
+ * ```ts
+ * const foo = None();
+ *
+ * if (foo instanceof None) {
+ *  // Do something
+ * }
+ * ```
  */
-export function None<T = undefined>() {
-  return Option.None<T>();
+export function None<const T>(value: null | undefined = undefined) {
+  return Option.None<T>(value);
 }
 
-type Methods = keyof Option<undefined>;
-type TypeofResult = "string" | "number" | "bigint" | "boolean" | "symbol" | "undefined" | "object" | "function";
-
-const assertArgument = (method: Methods, value: unknown, expectedType: TypeofResult) => {
-  if (typeof value !== expectedType) {
-    throw new UndefinedBehaviorError(`Method "${String(method)}" should accepts ${expectedType}`, { cause: { value: value, type: typeof value, } });
-  }
-}
+Object.defineProperty(None, Symbol.hasInstance, {
+  value: <T>(instance: Option<T>) => {
+    if (typeof instance !== "object") return false;
+    const instanceOfOption = instance instanceof Option;
+    if (instanceOfOption === false) {
+      return false;
+    }
+    return instance.isNone();
+  },
+});

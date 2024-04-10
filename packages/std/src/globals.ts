@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-import { None, Option, Some, Err, Ok, Result, Bind, Async } from './index';
+import { None, Option, Some, Err, Ok, Result, Bind, Async } from "./index";
 
 type NoneFn = typeof None;
 type OptionCtor = typeof Option;

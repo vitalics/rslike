@@ -24,47 +24,47 @@ SOFTWARE.
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
-import { Async } from './async.ts';
-import { match } from './match.ts';
-import { UndefinedBehaviorError } from './errors.ts';
-import { Option, Some } from './option.ts'
-import { Result, Err, Ok } from './result.ts';
+import { Async } from "./async.ts";
+import { match } from "./match.ts";
+import { UndefinedBehaviorError } from "./utils.ts";
+import { Option, Some } from "./option.ts";
+import { Result, Err, Ok } from "./result.ts";
 
 /**
  * Function decorator. Combines `Option` and `Result` classes.
- * 
+ *
  * Binds function and return a new callable function.
- * 
+ *
  * Result of this function will be mapped into `Result<Option<T>,E>`.
- * 
+ *
  * Function `result` will be mapped into `Ok(Some(result))`.
- * 
+ *
  * `undefined` funtion result will mapped into `Ok(None())`.
- * 
+ *
  * @see {@link https://github.com/vitalics/rslike/wiki/Bind Wiki}
  * @see {@link Async} if you would like to resolve `Promise` or value, not a whole function.
  * @see {@link match} if you would like to unwrap `Result` or `Option` successfully.
  * @example
  * const fn = (a: number) => a + 2;
  * const newFn = Bind(fn);
- * 
+ *
  * const res = newFn(1);
  * res.unwrap().unwrap() // 3
  * newFn(10).unwrap().unwrap() // 12
- * 
+ *
  * const thrower = () => {throw new Error('shit happens :)')};
  * const func = Bind(thrower);
  * func().isErr() // true
  * const err = func().unwrapErr();
  * console.log(err) // {message: 'shit happens :)'}
  * err instanceof Error // true
- * 
+ *
  * // async example
  * const asyncFn = () => Promise.resolve(123);
  * const fn = Bind(asyncFn);
- * 
+ *
  * const r = await fn();
- * 
+ *
  * r.isOk() // true
  * r.unwrap() // 123
  * @export
@@ -76,17 +76,32 @@ import { Result, Err, Ok } from './result.ts';
  * @param {(This | undefined)} [thisArg=undefined]
  * @return {*}  {(...args: A) => Result<Option<T>, E>}
  */
-export function Bind<T, E = unknown, A extends unknown[] = [], This = void>(fn: (this: This, ...args: A) => T, thisArg: This | undefined = undefined): (...args: A) => T extends Promise<infer P> ? Promise<Result<Option<P>, E>> : Result<Option<T>, E> {
-  if (typeof fn !== 'function') {
-    throw new UndefinedBehaviorError(`"Bind" function expect to pass function as 1 argument`, { cause: { value: fn, type: typeof fn } })
+export function Bind<
+  const T,
+  E = unknown,
+  A extends unknown[] = [],
+  This = void,
+>(
+  fn: (this: This, ...args: A) => T,
+  thisArg: This | undefined = undefined,
+): (
+  ...args: A
+) => T extends Promise<infer P>
+  ? Promise<Result<Option<P>, E>>
+  : Result<Option<T>, E> {
+  if (typeof fn !== "function") {
+    throw new UndefinedBehaviorError(
+      `"Bind" function expect to pass function as 1 argument`,
+      { cause: { value: fn, type: typeof fn } },
+    );
   }
   return function (...args: A) {
     try {
-      const result = fn.call(thisArg as This, ...args);
+      const result = Reflect.apply(fn, thisArg, args);
       if (result instanceof Promise) {
-        return result.then(v => Ok(Some(v))).catch(e => Err(e));
+        return result.then((v) => Ok(Some(v))).catch((e) => Err(e));
       }
-      // if result === undefined. Some will be automatically transformed into None
+      // if result === undefined. "Some" will be automatically transformed into None
       return Ok(Some(result));
     } catch (e) {
       return Err(e as E);

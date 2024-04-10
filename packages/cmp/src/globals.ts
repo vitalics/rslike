@@ -22,17 +22,66 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-import { Ordering } from './index.ts';
+import { UndefinedBehaviorError } from '@rslike/std'
 
-type OrderingCtor = typeof Ordering;
-
-// eslint-disable-next-line @typescript-eslint/no-namespace
-declare namespace globalThis {
-  let Ordering: OrderingCtor;
-}
+import { kCompare, kEquals, kPartialEquals } from "./symbols";
 
 declare global {
-  let Ordering: OrderingCtor;
+  interface SymbolConstructor {
+    /**
+     * Type for equality comparisons which are equivalence relations.
+     *
+     * ## Notes
+     * - other always will be `unknown`. Generic `T` only helps when use with typescript. Perform checks on your side.
+     * - built-in objects will throw {@link UndefinedBehaviorError} error for object with `[Symbol.equals]` trait implementation but returns not a boolean type
+     * ## Best practicies
+     * - always return "boolean" type without throwing an error
+     * @param other
+     * @returns {boolean} true if `this` and `other` are equals, and is used like `===` (without type lossenes), otherwise it returns `false`.
+     */
+    readonly equals: typeof kEquals;
+    /**
+     * This method tests for `this` and `other` values to be equal, and is used by `==` (with type lossenes).
+     *
+     * **NOTE:** other always will be `unknown`. Generic `T` only helps when use with typescript. Perform checks on your side.
+     * 
+     * ## Notes
+     * - `partialEquals` function uses `this` to binds self result.
+     * - built-in objects can throw {@link UndefinedBehaviorError} error for object with `[Symbol.partialEquals]` trait implementation but returns not a boolean type
+     * ## Best practice
+     * - accept `other` as `unknown` type and make less checks than `Eq.equals` does.
+     * - use function declaration for `this` binding if you need to use original object to compare
+     */
+    readonly partialEquals: typeof kPartialEquals;
+
+    /**
+     * Compare 2 items. `this` with `other` and return it's Ordering.
+     *
+     * `Ordering` have 3 possible values:
+     * - `Less` === `-1`
+     * - `Equal` === `0`
+     * - `Greater` === `1`
+     *
+     * By convention, `this.compare(other)` returns the ordering matching the expression `self <operator> other` if `true`.
+     * ## Notes
+     * - built-in objects will throw {@link UndefinedBehaviorError} error for object with `[Symbol.partialEquals]` trait implementation but returns not a boolean type
+     * ## Best practicies
+     * - throw {@link UndefinedBehaviorError} in case of `other` argument is not that your method expects
+     */
+    readonly compare: typeof kCompare;
+  }
+
+  interface Symbol {
+    readonly [Symbol.equals]: unique symbol;
+    readonly [Symbol.compare]: unique symbol;
+    readonly [Symbol.partialEquals]: unique symbol;
+  }
+  var Symbol: SymbolConstructor;
 }
 
-globalThis.Ordering = Ordering;
+(Symbol as any).compare = kCompare;
+(Symbol as any).partialEquals = kPartialEquals;
+(Symbol as any).equals = kEquals;
+
+// patch primitives
+import "./primitives.ts";
