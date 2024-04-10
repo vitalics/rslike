@@ -1,6 +1,6 @@
 {
   "name": "@rslike/dbg",
-  "version": "2.1.2",
+  "version": "3.0.0",
   "description": "Never use console.log to debug again!",
   "private": false,
   "main": "./dist/index.cjs",
