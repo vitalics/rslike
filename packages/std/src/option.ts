@@ -35,6 +35,10 @@ enum Status {
   Some,
 }
 
+type SomeFn<T> = (value?: T | null | undefined) => void;
+type NoneFn = (reason?: unknown) => void;
+type Executor<T> = (some: SomeFn<T>, none: NoneFn) => void;
+
 /**
  * Type Option represents an optional value: every `Option` is either `Some` and contains a value, or `None`, and does not. Option types are very common in code, as they have a number of uses:
  * - Initial values
@@ -56,10 +60,30 @@ enum Status {
  * @template T
  */
 export class Option<const T, const S extends Status = Status> {
-  private constructor(
-    protected status: S,
-    protected value?: T | null,
-  ) {}
+  private value: T | null | undefined = undefined;
+  private status: S | undefined;
+
+  constructor(executor: Executor<T>) {
+    const resolve: SomeFn<T> = (value) => {
+      if (!this.status) {
+        this.value = value;
+        if (value === undefined || value === null) {
+          this.status = Status.None as S;
+        } else {
+          this.status = Status.Some as S;
+        }
+      }
+    };
+
+    const none: NoneFn = (reason: unknown = undefined) => {
+      if (!this.status) {
+        this.value = reason as T;
+        this.status = Status.None as S;
+      }
+    };
+
+    executor(resolve, none);
+  }
 
   /**
    * Returns the contained `Some` value, consuming the self value.
@@ -507,7 +531,7 @@ export class Option<const T, const S extends Status = Status> {
       );
     }
     if (this.status === Status.Some && other.status === Status.Some) {
-      return new Option(Status.Some, [this.value, other.value]) as never;
+      return new Option((some) => some([this.value, other.value])) as never;
     }
     return None() as never;
   }
@@ -610,21 +634,44 @@ export class Option<const T, const S extends Status = Status> {
       ? Option<null, Status.None>
       : Option<NonNullable<T>, Status.Some> {
     if (value === undefined || value === null) {
-      return new Option(Status.None, value) as never;
+      return new Option((_, none) => none(value)) as never;
     }
-    return new Option<T, Status.Some>(Status.Some, value!) as never;
+    return new Option<T, Status.Some>((some) => some(value)) as never;
   }
 
   /**
    * No value.
-   *
-   * @static
-   * @template T
-   * @memberof Option
    */
   static None<T = undefined>(value: undefined | null = undefined) {
-    return new Option<T, Status.None>(Status.None, value as T);
+    return new Option<T, Status.None>((_, none) => none(value as never));
   }
+
+  /** represents no value */
+  static none = Option.None;
+
+  /** represents some value (non `null` or `undefined`) */
+  static some = Option.Some;
+
+  /**
+   * Creates an Option instance along with its associated `some` and `none` functions.
+   * @returns An object containing the resolve function, reject function, and the Option instance.
+   * @example
+   * const { resolve, reject, option } = Option.withResolvers<number, string>();
+   * resolve(3);
+   * option.then(value => console.log(value)); // Outputs: 3
+   */
+  static withResolvers<T>() {
+    let some: SomeFn<T>;
+    let none: NoneFn;
+
+    const option = new Option<T>((ok, err) => {
+      some = ok;
+      none = err;
+    });
+
+    return { some: some!, none: none!, option };
+  }
+
   static Status = Status;
 
   /**
@@ -1016,9 +1063,10 @@ export class Option<const T, const S extends Status = Status> {
     );
   }
   [customInspectSymbol](depth: number, options: any, inspect: Function) {
-    const name = this.isNone() ? "None" : "Some";
+    const status = this.isNone() ? "None" : "Some";
+    const primitive = this[Symbol.toPrimitive]();
     if (depth < 0) {
-      return options.stylize(name, "special");
+      return options.stylize(`Option<${status}, ${primitive}>`, "special");
     }
     const newOptions = Object.assign({}, options, {
       depth: options.depth === null ? null : options.depth - 1,
@@ -1027,7 +1075,7 @@ export class Option<const T, const S extends Status = Status> {
       this.value !== undefined
         ? inspect(this.value, newOptions).replace(/\n/g, `\n$`)
         : "";
-    return `${options.stylize(name, "special")}(${inner})`;
+    return `${options.stylize(`Option<${status}, ${inner}>`, "special")}`;
   }
 }
 

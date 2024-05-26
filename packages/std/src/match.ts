@@ -109,7 +109,7 @@ export function match<
       const unwrapped = value!.unwrap();
       if (unwrapped instanceof Option) {
         if (unwrapped.isNone()) {
-          return errOrNoneCb(unwrapped.unwrap());
+          return errOrNoneCb(unwrapped.valueOf());
         }
         return okOrSomeCb(unwrapped.unwrap());
       }

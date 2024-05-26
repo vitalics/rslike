@@ -22,29 +22,34 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-import { Async } from '../src/async'
+import { Async } from "../src/async";
 
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 
-test('Async should resolves undefined as Ok(None())', async () => {
+test("Async should resolves undefined as Ok(None())", async () => {
   const a = await Async(undefined);
 
   expect(a.isOk()).toBeTruthy();
   expect(a.unwrap().isNone()).toBeTruthy();
 });
 
-
-test('Async should resolves Promise.resolve(undefined) as Ok(None())', async () => {
+test("Async should resolves Promise.resolve(undefined) as Ok(None())", async () => {
   const a = await Async(Promise.resolve(undefined));
 
   expect(a.isOk()).toBeTruthy();
   expect(a.unwrap().isNone()).toBeTruthy();
 });
 
-
 test('Async should resolves Promise.reject(undefined) as Err("undefined")', async () => {
   const a = await Async(Promise.reject(undefined));
 
   expect(a.isErr()).toBeTruthy();
   expect(a.unwrapErr()).toBe(undefined);
+});
+
+test("Async should resolves Promise.reject(null) as Err(null)", async () => {
+  const a = await Async(Promise.reject(null));
+
+  expect(a.isErr()).toBeTruthy();
+  expect(a.unwrapErr()).toBe(null);
 });

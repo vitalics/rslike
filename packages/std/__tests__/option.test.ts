@@ -826,7 +826,8 @@ test("valueOf should returns undefined for None(undefiend)", () => {
   const a = None();
   expect(a.valueOf()).toBe(undefined);
 });
-test("valueOf should returns undefined for None(null)", () => {
+
+test("valueOf should returns null for None(null)", () => {
   const a = None(null);
   expect(a.valueOf()).toBe(null);
 });
@@ -947,21 +948,41 @@ test("[Symbol.asyncIterator] should throw for not iterable object", async () => 
 test("Symbol.inspect should works", () => {
   const a = Some(4);
   const ai = inspect(a);
-  expect(ai).toBe("Some(4)");
+  expect(ai).toBe("Option<Some, 4>");
 
   const b = None();
   const bi = inspect(b);
-  expect(bi).toBe("None()");
+  expect(bi).toBe("Option<None, >");
 
   const c = None(null);
   const ci = inspect(c);
-  expect(ci).toBe("None(null)");
+  expect(ci).toBe("Option<None, null>");
 
   const d = Some(4);
   const di = inspect(d, { depth: -3 });
-  expect(di).toBe("Some");
+  expect(di).toBe("Option<Some, 4>");
 
   const e = Some({});
   const ei = inspect(e, { depth: null });
-  expect(ei).toBe("Some({})");
+  expect(ei).toBe("Option<Some, {}>");
+});
+
+test("withResolvers should work for some", () => {
+  const { option, some } = Option.withResolvers();
+  some(3);
+  expect(option.unwrap()).toBe(3);
+});
+
+test("withResolvers should work for none", () => {
+  const { option, some } = Option.withResolvers();
+  some();
+  expect(option.isNone()).toBe(true);
+  expect(option[Symbol.toPrimitive]()).toBe(undefined);
+});
+
+test("withResolvers should work for none null", () => {
+  const { option, some } = Option.withResolvers();
+  some(null);
+  expect(option.isNone()).toBe(true);
+  expect(option[Symbol.toPrimitive]()).toBe(null);
 });

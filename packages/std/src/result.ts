@@ -35,23 +35,44 @@ enum Status {
   Ok,
 }
 
+type Resolver<T> = (value: T) => void;
+type Rejecter<E> = (reason?: E) => void;
+type Executor<T, E> = (resolve: Resolver<T>, reject: Rejecter<E>) => void;
+
 /**
  * `Result<T, E>` is the type used for returning and propagating errors. It is an enum with the variants, `Ok(T)`, representing success and containing a value, and `Err(E)`, representing error and containing an error value.
  *
- * Functions return `Result` whenever errors are expected and recoverable.
- * @export
- * @class Result
- * @implements {CloneLike<Result<T, E>>}
- * @implements {EqualLike}
- * @template T
- * @template E
+ * Based on Promise-like API
+ * @example
+ * @template T success value
+ * @template E error value
  */
 export class Result<const T, const E, const S extends Status = Status> {
-  private constructor(
-    protected readonly status: S,
-    protected readonly value: T | null | undefined,
-    protected readonly error: E | null,
-  ) {}
+  private value: T | null = null;
+  private error: E | null | undefined = undefined;
+  private status: S | undefined;
+
+  constructor(executor: Executor<T, E>) {
+    const resolve: Resolver<T> = (value) => {
+      if (!this.status) {
+        this.value = value;
+        this.status = Status.Ok as S;
+      }
+    };
+
+    const reject: Rejecter<E> = (error) => {
+      if (!this.status) {
+        this.error = error;
+        this.status = Status.Err as S;
+      }
+    };
+
+    try {
+      executor(resolve, reject);
+    } catch (err) {
+      reject(err as E);
+    }
+  }
 
   /**
    * Returns the contained `Ok` value, consuming the self value.
@@ -576,10 +597,32 @@ export class Result<const T, const E, const S extends Status = Status> {
   }
 
   static Ok<const V, const E>(value: V) {
-    return new Result<V, E, Status.Ok>(Status.Ok, value, null);
+    return new Result<V, E, Status.Ok>((res) => res(value));
   }
   static Err<const V, const ErrorValue>(value: ErrorValue) {
-    return new Result<V, ErrorValue, Status.Err>(Status.Err, null, value);
+    return new Result<V, ErrorValue, Status.Err>((_, rej) => rej(value));
+  }
+
+  static ok = Result.Ok;
+  static err = Result.Err;
+
+  /**
+   * Similar to `Promise.withResolvers` API.
+   * @example
+   * const {ok, result} = Result.withResolvers()
+   * ok(3)
+   * result.unwrap() // 3
+   */
+  static withResolvers<const T, const E>() {
+    let ok: Resolver<T>;
+    let err: Rejecter<E>;
+
+    const result = new Result<T, E>((res, rej) => {
+      ok = res;
+      err = rej;
+    });
+
+    return { ok: ok!, err: err!, result };
   }
 
   /**
@@ -598,12 +641,14 @@ export class Result<const T, const E, const S extends Status = Status> {
   static async fromPromise<const P, const E>(
     promiseLike: P | Promise<P> | PromiseLike<P>,
   ): Promise<Result<Awaited<P>, E>> {
+    const { err, ok, result } = Result.withResolvers<Awaited<P>, E>();
     try {
       const v = await promiseLike;
-      return Ok(v);
+      ok(v);
     } catch (e) {
-      return Err(e as E);
+      err(e as E);
     }
+    return result;
   }
 
   /**
