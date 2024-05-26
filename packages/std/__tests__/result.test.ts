@@ -763,6 +763,7 @@ test("constructor should returns wrapped error", () => {
     throw new Error("qwe");
   });
   expect(r.isErr()).toBe(true);
+  expect(r.unwrapErr()).toBeInstanceOf(Error);
 });
 
 test("withResolvers should work", () => {
@@ -773,12 +774,4 @@ test("withResolvers should work", () => {
   err("some");
   // should not change after getting result
   expect(result.isErr()).toBe(false);
-});
-
-test("should return error for throwing error", () => {
-  const res = new Result(() => {
-    throw new Error("Some Error");
-  });
-  expect(res.isErr()).toBe(true);
-  expect(res.unwrapErr()).toBeInstanceOf(Error);
 });
