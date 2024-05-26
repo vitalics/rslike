@@ -565,9 +565,8 @@ test("toString should returns Err(3)", () => {
 test("toJSON should be serializable for JSON.stringify", () => {
   const a = Ok(3);
   const stringifyed = JSON.stringify(a);
-  expect(stringifyed).toBe('{"status":1,"value":3,"error":null}');
+  expect(stringifyed).toBe('{"status":1,"value":3}');
 });
-
 
 test("equal should returns true for custom comparator value", () => {
   const a = Ok(5);
@@ -757,4 +756,29 @@ test("fromPromise should work for promise reject value", async () => {
   const a = await Result.fromPromise(Promise.reject(2));
   expect(a.isErr()).toBeTruthy();
   expect(a.unwrapErr()).toBe(2);
+});
+
+test("constructor should returns wrapped error", () => {
+  const r = new Result(() => {
+    throw new Error("qwe");
+  });
+  expect(r.isErr()).toBe(true);
+});
+
+test("withResolvers should work", () => {
+  const { ok, result, err } = Result.withResolvers();
+  ok(3);
+  expect(result.isOk()).toBe(true);
+
+  err("some");
+  // should not change after getting result
+  expect(result.isErr()).toBe(false);
+});
+
+test("should return error for throwing error", () => {
+  const res = new Result(() => {
+    throw new Error("Some Error");
+  });
+  expect(res.isErr()).toBe(true);
+  expect(res.unwrapErr()).toBeInstanceOf(Error);
 });

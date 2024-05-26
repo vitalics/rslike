@@ -126,3 +126,13 @@ test("match should work for false result", () => {
   );
   expect(res).toBe(false);
 });
+
+test("match should call error cb for Ok(None)", () => {
+  const fn = jest.fn(() => null);
+  const fnAsync = Bind(fn);
+  const errCb = jest.fn();
+  const okCb = jest.fn();
+  match(fnAsync(), okCb, errCb);
+  expect(errCb).toBeCalled();
+  expect(okCb).not.toBeCalled();
+});
