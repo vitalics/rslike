@@ -2,6 +2,8 @@
 "@rslike/std": patch
 ---
 
+Adds promise-like API and security fixes
+
 ## What's new
 
 Add primise-like API for `Option` and `Result`
@@ -44,3 +46,7 @@ ok(3);
 
 result.unwrap(); // 3
 ```
+
+### Security fixes
+
+- [38](https://github.com/vitalics/rslike/pull/38) - fixes `@babel/traverse` package
