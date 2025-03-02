@@ -6,15 +6,15 @@ type CompareFn = (a: unknown, b: unknown) => number;
 
 export function compare(
   a: { [kCompare](another: unknown): number },
-  b: { [kCompare](another: unknown): number },
+  b: { [kCompare](another: unknown): number }
 ): number;
 export function compare(
   a: { [kCompare](another: unknown): number },
-  b: unknown,
+  b: unknown
 ): number;
 export function compare(
   a: unknown,
-  b: { [kCompare](another: unknown): number },
+  b: { [kCompare](another: unknown): number }
 ): number;
 export function compare(a: unknown, b: unknown, compareFn: CompareFn): number;
 /**
@@ -54,19 +54,19 @@ export function compare(a: any, b: any, compareFn?: CompareFn): number {
             value: compareFn,
             type: typeof compareFn,
           },
-        },
+        }
       );
     }
     const res = compareFn(a, b);
     if (typeof res !== "number") {
       throw new UndefinedBehaviorError(
         `"compareFn" function should return number. Got "${typeof res}"`,
-        { cause: { value: res, type: typeof res } },
+        { cause: { value: res, type: typeof res } }
       );
     }
   }
   throw new UndefinedBehaviorError(
-    'At least 1 argument should implement "Symbol.compare" trait',
+    'At least 1 argument should implement "Symbol.compare" trait'
   );
 }
 
@@ -74,20 +74,20 @@ type EqualityFn = (a: unknown, b: unknown) => boolean;
 
 export function partialEquals(
   a: { [kPartialEquals](another: unknown): boolean },
-  b: { [kPartialEquals](another: unknown): boolean },
+  b: { [kPartialEquals](another: unknown): boolean }
 ): boolean;
 export function partialEquals(
   a: { [kPartialEquals](another: unknown): boolean },
-  b: unknown,
+  b: unknown
 ): boolean;
 export function partialEquals(
   a: unknown,
-  b: { [kPartialEquals](another: unknown): boolean },
+  b: { [kPartialEquals](another: unknown): boolean }
 ): boolean;
 export function partialEquals(
   a: unknown,
   b: unknown,
-  equalityFn?: EqualityFn,
+  equalityFn?: EqualityFn
 ): boolean;
 
 /**
@@ -103,7 +103,7 @@ export function partialEquals(
 export function partialEquals(
   a: any,
   b: any,
-  equalityFn?: EqualityFn,
+  equalityFn?: EqualityFn
 ): boolean {
   if (typeof a[kPartialEquals] === "function") {
     const res = Reflect.apply(a[kPartialEquals], a, [b]);
@@ -123,7 +123,7 @@ export function partialEquals(
           typeSecond: typeof b,
           ctorSecond: b?.constructor,
         },
-      },
+      }
     );
   }
   if (typeof b[kPartialEquals] === "function") {
@@ -144,7 +144,7 @@ export function partialEquals(
           typeSecond: typeof b,
           ctorSecond: b?.constructor,
         },
-      },
+      }
     );
   }
   if (equalityFn) {
@@ -157,38 +157,39 @@ export function partialEquals(
         `equalityFn should returns boolean. Got "${typeof res}"`,
         {
           cause: { value: res, type: typeof res },
-        },
+        }
       );
     }
     throw new UndefinedBehaviorError(
       `equalityFn argument should be a function. Got "${typeof equalityFn}"`,
       {
         cause: { value: equalityFn, type: typeof equalityFn },
-      },
+      }
     );
   }
+  // biome-ignore lint/suspicious/noDoubleEquals: partial equals default behavior
   return a == b;
 }
 
 export function equals(
   a: { [kEquals](another: unknown): boolean },
   b: { [kEquals](another: unknown): boolean },
-  equalityFn?: EqualityFn,
+  equalityFn?: EqualityFn
 ): boolean;
 export function equals(
   a: { [kEquals](another: unknown): boolean },
   b: unknown,
-  equalityFn?: EqualityFn,
+  equalityFn?: EqualityFn
 ): boolean;
 export function equals(
   a: unknown,
   b: { [kEquals](another: unknown): boolean },
-  equalityFn?: EqualityFn,
+  equalityFn?: EqualityFn
 ): boolean;
 export function equals(
   a: unknown,
   b: unknown,
-  equalityFn?: EqualityFn,
+  equalityFn?: EqualityFn
 ): boolean;
 
 /**
@@ -208,10 +209,10 @@ export function equals(
 export function equals(
   a: unknown,
   b: unknown,
-  equalityFn?: EqualityFn,
+  equalityFn?: EqualityFn
 ): boolean {
   if (
-    typeof a == "object" &&
+    typeof a === "object" &&
     a !== null &&
     kEquals in a &&
     typeof a[kEquals] === "function"
@@ -233,11 +234,11 @@ export function equals(
           typeSecond: typeof b,
           ctorSecond: b?.constructor,
         },
-      },
+      }
     );
   }
   if (
-    typeof b == "object" &&
+    typeof b === "object" &&
     b !== null &&
     kEquals in b &&
     typeof b[kEquals] === "function"
@@ -259,7 +260,7 @@ export function equals(
           typeSecond: typeof b,
           ctorSecond: b?.constructor,
         },
-      },
+      }
     );
   }
   if (equalityFn) {
@@ -272,14 +273,14 @@ export function equals(
         `equalityFn should returns boolean. Got "${typeof res}"`,
         {
           cause: { value: res, type: typeof res },
-        },
+        }
       );
     }
     throw new UndefinedBehaviorError(
       `equalityFn argument should be a function. Got "${typeof equalityFn}"`,
       {
         cause: { value: equalityFn, type: typeof equalityFn },
-      },
+      }
     );
   }
   return a === b;

@@ -26,11 +26,7 @@ SOFTWARE.
  * Common error. Usually throws when something is not defined.
  * @see {@link https://github.com/vitalics/rslike/wiki/UndefinedBehaviorError Wiki}
  */
-export class UndefinedBehaviorError extends Error {
-  constructor(message: string, options?: ErrorOptions) {
-    super(message, options);
-  }
-}
+export class UndefinedBehaviorError extends Error {}
 
 /** Node.js inspection symbol */
 export const customInspectSymbol = Symbol.for("nodejs.util.inspect.custom");
@@ -48,12 +44,13 @@ type TypeofResult =
 export const assertArgument = <Methods extends string>(
   method: Methods,
   value: unknown,
-  expectedType: TypeofResult,
+  expectedType: TypeofResult
 ) => {
+  // biome-ignore lint/suspicious/useValidTypeof: this is typeof only types
   if (typeof value !== expectedType) {
     throw new UndefinedBehaviorError(
       `Method "${String(method)}" should accepts ${expectedType}`,
-      { cause: { value, type: typeof value } },
+      { cause: { value, type: typeof value } }
     );
   }
 };

@@ -22,8 +22,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-import { UndefinedBehaviorError } from '@rslike/std'
-
 import { kCompare, kEquals, kPartialEquals } from "./symbols";
 
 declare global {
@@ -44,7 +42,7 @@ declare global {
      * This method tests for `this` and `other` values to be equal, and is used by `==` (with type lossenes).
      *
      * **NOTE:** other always will be `unknown`. Generic `T` only helps when use with typescript. Perform checks on your side.
-     * 
+     *
      * ## Notes
      * - `partialEquals` function uses `this` to binds self result.
      * - built-in objects can throw {@link UndefinedBehaviorError} error for object with `[Symbol.partialEquals]` trait implementation but returns not a boolean type
@@ -71,12 +69,13 @@ declare global {
     readonly compare: typeof kCompare;
   }
 
+  // biome-ignore lint/suspicious/noShadowRestrictedNames: declare global variable
+  var Symbol: SymbolConstructor;
   interface Symbol {
     readonly [Symbol.equals]: unique symbol;
     readonly [Symbol.compare]: unique symbol;
     readonly [Symbol.partialEquals]: unique symbol;
   }
-  var Symbol: SymbolConstructor;
 }
 
 (Symbol as any).compare = kCompare;

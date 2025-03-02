@@ -25,8 +25,8 @@ SOFTWARE.
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { Bind } from "./bind.ts";
 import { match } from "./match.ts";
-import { Result, Ok, Err } from "./result.ts";
-import { Option, Some } from "./option.ts";
+import { type Result, Ok, Err } from "./result.ts";
+import { type Option, Some } from "./option.ts";
 
 type OptionStatus = (typeof Option)["Status"];
 type ResultStatus = (typeof Result)["Status"];

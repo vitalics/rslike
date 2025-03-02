@@ -8,7 +8,7 @@ of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+furnished to do so, subject ot the following conditions:
 
 The above copyright notice and this permission notice shall be included in all
 copies or substantial portions of the Software.
@@ -23,6 +23,12 @@ SOFTWARE.
 */
 
 import { Err, Ok, Result } from "./result.ts";
+import type {
+  ComparatorFn,
+  IsNever,
+  ToStack,
+  TUndefinedBehaviorError,
+} from "./types.ts";
 import {
   UndefinedBehaviorError,
   assertArgument,
@@ -30,14 +36,19 @@ import {
 } from "./utils.ts";
 
 /** Option possible statuses */
-enum Status {
-  None,
-  Some,
-}
+const Status = {
+  None: "None",
+  Some: "Some",
+} as const;
+
+type StatusKey = keyof typeof Status;
 
 type SomeFn<T> = (value?: T | null | undefined) => void;
-type NoneFn = (reason?: unknown) => void;
-type Executor<T> = (some: SomeFn<T>, none: NoneFn) => void;
+type NoneFn<E = unknown> = (reason?: E) => void;
+type Executor<T, E = unknown, R = T> = (
+  some: SomeFn<T>,
+  none: NoneFn<E>
+) => void | R;
 
 /**
  * Type Option represents an optional value: every `Option` is either `Some` and contains a value, or `None`, and does not. Option types are very common in code, as they have a number of uses:
@@ -54,22 +65,32 @@ type Executor<T> = (some: SomeFn<T>, none: NoneFn) => void;
  * @see {@link https://github.com/vitalics/rslike/wiki/Option WIKI}
  * @export
  * @class Option
- * @implements {CloneLike<Option<T>>}
- * @implements {EqualLike}
+ * @implements {Symbol.iterator}
+ * @implements {Symbol.asyncIterator}
  * @implements {OptionLike<T>}
  * @template T
  */
-export class Option<const T, const S extends Status = Status> {
-  private value: T | null | undefined = undefined;
+export class Option<
+  const T,
+  const S extends (typeof Status)[StatusKey] = IsNever<T> extends true
+    ? typeof Status.None
+    : T extends undefined
+    ? typeof Status.None
+    : [T] extends [null]
+    ? typeof Status.None
+    : (typeof Status)[StatusKey]
+> {
+  private value: T | null | undefined;
   private status: S | undefined;
 
   constructor(executor: Executor<T>) {
-    const resolve: SomeFn<T> = (value) => {
+    const some: SomeFn<T> = (value) => {
       if (!this.status) {
-        this.value = value;
         if (value === undefined || value === null) {
+          this.value = value as T;
           this.status = Status.None as S;
         } else {
+          this.value = value;
           this.status = Status.Some as S;
         }
       }
@@ -82,7 +103,60 @@ export class Option<const T, const S extends Status = Status> {
       }
     };
 
-    executor(resolve, none);
+    assertArgument("constructor", executor, "function");
+    let executionResult: unknown;
+    try {
+      const executionResult = executor(some, none);
+      if (
+        executionResult &&
+        typeof executionResult === "object" &&
+        "then" in executionResult &&
+        typeof executionResult.then === "function"
+      ) {
+        const err = new UndefinedBehaviorError(
+          `You passed an async function in constructor. Only synchronous functions are allowed. Use "Option.fromPromise" or "Option.fromAsync" instead.`
+        );
+        // fail promise anyway with error as declared before
+        executionResult.then(
+          () => {
+            throw err;
+          },
+          () => {
+            throw err;
+          }
+        );
+      } else if (executionResult instanceof Option) {
+        // biome-ignore lint/correctness/noConstructorReturn: already option, return it
+        return executionResult;
+      } else if (executionResult instanceof Result) {
+        if (executionResult.isOk()) {
+          const unwrapped = executionResult.unwrap();
+          if (unwrapped === undefined || unwrapped === null) {
+            none(unwrapped);
+          } else {
+            some(unwrapped);
+          }
+        } else {
+          none(executionResult.valueOf());
+        }
+      } else if (executionResult !== undefined && executionResult !== null) {
+        some(executionResult);
+      } else {
+        // noop, in case of withResolvers
+        // debugger;
+      }
+    } catch (err) {
+      if (
+        err instanceof UndefinedBehaviorError &&
+        executionResult &&
+        typeof executionResult === "object" &&
+        "then" in executionResult &&
+        typeof executionResult.then === "function"
+      ) {
+        throw err;
+      }
+      none(err);
+    }
   }
 
   /**
@@ -153,7 +227,9 @@ export class Option<const T, const S extends Status = Status> {
    * @param {T} fallback fallback value
    * @return {*} {Value}
    */
-  unwrapOr<const U>(fallback: U): S extends Status.Some ? T : U {
+  unwrapOr<const U>(
+    fallback: U
+  ): S extends typeof Status.Some ? NonNullable<T> : U {
     if (
       this.status === Status.None ||
       this.value === null ||
@@ -169,12 +245,14 @@ export class Option<const T, const S extends Status = Status> {
    * @example
    * const k = 10;
    * Some(4).unwrapOrElse(() => 2 * k) === 4
-   * None().unwrap_or_else(() => 2 * k) === 20
+   * None().unwrapOrElse(() => 2 * k) === 20
    * @param predicate function to call when `Option` is `None`
    * @throws `UndefinedBehaviorError` if `predicate` is not a function
    * @return Unwrapped value or prdicate result
    */
-  unwrapOrElse<const U>(predicate: () => U): S extends Status.Some ? T : U {
+  unwrapOrElse<const U>(
+    predicate: () => U
+  ): S extends typeof Status.Some ? NonNullable<T> : U {
     if (this.status === Status.None) {
       assertArgument("unwrapOrElse", predicate, "function");
       return predicate() as never;
@@ -198,14 +276,14 @@ export class Option<const T, const S extends Status = Status> {
    * @return `Option` instance
    */
   map<const U>(
-    predicate: (value: T) => U,
-  ): S extends Status.Some
+    predicate: (value: T) => U
+  ): S extends typeof Status.Some
     ? U extends null
-      ? Option<U, Status.None>
+      ? Option<U, typeof Status.None>
       : U extends undefined
-        ? Option<U, Status.None>
-        : Option<NonNullable<U>, Status.Some>
-    : Option<U, Status.None> {
+      ? Option<U, typeof Status.None>
+      : Option<NonNullable<U>, typeof Status.Some>
+    : Option<U, typeof Status.None> {
     if (this.status === Status.Some) {
       assertArgument("map", predicate, "function");
       return Some(predicate(this.value as T)) as never;
@@ -231,8 +309,8 @@ export class Option<const T, const S extends Status = Status> {
    */
   mapOr<const U>(
     fallback: U,
-    predicate: (value: T) => U,
-  ): S extends Status.None ? U : T {
+    predicate: (value: T) => U
+  ): S extends typeof Status.None ? U : T {
     if (this.status === Status.None) {
       return fallback as never;
     }
@@ -280,7 +358,7 @@ export class Option<const T, const S extends Status = Status> {
     if (this.status === Status.None) {
       return Err(err);
     }
-    return Ok(this.value);
+    return Ok(this.value) as never;
   }
 
   /**
@@ -324,16 +402,16 @@ export class Option<const T, const S extends Status = Status> {
    * let y: Option<string> = None();
    * console.assert(x.and(y) === None());
    */
-  and<const U, const O extends Option<U, any>>(
-    optb: O,
-  ): S extends Status.None ? Option<T, Status.None> : O {
+  and<const U, const O extends Option<any, any> = Option<U>>(
+    optb: O
+  ): S extends typeof Status.None ? Option<T, typeof Status.None> : O {
     if (this.status === Status.None) {
       return None() as never;
     }
     if (!(optb instanceof Option)) {
       throw new UndefinedBehaviorError(
         `Method "and" should accepts instance of Option`,
-        { cause: { value: optb, type: typeof optb } },
+        { cause: { value: optb, type: typeof optb } }
       );
     }
     return optb as never;
@@ -355,9 +433,9 @@ export class Option<const T, const S extends Status = Status> {
    * @throws `UndefinedBehaviorError` if return type of `predicate` is not an instance of `Option`
    * @return {*}  {Option<U>}
    */
-  andThen<const U, O extends Option<U, any>>(
-    predicate: (value: T) => O,
-  ): S extends Status.None ? Option<U, Status.None> : O {
+  andThen<const U, O extends Option<U, (typeof Status)[StatusKey]>>(
+    predicate: (value: T) => O
+  ): S extends typeof Status.None ? Option<U, typeof Status.None> : O {
     if (this.status === Status.None) {
       return None() as never;
     }
@@ -366,10 +444,10 @@ export class Option<const T, const S extends Status = Status> {
     if (!(res instanceof Option)) {
       throw new UndefinedBehaviorError(
         'callback for Method "andThen" expects to returns instance of Option. Use "None" or "Some" funtions',
-        { cause: { value: res, type: typeof res } },
+        { cause: { value: res, type: typeof res } }
       );
     }
-    return res;
+    return res as never;
   }
 
   /**
@@ -391,8 +469,10 @@ export class Option<const T, const S extends Status = Status> {
    * @return {*}  {Option<Value>}
    */
   filter(
-    predicate: (value: T) => boolean,
-  ): S extends Status.None ? Option<T, Status.None> : Option<T, Status> {
+    predicate: (value: T) => boolean
+  ): S extends typeof Status.None
+    ? Option<T, typeof Status.None>
+    : Option<T, StatusKey> {
     if (this.status === Status.None) {
       return None() as never;
     }
@@ -411,22 +491,22 @@ export class Option<const T, const S extends Status = Status> {
    * @param optb
    * @return {*}  {Option<Value>}
    */
-  xor<const U, O extends Option<U>>(
-    optb: O,
-  ): S extends Status.Some
+  xor<const U, O extends Option<any, any> = Option<U>>(
+    optb: O
+  ): S extends typeof Status.Some
     ? this
-    : O extends Option<any, infer OS extends Status>
-      ? OS extends Status.Some
-        ? O
-        : Option<any, Status.None>
-      : Option<any, Status.None> {
+    : O extends Option<any, infer OS extends StatusKey>
+    ? OS extends typeof Status.Some
+      ? O
+      : Option<any, typeof Status.None>
+    : Option<any, typeof Status.None> {
     if (this.status === Status.Some) {
       return this as never;
     }
     if (!(optb instanceof Option)) {
       throw new UndefinedBehaviorError(
         `Method "xor" should accepts instance of Option`,
-        { cause: { value: optb } },
+        { cause: { value: optb } }
       );
     }
     return optb as never;
@@ -452,12 +532,12 @@ export class Option<const T, const S extends Status = Status> {
    * @return {*}  {Option<Value>}
    */
   insert<const U>(
-    value?: U | null,
+    value?: U | null
   ): U extends undefined
-    ? Option<U, Status.None>
+    ? Option<U, typeof Status.None>
     : U extends null
-      ? Option<U, Status.None>
-      : Option<NonNullable<U>, Status.Some> {
+    ? Option<U, typeof Status.None>
+    : Option<NonNullable<U>, typeof Status.Some> {
     if (value === undefined) {
       this.status = Status.None as S;
       this.value = undefined;
@@ -513,21 +593,21 @@ export class Option<const T, const S extends Status = Status> {
    * @template U
    * @param {Option<U>} other
    * @throws `UndefinedBehaviorError` if `other` is not an instance of `Option`
-   * @return {*}  {Option<[Value, U]>}
+   * @return {*} {Option<[Value, U]>}
    */
-  zip<const U, O extends Option<U>>(
-    other: O,
+  zip<const U, O extends Option<any, any> = Option<U>>(
+    other: O
   ): O extends Option<infer V, infer OS>
-    ? OS extends Status.Some
-      ? S extends Status.Some
-        ? Option<[T, V], Status.Some>
-        : Option<[T, V], Status.None>
-      : Option<[T, V], Status.None>
-    : Option<[T, never], Status.None> {
+    ? OS extends typeof Status.Some
+      ? S extends typeof Status.Some
+        ? Option<[T, V], typeof Status.Some>
+        : Option<[T, V], typeof Status.None>
+      : Option<[T, V], typeof Status.None>
+    : Option<[T, never], typeof Status.None> {
     if (!(other instanceof Option)) {
       throw new UndefinedBehaviorError(
         `Method "zip" should accepts instance of Option`,
-        { cause: { value: other } },
+        { cause: { value: other } }
       );
     }
     if (this.status === Status.Some && other.status === Status.Some) {
@@ -559,20 +639,20 @@ export class Option<const T, const S extends Status = Status> {
    * @param predicate
    * @return {*} {Option<R>}
    */
-  zipWith<const U, const R, O extends Option<U>>(
+  zipWith<const U, const R, O extends Option<any, any> = Option<U>>(
     other: O,
-    predicate: (value: T, other: O extends Option<infer V> ? V : U) => R,
+    predicate: (value: T, other: O extends Option<infer V> ? V : U) => R
   ): O extends Option<any, infer OS>
-    ? OS extends Status.Some
-      ? S extends Status.Some
-        ? Option<R, Status.Some>
-        : Option<R, Status.None>
-      : Option<R, Status.None>
-    : Option<R, Status.None> {
+    ? OS extends typeof Status.Some
+      ? S extends typeof Status.Some
+        ? Option<R, typeof Status.Some>
+        : Option<R, typeof Status.None>
+      : Option<R, typeof Status.None>
+    : Option<R, typeof Status.None> {
     if (!(other instanceof Option)) {
       throw new UndefinedBehaviorError(
         `Method "zipWith" should accepts instance of Option`,
-        { cause: { value: other, type: typeof other } },
+        { cause: { value: other, type: typeof other } }
       );
     }
     assertArgument("zipWith", predicate, "function");
@@ -614,7 +694,10 @@ export class Option<const T, const S extends Status = Status> {
    * None() === x.flatten()
    * @return {*}  {Value extends Option<infer Sub> ? Option<Sub> : Option<Value>}
    */
-  flatten(): T extends Option<infer Sub, infer SubStatus extends Status>
+  flatten(): T extends Option<
+    infer Sub,
+    infer SubStatus extends (typeof Status)[StatusKey]
+  >
     ? Option<Sub, SubStatus>
     : Option<T, S> {
     if (this.value instanceof Option) {
@@ -627,23 +710,21 @@ export class Option<const T, const S extends Status = Status> {
    * Some value of type `T`.
    */
   static Some<const T = undefined>(
-    value: T = undefined as T,
-  ): T extends undefined
-    ? Option<undefined, Status.None>
-    : T extends null
-      ? Option<null, Status.None>
-      : Option<NonNullable<T>, Status.Some> {
+    value: T = undefined as T
+  ): T extends undefined | null
+    ? Option<T, typeof Status.None>
+    : Option<NonNullable<T>, typeof Status.Some> {
     if (value === undefined || value === null) {
       return new Option((_, none) => none(value)) as never;
     }
-    return new Option<T, Status.Some>((some) => some(value)) as never;
+    return new Option<T, typeof Status.Some>((some) => some(value)) as never;
   }
 
   /**
    * No value.
    */
   static None<T = undefined>(value: undefined | null = undefined) {
-    return new Option<T, Status.None>((_, none) => none(value as never));
+    return new Option<T, typeof Status.None>((_, none) => none(value as never));
   }
 
   /** represents no value */
@@ -687,6 +768,30 @@ export class Option<const T, const S extends Status = Status> {
   }
 
   /**
+   * Await a promise and return an `Option` instance.
+   * @param promiseLike promise to await
+   * @returns
+   */
+  static async fromPromise<const P, const E>(
+    promiseLike: P | Promise<P> | PromiseLike<P>
+  ): Promise<Option<Awaited<P>>> {
+    let option: Option<Awaited<P>>;
+    try {
+      const v = await promiseLike;
+      option = Some(v) as never;
+    } catch (error) {
+      if (error === undefined || error === null) {
+        option = None(error) as never;
+      } else {
+        option = None() as never;
+      }
+    }
+    return option;
+  }
+
+  static fromAsync = this.fromPromise;
+
+  /**
    * Compare Self and another value.
    * You can pass your own function to compare
    * @example
@@ -703,9 +808,22 @@ export class Option<const T, const S extends Status = Status> {
    * @param other another value
    * @param [cmp=Object.is] compare function. Default - `Object.is`
    */
-  equal<const U>(
+  equal<
+    const U = T,
+    const Self extends Option<T, S> = this,
+    const DefaultComparator extends ComparatorFn<any, any> = ComparatorFn<
+      Self,
+      U
+    >,
+    const ResolvedComparatorFn extends ComparatorFn<
+      any,
+      any
+    > = U extends Option<infer UValue, any>
+      ? ComparatorFn<T, UValue>
+      : DefaultComparator
+  >(
     other: U,
-    cmp: (value1: this, value2: U) => boolean = Object.is,
+    cmp: ResolvedComparatorFn = Object.is as ResolvedComparatorFn
   ): boolean {
     if (other instanceof Option) {
       return cmp(this.value as never, other.value);
@@ -725,11 +843,11 @@ export class Option<const T, const S extends Status = Status> {
    * @return {*}  {boolean}
    */
 
-  isSome(): S extends Status.None
+  isSome(): S extends typeof Status.None
     ? false
-    : S extends Status.Some
-      ? true
-      : boolean {
+    : S extends typeof Status.Some
+    ? true
+    : boolean {
     return (this.status === Status.Some) as never;
   }
 
@@ -738,11 +856,11 @@ export class Option<const T, const S extends Status = Status> {
    *
    * @return {*}  {boolean}
    */
-  isNone(): S extends Status.None
+  isNone(): S extends typeof Status.None
     ? true
-    : S extends Status.Some
-      ? false
-      : boolean {
+    : S extends typeof Status.Some
+    ? false
+    : boolean {
     return (this.status === Status.None) as never;
   }
 
@@ -785,15 +903,18 @@ export class Option<const T, const S extends Status = Status> {
    * @param {T} value
    * @return {*}  {Value}
    */
-  getOrInsert<const U>(value: NonNullable<U>): S extends Status.None ? U : T {
+  getOrInsert<const U>(
+    value: NonNullable<U>
+  ): S extends typeof Status.None ? U : T {
     if (this.status === Status.None) {
       if (value === undefined) {
         throw new UndefinedBehaviorError(
-          `Method "getOrInsert" should provide non "undefined" value.`,
+          `Method "getOrInsert" should provide non "undefined" value.`
         );
+        // biome-ignore lint/style/noUselessElse: <explanation>
       } else if (value === null) {
         throw new UndefinedBehaviorError(
-          `Method "getOrInsert" should provide non "null" value.`,
+          `Method "getOrInsert" should provide non "null" value.`
         );
       }
       return this.insert(value).unwrap() as never;
@@ -815,24 +936,25 @@ export class Option<const T, const S extends Status = Status> {
    * @return {*}  {Value}
    */
   getOrInsertWith<const U>(
-    predicate: () => NonNullable<U>,
-  ): S extends Status.None
+    predicate: () => NonNullable<U>
+  ): S extends typeof Status.None
     ? U extends undefined
       ? never
       : U extends null
-        ? never
-        : U
+      ? never
+      : U
     : T {
     if (this.status === Status.None) {
       assertArgument("getOrInsertWith", predicate, "function");
       const res = predicate();
       if (res === undefined) {
         throw new UndefinedBehaviorError(
-          "Callback for method 'getOrInsertWith' should returns non 'undefined' value.",
+          "Callback for method 'getOrInsertWith' should returns non 'undefined' value."
         );
+        // biome-ignore lint/style/noUselessElse: <explanation>
       } else if (res === null) {
         throw new UndefinedBehaviorError(
-          "Callback for method 'getOrInsertWith' should returns non 'null' value.",
+          "Callback for method 'getOrInsertWith' should returns non 'null' value."
         );
       }
       return this.insert(res).unwrap() as never;
@@ -865,16 +987,16 @@ export class Option<const T, const S extends Status = Status> {
    * @param {Option<T>} optb
    * @return {*}  {Option<Value>}
    */
-  or<const U, const O extends Option<U>>(
-    optb: O,
-  ): S extends Status.None ? O : this {
+  or<const U, const O extends Option<any, any> = Option<U>>(
+    optb: O
+  ): S extends typeof Status.None ? O : this {
     if (this.status === Status.Some) {
       return this as never;
     }
     if (!(optb instanceof Option)) {
       throw new UndefinedBehaviorError(
         `Method "or" should accepts isntance of "Option"`,
-        { cause: { value: optb, type: typeof optb } },
+        { cause: { value: optb, type: typeof optb } }
       );
     }
     return optb as never;
@@ -896,9 +1018,9 @@ export class Option<const T, const S extends Status = Status> {
    * @param predicate
    * @return {*}  {Option<Value>}
    */
-  orElse<const U, const O extends Option<U>>(
-    predicate: () => O,
-  ): S extends Status.None ? O : this {
+  orElse<const U, const O extends Option<any, any> = Option<U>>(
+    predicate: () => O
+  ): S extends typeof Status.None ? O : this {
     if (this.status === Status.Some) {
       return this as never;
     }
@@ -907,7 +1029,7 @@ export class Option<const T, const S extends Status = Status> {
     if (!(result instanceof Option)) {
       throw new UndefinedBehaviorError(
         `Callback result for method "orElse" should returns instance of Option. Use "Some" or "None".`,
-        { cause: { value: result, type: typeof result } },
+        { cause: { value: result, type: typeof result } }
       );
     }
     return result as never;
@@ -922,9 +1044,9 @@ export class Option<const T, const S extends Status = Status> {
    */
   transpose(): T extends Result<infer OK, infer ERR>
     ? Result<Option<OK, S>, ERR>
-    : S extends Status.None
-      ? Result<Option<T, S>, unknown>
-      : never {
+    : S extends typeof Status.None
+    ? Result<Option<T, S>, unknown>
+    : never {
     if (this.isNone()) {
       return Ok(None()) as never;
     }
@@ -936,7 +1058,8 @@ export class Option<const T, const S extends Status = Status> {
       return value as never;
     }
     throw new UndefinedBehaviorError(
-      `no method named "transpose" found for class "Result<${typeof this.value}, _>" in the current scope`,
+      `no method named "transpose" found for class "Result<${typeof this
+        .value}, _>" in the current scope`
     );
   }
 
@@ -945,8 +1068,7 @@ export class Option<const T, const S extends Status = Status> {
   }
 
   toString() {
-    const printFn = this.status === Status.None ? `None` : `Some`;
-    return `${printFn}(${this.status === Status.None ? "" : this.value})`;
+    return `${this.status}(${this.status === Status.None ? "" : this.value})`;
   }
 
   toJSON() {
@@ -975,9 +1097,11 @@ export class Option<const T, const S extends Status = Status> {
    *
    * _Note: This method will only yeild if the Option is Some._
    */
-  [Symbol.iterator]<
-    Arr = T extends Iterable<infer V> ? V : never,
-  >(): Arr extends never ? never : Iterator<Arr> {
+  [Symbol.iterator](): S extends typeof Status.None
+    ? never
+    : T extends Iterable<infer TT>
+    ? IteratorObject<TT, BuiltinIteratorReturn>
+    : never {
     if (
       this.isSome() &&
       typeof this.value === "object" &&
@@ -987,50 +1111,81 @@ export class Option<const T, const S extends Status = Status> {
       return (this.value as any)[Symbol.iterator]();
     }
     throw new UndefinedBehaviorError(
-      `[Symbol.iterator] can applies only for Some(<Iterable>) value`,
+      "[Symbol.iterator] can applies only for Some(<Iterable>) value",
       {
         cause: {
           value: this.value,
           type: typeof this.value,
           status: this.status,
         },
-      },
+      }
     );
   }
-  [Symbol.split](string: string, limit?: number) {
-    if (
-      this.isSome() &&
-      (typeof this.value === "string" ||
-        (typeof this.value === "object" &&
-          this.value &&
-          this.value.constructor.name === "RegExp"))
-    ) {
-      return string.split(this.value as string | RegExp, limit);
-    }
-    throw new UndefinedBehaviorError(
-      `[Symbol.split] can applies only for Some(<string | RegExp>) value`,
-      {
-        cause: {
-          value: this.value,
-          type: typeof this.value,
-          status: this.status,
-        },
-      },
-    );
-  }
-  [Symbol.search](string: string) {
+  [Symbol.split]<
+    const TError = TUndefinedBehaviorError<{
+      readonly message: `[Symbol.split] can applies only for Ok(<string>) value`;
+      readonly cause: {
+        readonly value: T;
+        readonly status: S;
+        readonly expectedType: string;
+      };
+      readonly stack: ToStack<
+        [
+          `Symbol.split`,
+          `Status===Some: ${S extends typeof Status.Some ? true : false}`
+        ]
+      >;
+    }>
+  >(
+    string: string,
+    limit?: number
+  ): S extends typeof Status.None
+    ? TError
+    : T extends string
+    ? string[]
+    : TError {
     if (this.isSome() && typeof this.value === "string") {
-      return string.indexOf(this.value);
+      return string.split(this.value as string, limit) as never;
     }
     throw new UndefinedBehaviorError(
-      `[Symbol.search] can applies only for Some(<string>) value`,
+      "[Symbol.split] can applies only for Some(<string>) value",
       {
         cause: {
           value: this.value,
           type: typeof this.value,
           status: this.status,
         },
-      },
+      }
+    );
+  }
+  [Symbol.search]<
+    const TError = TUndefinedBehaviorError<{
+      readonly message: "[Symbol.search] can applies only for Some(<string>) value";
+      readonly cause: {
+        readonly value: T;
+        readonly type: string;
+        readonly status: S;
+      };
+    }>
+  >(
+    string: string
+  ): S extends typeof Status.None
+    ? TError
+    : T extends string
+    ? number
+    : TError {
+    if (this.isSome() && typeof this.value === "string") {
+      return string.indexOf(this.value) as never;
+    }
+    throw new UndefinedBehaviorError(
+      "[Symbol.search] can applies only for Some(<string>) value",
+      {
+        cause: {
+          value: this.value,
+          type: typeof this.value,
+          status: this.status,
+        },
+      }
     );
   }
 
@@ -1040,42 +1195,45 @@ export class Option<const T, const S extends Status = Status> {
    *
    * _Note: This method will only yeild if the Option is Some._
    */
-  async *[Symbol.asyncIterator]<
-    Arr = T extends Iterable<infer V> ? Awaited<V> : never,
-  >(): AsyncIterator<Arr> {
+  [Symbol.asyncIterator](): S extends typeof Status.None
+    ? never
+    : T extends AsyncIterable<infer TT>
+    ? AsyncIteratorObject<TT, BuiltinIteratorReturn>
+    : never {
     if (
       this.isSome() &&
       typeof this.value === "object" &&
       this.value !== null &&
-      typeof (this.value as any)[Symbol.iterator] === "function"
+      typeof (this.value as any)[Symbol.asyncIterator] === "function"
     ) {
-      return (this.value as any)[Symbol.iterator]();
+      return (this.value as any)[Symbol.asyncIterator]();
     }
     throw new UndefinedBehaviorError(
-      `[Symbol.iterator] can applies only for Some(<Iterable>) value`,
+      "[Symbol.asyncIterator] can applies only for Some(<AsyncIterable>) value",
       {
         cause: {
           value: this.value,
           type: typeof this.value,
           status: this.status,
         },
-      },
+      }
     );
   }
+
   [customInspectSymbol](depth: number, options: any, inspect: Function) {
-    const status = this.isNone() ? "None" : "Some";
+    const name = this.status!;
     const primitive = this[Symbol.toPrimitive]();
     if (depth < 0) {
-      return options.stylize(`Option<${status}, ${primitive}>`, "special");
+      return `${options.stylize(name, "special")}(${primitive})`;
     }
     const newOptions = Object.assign({}, options, {
       depth: options.depth === null ? null : options.depth - 1,
     });
     const inner =
       this.value !== undefined
-        ? inspect(this.value, newOptions).replace(/\n/g, `\n$`)
+        ? inspect(this.value, newOptions).replace(/\n/g, "\n$")
         : "";
-    return `${options.stylize(`Option<${status}, ${inner}>`, "special")}`;
+    return `${options.stylize(name, "special")}(${inner})`;
   }
 }
 
@@ -1100,7 +1258,7 @@ export class Option<const T, const S extends Status = Status> {
  * }
  * ```
  */
-export function Some<const T = undefined>(value: T = undefined as T) {
+export function Some<const T>(value: T = undefined as T) {
   return Option.Some<T>(value);
 }
 

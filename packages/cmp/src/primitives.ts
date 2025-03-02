@@ -9,21 +9,21 @@ declare global {
       another:
         | boolean
         | { [Symbol.partialEquals](another: unknown): boolean }
-        | unknown,
+        | unknown
     ): boolean;
     [Symbol.equals](
       this: Boolean,
       another:
         | boolean
         | { [Symbol.equals](another: unknown): boolean }
-        | unknown,
+        | unknown
     ): boolean;
     [Symbol.compare](
       this: Boolean,
       another:
         | boolean
         | { [Symbol.compare](another: unknown): number }
-        | unknown,
+        | unknown
     ): number;
   }
   interface Boolean {
@@ -32,21 +32,21 @@ declare global {
       another:
         | boolean
         | { [Symbol.partialEquals](another: unknown): boolean }
-        | unknown,
+        | unknown
     ): boolean;
     [Symbol.equals](
       this: Boolean,
       another:
         | boolean
         | { [Symbol.equals](another: unknown): boolean }
-        | unknown,
+        | unknown
     ): boolean;
     [Symbol.compare](
       this: Boolean,
       another:
         | boolean
         | { [Symbol.compare](another: unknown): number }
-        | unknown,
+        | unknown
     ): number;
   }
 
@@ -56,23 +56,17 @@ declare global {
       another:
         | number
         | { [Symbol.partialEquals](another: unknown): boolean }
-        | unknown,
+        | unknown
     ): boolean;
 
     [Symbol.equals](
       this: Number,
-      another:
-        | number
-        | { [Symbol.equals](another: unknown): boolean }
-        | unknown,
+      another: number | { [Symbol.equals](another: unknown): boolean } | unknown
     ): boolean;
 
     [Symbol.compare](
       this: Number,
-      another:
-        | number
-        | { [Symbol.compare](another: unknown): number }
-        | unknown,
+      another: number | { [Symbol.compare](another: unknown): number } | unknown
     ): number;
   }
   interface Number {
@@ -81,23 +75,17 @@ declare global {
       another:
         | number
         | { [Symbol.partialEquals](another: unknown): boolean }
-        | unknown,
+        | unknown
     ): boolean;
 
     [Symbol.equals](
       this: Number,
-      another:
-        | number
-        | { [Symbol.equals](another: unknown): boolean }
-        | unknown,
+      another: number | { [Symbol.equals](another: unknown): boolean } | unknown
     ): boolean;
 
     [Symbol.compare](
       this: Number,
-      another:
-        | number
-        | { [Symbol.compare](another: unknown): number }
-        | unknown,
+      another: number | { [Symbol.compare](another: unknown): number } | unknown
     ): number;
   }
 
@@ -107,22 +95,19 @@ declare global {
       another:
         | string
         | { [Symbol.partialEquals](another: unknown): boolean }
-        | unknown,
+        | unknown
     ): boolean;
 
     [Symbol.equals](
       this: String,
-      another:
-        | string
-        | { [Symbol.equals](another: unknown): boolean }
-        | unknown,
+      another: string | { [Symbol.equals](another: unknown): boolean } | unknown
     ): boolean;
 
     [Symbol.compare](
       this: String,
       another: string,
       locales?: string | string[],
-      opts?: Intl.CollatorOptions,
+      opts?: Intl.CollatorOptions
     ): number;
     [Symbol.compare](
       this: String,
@@ -131,7 +116,7 @@ declare global {
         | {
             [Symbol.compare](another: unknown): number;
           }
-        | unknown,
+        | unknown
     ): number;
   }
   interface String {
@@ -140,22 +125,19 @@ declare global {
       another:
         | string
         | { [Symbol.partialEquals](another: unknown): boolean }
-        | unknown,
+        | unknown
     ): boolean;
 
     [Symbol.equals](
       this: String,
-      another:
-        | string
-        | { [Symbol.equals](another: unknown): boolean }
-        | unknown,
+      another: string | { [Symbol.equals](another: unknown): boolean } | unknown
     ): boolean;
 
     [Symbol.compare](
       this: String,
       another: string,
       locales?: string | string[],
-      opts?: Intl.CollatorOptions,
+      opts?: Intl.CollatorOptions
     ): number;
     [Symbol.compare](
       this: String,
@@ -163,7 +145,7 @@ declare global {
         | {
             [Symbol.compare](another: unknown): number;
           }
-        | unknown,
+        | unknown
     ): number;
   }
 
@@ -175,7 +157,7 @@ declare global {
         | string
         | number
         | { [Symbol.partialEquals](another: unknown): boolean }
-        | unknown,
+        | unknown
     ): boolean;
 
     [Symbol.equals](
@@ -185,7 +167,7 @@ declare global {
         | string
         | number
         | { [Symbol.equals](another: unknown): boolean }
-        | unknown,
+        | unknown
     ): boolean;
 
     [Symbol.compare](
@@ -195,7 +177,7 @@ declare global {
         | string
         | number
         | { [Symbol.compare](another: unknown): number }
-        | unknown,
+        | unknown
     ): number;
   }
   interface Date {
@@ -206,7 +188,7 @@ declare global {
         | string
         | number
         | { [Symbol.partialEquals](another: unknown): boolean }
-        | unknown,
+        | unknown
     ): boolean;
 
     [Symbol.equals](
@@ -216,7 +198,7 @@ declare global {
         | string
         | number
         | { [Symbol.equals](another: unknown): boolean }
-        | unknown,
+        | unknown
     ): boolean;
 
     [Symbol.compare](
@@ -226,7 +208,7 @@ declare global {
         | string
         | number
         | { [Symbol.compare](another: unknown): number }
-        | unknown,
+        | unknown
     ): number;
   }
 }
@@ -246,16 +228,17 @@ Number.prototype[Symbol.compare] = function (this, another) {
     }
     throw new UndefinedBehaviorError(
       `[Symbol.compare] should returns number type. Got "${typeof res}"`,
-      { cause: { value: res, type: typeof res } },
+      { cause: { value: res, type: typeof res } }
     );
   }
   if (typeof another === "number") {
     if (!Number.isFinite(this.valueOf()) || !Number.isFinite(another)) {
-      return NaN;
+      return Number.NaN;
     }
     const res = this.valueOf() - another;
     if (res > 0) {
       return 1;
+      // biome-ignore lint/style/noUselessElse: <explanation>
     } else if (res < 0) {
       return -1;
     }
@@ -268,7 +251,7 @@ Number.prototype[Symbol.compare] = function (this, another) {
         value: another,
         type: typeof another,
       },
-    },
+    }
   );
 };
 
@@ -292,9 +275,10 @@ Number.prototype[kPartialEquals] = function (this, another) {
           value: res,
           type: typeof res,
         },
-      },
+      }
     );
   }
+  // biome-ignore lint/suspicious/noDoubleEquals: partial equals
   return this.valueOf() == another;
 };
 
@@ -318,7 +302,7 @@ Number.prototype[kEquals] = function (this, another) {
           value: res,
           type: typeof res,
         },
-      },
+      }
     );
   }
   return this.valueOf() === another;
@@ -328,7 +312,7 @@ String.prototype[kCompare] = function (
   this,
   another: unknown,
   locales?: string | string[],
-  options?: Intl.CollatorOptions,
+  options?: Intl.CollatorOptions
 ) {
   if (
     typeof another === "object" &&
@@ -343,7 +327,7 @@ String.prototype[kCompare] = function (
       return res;
     }
     throw new UndefinedBehaviorError(
-      `Symbol.compare trait expected to returns number type. Got "${typeof res}"`,
+      `Symbol.compare trait expected to returns number type. Got "${typeof res}"`
     );
   }
   if (typeof another === "number" || typeof another === "boolean") {
@@ -360,7 +344,7 @@ String.prototype[kCompare] = function (
         value: another,
         type: typeof another,
       },
-    },
+    }
   );
 };
 
@@ -378,9 +362,10 @@ String.prototype[kPartialEquals] = function (this, another) {
       return res;
     }
     throw new UndefinedBehaviorError(
-      `Symbol.partialEquals trait expected to returns number type. Got "${typeof res}"`,
+      `Symbol.partialEquals trait expected to returns number type. Got "${typeof res}"`
     );
   }
+  // biome-ignore lint/suspicious/noDoubleEquals: partial equals
   return this.valueOf() == another;
 };
 
@@ -398,7 +383,7 @@ String.prototype[kEquals] = function (this, another) {
       return res;
     }
     throw new UndefinedBehaviorError(
-      `Symbol.equals trait expected to returns number type. Got "${typeof res}"`,
+      `Symbol.equals trait expected to returns number type. Got "${typeof res}"`
     );
   }
   return this.valueOf() === another;
@@ -408,12 +393,15 @@ Boolean.prototype[kCompare] = function (this, another) {
   if (typeof another === "boolean") {
     if (this.valueOf() > another) {
       return 1;
+      // biome-ignore lint/style/noUselessElse: <explanation>
     } else if (this.valueOf() < another) {
       return -1;
     }
     return 0;
+    // biome-ignore lint/style/noUselessElse: <explanation>
   } else if (typeof another === "number") {
     return another[Symbol.compare](Number(this.valueOf()));
+    // biome-ignore lint/style/noUselessElse: <explanation>
   } else if (typeof another === "string") {
     return this[Symbol.compare](!!another);
   }
@@ -429,7 +417,7 @@ Boolean.prototype[kCompare] = function (this, another) {
       return res;
     }
     throw new UndefinedBehaviorError(
-      `Symbol.compare trait expected to returns number type. Got "${typeof res}"`,
+      `Symbol.compare trait expected to returns number type. Got "${typeof res}"`
     );
   }
   throw new UndefinedBehaviorError(
@@ -439,7 +427,7 @@ Boolean.prototype[kCompare] = function (this, another) {
         value: another,
         type: typeof another,
       },
-    },
+    }
   );
 };
 
@@ -462,7 +450,7 @@ Boolean.prototype[kEquals] = function (this, another) {
         return res;
       }
       throw new UndefinedBehaviorError(
-        `"Symbol.equals" trait expected to returns boolean type. Got "${typeof res}"`,
+        `"Symbol.equals" trait expected to returns boolean type. Got "${typeof res}"`
       );
     }
   }
@@ -483,7 +471,7 @@ Boolean.prototype[kPartialEquals] = function (this, another) {
       return res;
     }
     throw new UndefinedBehaviorError(
-      `Symbol.partialEquals trait expected to returns boolean type. Got "${typeof res}"`,
+      `Symbol.partialEquals trait expected to returns boolean type. Got "${typeof res}"`
     );
   }
   if (
@@ -491,6 +479,7 @@ Boolean.prototype[kPartialEquals] = function (this, another) {
     typeof another === "string" ||
     typeof another === "number"
   ) {
+    // biome-ignore lint/suspicious/noDoubleEquals: partial equals
     return this.valueOf() == another;
   }
   return false;
@@ -505,19 +494,21 @@ Date.prototype[kCompare] = function (this, another) {
     const asDate = new Date(another);
     if (!Number.isFinite(asDate.valueOf())) {
       throw new UndefinedBehaviorError(
-        `Incoming primitive is not finite after parsing to Date.`,
+        "Incoming primitive is not finite after parsing to Date.",
         {
           cause: {
             value: another,
             type: typeof another,
           },
-        },
+        }
       );
     }
     if (this.valueOf() > asDate.valueOf()) {
       return 1;
+      // biome-ignore lint/style/noUselessElse: <explanation>
     } else if (this.valueOf() < asDate.valueOf()) {
       return -1;
+      // biome-ignore lint/style/noUselessElse: <explanation>
     } else {
       return 0;
     }
@@ -534,7 +525,7 @@ Date.prototype[kCompare] = function (this, another) {
       return res;
     }
     throw new UndefinedBehaviorError(
-      `Symbol.equals trait expected to returns boolean type. Got "${typeof res}"`,
+      `Symbol.equals trait expected to returns boolean type. Got "${typeof res}"`
     );
   }
   throw new UndefinedBehaviorError(
@@ -544,7 +535,7 @@ Date.prototype[kCompare] = function (this, another) {
         value: another,
         type: typeof another,
       },
-    },
+    }
   );
 };
 
@@ -569,7 +560,7 @@ Date.prototype[kEquals] = function (this, another) {
       return res;
     }
     throw new UndefinedBehaviorError(
-      `Symbol.equals trait expected to returns boolean type. Got "${typeof res}"`,
+      `Symbol.equals trait expected to returns boolean type. Got "${typeof res}"`
     );
   }
   return this.valueOf() === another;
@@ -597,9 +588,10 @@ Date.prototype[kPartialEquals] = function (this, another) {
       return res;
     }
     throw new UndefinedBehaviorError(
-      `"Symbol.partialEquals" trait expected to returns boolean type. Got "${typeof res}"`,
+      `"Symbol.partialEquals" trait expected to returns boolean type. Got "${typeof res}"`
     );
   }
 
+  // biome-ignore lint/suspicious/noDoubleEquals: partial equals
   return this.valueOf() == another;
 };

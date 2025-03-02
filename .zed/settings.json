@@ -1,0 +1,15 @@
+{
+  "lsp": {
+    "vtsls": {
+      "initialization_options": {
+        "typescript": { "tsdk": "node_modules/typescript/lib" },
+        "vtsls": { "autoUseWorkspaceTsdk": true }
+      }
+    }
+  },
+  "biome": {
+    "settings": {
+      "config_path": "./biome.json"
+    }
+  }
+}
