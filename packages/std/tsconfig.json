@@ -4,20 +4,13 @@
     "outDir": "dist",
     "declaration": true,
     "emitDeclarationOnly": true,
-    "lib": [
-      "ES2023"
-    ],
-    "types": [
-      "node",
-      "jest",
-    ],
+    "lib": ["ES2023"],
+    "types": ["node", "jest"],
     "skipLibCheck": true,
-    "allowImportingTsExtensions": true
+    "allowImportingTsExtensions": true,
+    "moduleResolution": "bundler",
+    "module": "preserve"
   },
-  "exclude": [
-    "__tests__"
-  ],
-  "include": [
-    "src"
-  ]
+  "exclude": ["__tests__"],
+  "include": ["src"]
 }

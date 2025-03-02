@@ -28,49 +28,150 @@ import {
   customInspectSymbol,
 } from "./utils.ts";
 import { None, Option, Some } from "./option.ts";
+import type {
+  ComparatorFn,
+  Fn,
+  IsNever,
+  IsPromise,
+  ToStack,
+  TUndefinedBehaviorError,
+} from "./types.ts";
 
 /** Result possible status */
-enum Status {
-  Err,
-  Ok,
-}
+const Status = {
+  Err: "Err",
+  Ok: "Ok",
+} as const;
+
+type StatusKey = keyof typeof Status;
 
 type Resolver<T> = (value: T) => void;
 type Rejecter<E> = (reason?: E) => void;
-type Executor<T, E> = (resolve: Resolver<T>, reject: Rejecter<E>) => void;
+export type Executor<T, E, R = T> = (
+  resolve: Resolver<T>,
+  reject: Rejecter<E>
+) => R | void;
 
 /**
  * `Result<T, E>` is the type used for returning and propagating errors. It is an enum with the variants, `Ok(T)`, representing success and containing a value, and `Err(E)`, representing error and containing an error value.
  *
  * Based on Promise-like API
+ * @template TInput success value
+ * @template TErr error value
+ * @throws `UndefinedBehaviorError` if executor is async function or returns a Promise
+ * @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol/search implements Symbol.search}
+ * @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol/split implements Symbol.split}
+ * @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol/iterator implements Symbol.iterator}
+ * @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol/asyncIterator implements Symbol.asyncIterator}
+ * @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for-await...of for await of} syntax
+ * @see {@link https://nodejs.org/api/util.html#utilpromisifycustom Node.js inspection symbol} implementation
  * @example
- * @template T success value
- * @template E error value
+ * const r1 = new Result(() => {
+ *  throw new Error("qwe");
+ * })
+ * r1.isErr() // true
+ *
+ * const r2 = new Result(() => {
+ *  return "some success";
+ * })
+ * r2.isOk() // true
+ * r2.unwrap() // "some success"
+ * // using control flow functions
+ * const r3 = new Result((ok, err) => {
+ *    // return is not needed
+ *    Math.random() > 0.5 ? ok("success") : err("error");
+ * })
+ * // Note: async functions or Promise return will throw an error
+ * new Result(async () => { // throws
+ *   await Promise.resolve();
+ * });
+ * new Result(() => Promise.resolve()); // throws
+ * Result.fromPromise(Promise.resolve('okay')); // OK. Result<okay>
  */
-export class Result<const T, const E, const S extends Status = Status> {
-  private value: T | null = null;
-  private error: E | null | undefined = undefined;
+export class Result<
+  const TInput,
+  const TErr = IsNever<TInput> extends true
+    ? unknown
+    : IsPromise<TInput> extends true
+    ? TUndefinedBehaviorError<{
+        readonly message: `You passed an async function in constructor or executor returned a promise. Only synchronous functions are allowed. Use "Result.fromPromise" or "Result.fromAsync" instead.`;
+        readonly cause: "AsyncFunction";
+        readonly stack: ToStack<["at new Result()", "at constructor"]>;
+      }>
+    : unknown,
+  const S extends (typeof Status)[StatusKey] = IsNever<TInput> extends true
+    ? typeof Status.Err
+    : (typeof Status)[StatusKey]
+> {
+  private value: TInput | null = null;
+  private error: TErr | null | undefined = undefined;
   private status: S | undefined;
 
-  constructor(executor: Executor<T, E>) {
-    const resolve: Resolver<T> = (value) => {
+  constructor(executor: Executor<TInput, TErr>) {
+    const resolve: Resolver<TInput> = (value) => {
       if (!this.status) {
         this.value = value;
         this.status = Status.Ok as S;
       }
     };
 
-    const reject: Rejecter<E> = (error) => {
+    const reject: Rejecter<TErr> = (error) => {
       if (!this.status) {
         this.error = error;
         this.status = Status.Err as S;
       }
     };
 
+    assertArgument("constructor", executor, "function");
+    let executionResult: unknown;
     try {
-      executor(resolve, reject);
+      executionResult = executor(resolve, reject);
+      if (
+        executionResult &&
+        typeof executionResult === "object" &&
+        "then" in executionResult &&
+        typeof executionResult.then === "function"
+      ) {
+        const err = new UndefinedBehaviorError(
+          `You passed an async function in constructor or executor returned a promise. Only synchronous functions are allowed. Use "Result.fromPromise" or "Result.fromAsync" instead.`
+        );
+        // fail promise anyway with error as declared before
+        executionResult.then(
+          () => {
+            throw err;
+          },
+          () => {
+            throw err;
+          }
+        );
+        throw err;
+        // biome-ignore lint/style/noUselessElse: <explanation>
+      } else if (executionResult instanceof Result) {
+        // biome-ignore lint/correctness/noConstructorReturn: this is Result, return result
+        return executionResult;
+        // biome-ignore lint/style/noUselessElse: <explanation>
+      } else if (executionResult instanceof Option) {
+        if (executionResult.isSome()) {
+          resolve(executionResult.unwrap());
+        } else {
+          reject(executionResult.valueOf());
+        }
+      } else if (executionResult !== undefined) {
+        resolve(executionResult as TInput);
+      }
     } catch (err) {
-      reject(err as E);
+      if (
+        err instanceof UndefinedBehaviorError &&
+        executionResult &&
+        typeof executionResult === "object" &&
+        "then" in executionResult &&
+        typeof executionResult.then === "function"
+      ) {
+        throw err;
+        // biome-ignore lint/style/noUselessElse: <explanation>
+      } else {
+        reject(err as TErr);
+      }
     }
   }
 
@@ -88,7 +189,7 @@ export class Result<const T, const E, const S extends Status = Status> {
    * @param {string} reason
    * @return {*}  {T}
    */
-  expect(reason: string): S extends Status.Err ? never : T {
+  expect(reason: string): S extends typeof Status.Err ? never : TInput {
     if (reason && this.status === Status.Err) {
       throw new Error(reason, { cause: this.error });
     }
@@ -104,7 +205,7 @@ export class Result<const T, const E, const S extends Status = Status> {
    * x.unwrap() === 2;
    * @return {*}  {T}
    */
-  unwrap(): S extends Status.Ok ? T : never {
+  unwrap(): S extends typeof Status.Err ? never : TInput {
     if (this.status === Status.Ok) {
       return this.value as never;
     }
@@ -122,10 +223,10 @@ export class Result<const T, const E, const S extends Status = Status> {
    *
    * cosnt x: Result<number, string> = Err("error");
    * x.unwrapOr(fallback) === fallback; // true
-   * @param {T} fallback
+   * @param {TInput} fallback
    * @return {*}  {T}
    */
-  unwrapOr<const U>(fallback: U): S extends Status.Err ? U : T {
+  unwrapOr<const U>(fallback: U): S extends typeof Status.Err ? U : TInput {
     if (this.status === Status.Ok) {
       return this.value as never;
     }
@@ -143,7 +244,13 @@ export class Result<const T, const E, const S extends Status = Status> {
    * x.isOk() // false
    * @return {*}  {boolean}
    */
-  isOk(): S extends Status.Ok ? true : S extends Status.Err ? false : boolean {
+  isOk(): [TInput] extends [never]
+    ? false
+    : S extends typeof Status.Ok
+    ? true
+    : S extends typeof Status.Err
+    ? false
+    : boolean {
     return (this.status === Status.Ok) as never;
   }
   /**
@@ -163,13 +270,13 @@ export class Result<const T, const E, const S extends Status = Status> {
    * @return {*}  {boolean}
    */
   isOkAnd<const R extends boolean>(
-    predicate: (value: T) => R,
-  ): S extends Status.Ok ? true : R {
+    predicate: (value: TInput) => R
+  ): S extends typeof Status.Ok ? true : R {
     if (this.status === Status.Err) {
       return false as never;
     }
     assertArgument("isOkAnd", predicate, "function");
-    const res = predicate(this.value as T);
+    const res = predicate(this.value as TInput);
     assertArgument("isOkAnd", res, "boolean");
     return res as never;
   }
@@ -185,7 +292,13 @@ export class Result<const T, const E, const S extends Status = Status> {
    *
    * @return {*}  {boolean}
    */
-  isErr(): S extends Status.Err ? true : S extends Status.Ok ? false : boolean {
+  isErr(): IsNever<TInput> extends true
+    ? true
+    : S extends typeof Status.Err
+    ? true
+    : S extends typeof Status.Ok
+    ? false
+    : boolean {
     return (this.status === Status.Err) as never;
   }
   /**
@@ -201,17 +314,18 @@ export class Result<const T, const E, const S extends Status = Status> {
    * x.isErrAnd(e => e.name == 'Error'); // false
    * @throws `UndefinedBehaviorError` if `predicate` is not a function
    * @throws `UndefinedBehaviorError` if `predicate` result is not a boolean
-   * @param {(err: E) => boolean} predicate
+   * @param {(err: TErr) => boolean} predicate
    * @return {*}  {boolean}
    */
-  isErrAnd<R extends boolean>(
-    predicate: (err: E) => R,
-  ): S extends Status.Err ? true : R {
+  isErrAnd<
+    const R extends boolean,
+    const PredicateFn extends Fn<R, [err: TErr]> = Fn<R, [err: TErr]>
+  >(predicate: PredicateFn): S extends typeof Status.Err ? true : R {
     if (this.status === Status.Ok) {
       return false as never;
     }
     assertArgument("isErrAnd", predicate, "function");
-    const res = predicate(this.err as E);
+    const res = predicate(this.err as TErr);
     assertArgument("isErrAnd", res, "boolean");
     return res as never;
   }
@@ -228,9 +342,9 @@ export class Result<const T, const E, const S extends Status = Status> {
    * x.ok() === None(); // true
    * @return {*}  {Option<T>}
    */
-  ok(): S extends Status.Ok
-    ? Option<T, typeof Option.Status.Some>
-    : Option<T, typeof Option.Status.None> {
+  ok(): S extends typeof Status.Ok
+    ? Option<TInput, typeof Option.Status.Some>
+    : Option<TInput, typeof Option.Status.None> {
     if (this.status === Status.Ok) {
       return Some(this.value) as never;
     }
@@ -250,9 +364,9 @@ export class Result<const T, const E, const S extends Status = Status> {
    * x.err() === Some("Nothing here"); // true
    * @return {*}  {Option<E>}
    */
-  err(): S extends Status.Err
-    ? Option<E, typeof Option.Status.Some>
-    : Option<E, typeof Option.Status.None> {
+  err(): S extends typeof Status.Err
+    ? Option<TErr, typeof Option.Status.Some>
+    : Option<TErr, typeof Option.Status.None> {
     if (this.status === Status.Err) {
       return Some(this.error) as never;
     }
@@ -270,15 +384,15 @@ export class Result<const T, const E, const S extends Status = Status> {
    *
    * @template U
    * @throws `UndefinedBehaviorError` if `mapFn` is not a function
-   * @param {(value: T) => U} mapFn
+   * @param {(value: TInput) => U} mapFn
    * @return {*} {Result<U, E>}
    */
   map<const U>(
-    mapFn: (value: T) => U,
-  ): S extends Status.Err ? this : Result<U, E> {
+    mapFn: (value: TInput) => U
+  ): S extends typeof Status.Err ? this : Result<U, TErr> {
     assertArgument("map", mapFn, "function");
     if (this.status === Status.Ok) {
-      return Ok(mapFn(this.value as T)) as never;
+      return Ok(mapFn(this.value as TInput)) as never;
     }
     return this as never;
   }
@@ -297,16 +411,16 @@ export class Result<const T, const E, const S extends Status = Status> {
    * @throws `UndefinedBehaviorError` if `predicate` is not a function
    * @template U
    * @param {U} another
-   * @param {(value: T) => U} predicate
+   * @param {(value: TInput) => U} predicate
    * @return {*}  {U}
    */
   mapOr<const U, const FR>(
     another: U,
-    predicate: (value: T) => FR,
-  ): S extends Status.Err ? U : FR {
+    predicate: (value: TInput) => FR
+  ): S extends typeof Status.Err ? U : FR {
     assertArgument("mapOr", predicate, "function");
     if (this.status === Status.Ok) {
-      return predicate(this.value as T) as never;
+      return predicate(this.value as TInput) as never;
     }
     return another as never;
   }
@@ -332,15 +446,15 @@ export class Result<const T, const E, const S extends Status = Status> {
    * @return {*} {U}
    */
   mapOrElse<const ER, const RR>(
-    errFn: (err: E) => ER,
-    okFn: (value: T) => RR,
-  ): S extends Status.Err ? ER : RR {
+    errFn: (err: TErr) => ER,
+    okFn: (value: TInput) => RR
+  ): S extends typeof Status.Err ? ER : RR {
     assertArgument("mapOrElse", errFn, "function");
     if (this.status === Status.Err) {
-      return errFn(this.error as E) as never;
+      return errFn(this.error as TErr) as never;
     }
     assertArgument("mapOrElse", okFn, "function");
-    return okFn(this.value as T) as never;
+    return okFn(this.value as TInput) as never;
   }
   /**
    * Maps a `Result<T, E>` to `Result<T, F>` by applying a function to a contained `Err` value, leaving an `Ok` value untouched.
@@ -357,15 +471,15 @@ export class Result<const T, const E, const S extends Status = Status> {
    * y.mapErr(stringify) === Err("error code: 13"));
    * @template F
    * @throws `UndefinedBehaviorError` if `errFn` is not a function
-   * @param {(err: E) => F} errFn
+   * @param {(err: TErr) => F} errFn
    * @return {*}  {Result<T, F>}
    */
   mapErr<const F>(
-    errFn: (err: E) => F,
-  ): S extends Status.Err ? Result<T, F> : this {
+    errFn: (err: TErr) => F
+  ): S extends typeof Status.Err ? Result<TInput, F> : this {
     assertArgument("mapErr", errFn, "function");
     if (this.status === Status.Err) {
-      return Err(errFn(this.error as E)) as never;
+      return Err(errFn(this.error as TErr)) as never;
     }
     return this as never;
   }
@@ -379,7 +493,7 @@ export class Result<const T, const E, const S extends Status = Status> {
    * @param {string} reason
    * @return {*}  {E}
    */
-  expectErr(reason: string): S extends Status.Ok ? never : E {
+  expectErr(reason: string): S extends typeof Status.Ok ? never : TErr {
     assertArgument("expectErr", reason, "string");
     if (this.status === Status.Ok) {
       throw new Error(reason, { cause: this.value });
@@ -395,7 +509,7 @@ export class Result<const T, const E, const S extends Status = Status> {
    * @throws `value` if `Result` status is OK
    * @return {*}  {E}
    */
-  unwrapErr(): S extends Status.Err ? E : never {
+  unwrapErr(): S extends typeof Status.Err ? TErr : never {
     if (this.status === Status.Err) {
       return this.error as never;
     }
@@ -413,12 +527,14 @@ export class Result<const T, const E, const S extends Status = Status> {
    * @param predicate
    * @return {*} {T}
    */
-  unwrapOrElse<const U>(predicate: (err: E) => U): S extends Status.Ok ? T : U {
+  unwrapOrElse<const U>(
+    predicate: (err: TErr) => U
+  ): S extends typeof Status.Ok ? TInput : U {
     if (this.status === Status.Ok) {
       return this.value as never;
     }
     assertArgument("unwrapOrElse", predicate, "function");
-    return predicate(this.error as E) as never;
+    return predicate(this.error as TErr) as never;
   }
   /**
    * Returns `res` if the result is `Ok`, otherwise returns the `Err` value of self.
@@ -446,23 +562,27 @@ export class Result<const T, const E, const S extends Status = Status> {
    * @param res
    * @return {*}  {Result<U, E>}
    */
-  and<const U, const R extends Result<U, unknown>>(
-    res: R,
-  ): S extends Status.Ok
+  and<const U, const R extends Result<any, any, any>>(
+    res: R
+  ): S extends typeof Status.Ok
     ? R extends Result<any, infer RE, infer RS>
-      ? RS extends Status.Ok
+      ? RS extends typeof Status.Ok
         ? R
-        : Result<U, RE>
-      : Result<U, E>
-    : Result<T, E> {
+        : Result<U, RE, RS>
+      : Result<TInput, TErr, S>
+    : S extends typeof Status.Err
+    ? Result<TInput, TErr, S>
+    : R extends Result<any, infer RE, infer RS>
+    ? Result<U, RE, RS>
+    : Result<TInput, TErr> {
     if (!(res instanceof Result)) {
       throw new UndefinedBehaviorError(
         `Method "and" should accepts isntance of Result`,
-        { cause: { value: res } },
+        { cause: { value: res } }
       );
     }
     if (this.status === Status.Err) {
-      return Err(this.error as E) as never;
+      return Err(this.error as TErr) as never;
     }
     return res as never;
   }
@@ -481,24 +601,25 @@ export class Result<const T, const E, const S extends Status = Status> {
    * @template U
    * @throws `UndefinedBehaviorError` if `fn` argument is not a function
    * @throws `UndefinedBehaviorError` if `fn` result is not an instance of `Result`
-   * @param {(value: T) => Result<U, E>} fn
+   * @param {(value: TInput) => Result<U, TErr>} fn
    * @return {*}  {Result<U, E>}
    */
-  andThen<const U, const R extends Result<U, E> = Result<U, E>>(
-    fn: (value: T) => R,
-  ): S extends Status.Err ? this : R {
+  andThen<
+    const U,
+    const R extends Result<any, any, any> = Result<U, TErr, any>
+  >(fn: (value: TInput) => R): S extends typeof Status.Err ? this : R {
     assertArgument("andThen", fn, "function");
     if (this.status === Status.Ok) {
-      const res = fn(this.value as T);
+      const res = fn(this.value as TInput);
       if (res instanceof Result) {
         return res as never;
       }
       throw new UndefinedBehaviorError(
         "Function result expected to be instance of Result.",
-        { cause: res },
+        { cause: res }
       );
     }
-    return Err(this.error as E) as never;
+    return Err(this.error as TErr) as never;
   }
   /**
    * Returns `res` if the result is `Err`, otherwise returns the `Ok` value of self.
@@ -523,16 +644,16 @@ export class Result<const T, const E, const S extends Status = Status> {
    * x.or(y) === Ok(2); // true
    * @template F
    * @throws `UndefinedBehaviorError` if `res` argument is not an instance of `Result`
-   * @param {Result<T, F>} res
+   * @param {Result<TInput, F>} res
    * @return {*}  {Result<T, F>}
    */
-  or<const F, const R extends Result<unknown, F> = Result<unknown, F>>(
-    res: R,
-  ): S extends Status.Err ? R : Result<T, F, S> {
+  or<const F, const R extends Result<any, any, any> = Result<any, F, any>>(
+    res: R
+  ): S extends typeof Status.Err ? R : Result<TInput, F, S> {
     if (!(res instanceof Result)) {
       throw new UndefinedBehaviorError(
         `Operator "or" expect to pass instance of Result`,
-        { cause: { value: res } },
+        { cause: { value: res } }
       );
     }
     if (this.status === Status.Err) {
@@ -558,18 +679,18 @@ export class Result<const T, const E, const S extends Status = Status> {
    * @param fn
    * @return {*}  {Result<T, F>}
    */
-  orElse<const R extends Result<unknown, unknown> = Result<unknown, unknown>>(
-    fn: (err: E) => R,
-  ): S extends Status.Ok ? this : R {
+  orElse<const R extends Result<any, any, any> = Result<any, any, any>>(
+    fn: (err: TErr) => R
+  ): S extends typeof Status.Ok ? this : R {
     if (this.status === Status.Ok) {
       return this as never;
     }
     assertArgument("orElse", fn, "function");
-    const res = fn(this.error as E);
+    const res = fn(this.error as TErr);
     if (!(res instanceof Result)) {
       throw new UndefinedBehaviorError(
         'Operator "orElse" expected to return instance of Result. Use "Ok" or "Err" function to define them.',
-        { cause: { value: res, type: typeof res } },
+        { cause: { value: res, type: typeof res } }
       );
     }
     return res as never;
@@ -589,7 +710,9 @@ export class Result<const T, const E, const S extends Status = Status> {
    * Err(6) === x.flatten(); // true
    * @return {*}  {T extends Result<infer Ok, E> ? Result<Ok, E> : Result<T, E>}
    */
-  flatten(): T extends Result<infer Ok, E> ? Result<Ok, E> : Result<T, E> {
+  flatten(): TInput extends Result<infer Ok, TErr>
+    ? Result<Ok, TErr>
+    : Result<TInput, TErr> {
     if (this.value instanceof Result) {
       return this.value as never;
     }
@@ -597,10 +720,10 @@ export class Result<const T, const E, const S extends Status = Status> {
   }
 
   static Ok<const V, const E>(value: V) {
-    return new Result<V, E, Status.Ok>((res) => res(value));
+    return new Result<V, E, typeof Status.Ok>((ok) => ok(value));
   }
   static Err<const V, const ErrorValue>(value: ErrorValue) {
-    return new Result<V, ErrorValue, Status.Err>((_, rej) => rej(value));
+    return new Result<V, ErrorValue, typeof Status.Err>((_, rej) => rej(value));
   }
 
   static ok = Result.Ok;
@@ -638,27 +761,43 @@ export class Result<const T, const E, const S extends Status = Status> {
   }
 
   static Status = Status;
+
+  /**
+   * Await a promise and return a Result instance.
+   *
+   * @static
+   * @param promiseLike value that should be resolved
+   * @returns
+   */
   static async fromPromise<const P, const E>(
-    promiseLike: P | Promise<P> | PromiseLike<P>,
+    promiseLike: P | Promise<P> | PromiseLike<P>
   ): Promise<Result<Awaited<P>, E>> {
-    const { err, ok, result } = Result.withResolvers<Awaited<P>, E>();
+    let result: Result<Awaited<P>, E>;
     try {
       const v = await promiseLike;
-      ok(v);
+      result = Ok(v) as never;
     } catch (e) {
-      err(e as E);
+      result = Err(e as E);
     }
     return result;
   }
 
+  static fromAsync = this.fromPromise;
+
   /**
-   * Compare Self and another value.
+   * Compare `self` and another value.
+   *
+   * comparer algorithm (if comparatorFunction does not set):
+   * - if self=Ok, other=Ok -> `self.unwrap() === other.unwrap()`
+   * - if self=Err, other=Ok -> `false`
+   * - if self=Ok, other=Err -> `false`
+   * - if self=Err, other=Err -> `self.unwrapErr() === other.unwrapErr()`
    * You can pass your own function to compare
    * @example
    * const a = Ok(2)
    * const b = 2
-   * const same = a.equal(b, (result, another) => {
-   * // result = Ok(2)
+   * const same = a.equal(b, (self, another) => {
+   * // self = Ok(2)
    * // another = 2
    *  return result.unwrap() === another
    * })
@@ -666,22 +805,43 @@ export class Result<const T, const E, const S extends Status = Status> {
    * console.log(a.equal(b)) // false
    * console.log(a.equal(Ok(2))) // true
    * @param other another value
-   * @param [cmp=Object.is] compare function. Default - `Object.is`
+   * @param [comparatorFn=Object.is] compare function. Default - `Object.is`
    */
-  equal<const U>(
+  equal<
+    const U = TInput,
+    const Self extends Result<TInput, TErr, S> = this,
+    const DefaultComparator extends ComparatorFn<any, any> = ComparatorFn<
+      Self,
+      U
+    >,
+    const ResolvedComparatorFn extends ComparatorFn<
+      any,
+      any
+    > = U extends Result<infer UValue, infer UErr, infer UStatus>
+      ? UStatus extends typeof Status.Ok
+        ? S extends typeof Status.Ok
+          ? ComparatorFn<TInput, UValue>
+          : DefaultComparator
+        : UStatus extends typeof Status.Err
+        ? S extends typeof Status.Err
+          ? ComparatorFn<TErr, UErr>
+          : DefaultComparator
+        : DefaultComparator
+      : DefaultComparator
+  >(
     other: U,
-    cmp: (value1: this, value2: U) => boolean = Object.is,
+    comparatorFn: ResolvedComparatorFn = Object.is as ResolvedComparatorFn
   ): boolean {
     if (other instanceof Result) {
       if (this.status === Status.Ok && other.status === Status.Ok) {
-        return cmp(this.value as never, other.value);
+        return comparatorFn(this.value as never, other.value);
       }
       if (this.status === Status.Err && other.status === Status.Err) {
-        return cmp(this.error as never, other.error);
+        return comparatorFn(this.error as never, other.error);
       }
       return false;
     }
-    return cmp(this, other);
+    return comparatorFn(this, other);
   }
 
   valueOf() {
@@ -692,8 +852,9 @@ export class Result<const T, const E, const S extends Status = Status> {
   }
 
   toString() {
-    const printFn = this.status === Status.Err ? `Err` : `Ok`;
-    return `${printFn}(${this.status === Status.Err ? this.error : this.value})`;
+    return `${this.status}(${
+      this.status === Status.Err ? this.error : this.value
+    })`;
   }
 
   toJSON() {
@@ -720,11 +881,15 @@ export class Result<const T, const E, const S extends Status = Status> {
    * @protected
    * Iterator support for `Option`.
    *
-   * _Note: This method will only yeild if the Option is Some._
+   * _Note: This method will only yeild if the Result is Ok
    */
-  [Symbol.iterator]<
-    ArrOk = T extends Iterable<infer V> ? V : never,
-  >(): ArrOk extends never ? never : Iterator<ArrOk> {
+  [Symbol.iterator](): IsNever<TInput> extends true
+    ? never
+    : S extends (typeof Status)["Err"]
+    ? never
+    : TInput extends Iterable<infer TT>
+    ? IteratorObject<TT, BuiltinIteratorReturn>
+    : never {
     if (this.isErr()) {
       throw this.error;
     }
@@ -737,68 +902,113 @@ export class Result<const T, const E, const S extends Status = Status> {
       return (this.value as any)[Symbol.iterator]();
     }
     throw new UndefinedBehaviorError(
-      `[Symbol.iterator] can applies only for Ok(<Iterable>) value`,
+      "[Symbol.iterator] can applies only for Ok(<Iterable | Iterator | Generator>) value",
       {
         cause: {
           value: this.value,
           type: typeof this.value,
           status: this.status,
         },
-      },
+      }
     );
   }
-  [Symbol.split](string: string, limit?: number) {
-    if (this.isErr()) {
-      throw this.error;
-    }
-    if (
-      this.isOk() &&
-      (typeof this.value === "string" ||
-        (typeof this.value === "object" &&
-          this.value &&
-          this.value.constructor.name === "RegExp"))
-    ) {
-      return string.split(this.value as string | RegExp, limit);
-    }
-    throw new UndefinedBehaviorError(
-      `[Symbol.split] can applies only for Ok(<string | RegExp>) value`,
-      {
-        cause: {
-          value: this.value,
-          type: typeof this.value,
-          status: this.status,
-        },
-      },
-    );
-  }
-  [Symbol.search](string: string) {
+
+  [Symbol.split]<
+    TError = TUndefinedBehaviorError<{
+      readonly message: `[Symbol.split] can applies only for Ok(<string>) value`;
+      readonly cause: {
+        readonly value: TInput;
+        readonly error: TErr;
+        readonly status: S;
+      };
+      readonly stack: ToStack<
+        ["Symbol.split", `TInput===never: ${IsNever<TInput>}`, `Status: ${S}`]
+      >;
+    }>
+  >(
+    string: TInput,
+    limit?: number
+  ): IsNever<TInput> extends true
+    ? TError
+    : S extends (typeof Status)["Err"]
+    ? TError
+    : string[] {
     if (this.isErr()) {
       throw this.error;
     }
     if (this.isOk() && typeof this.value === "string") {
-      return string.indexOf(this.value);
+      return (string as string).split(this.value as string, limit) as never;
     }
+
     throw new UndefinedBehaviorError(
-      `[Symbol.search] can applies only for Ok(<string>) value`,
+      "[Symbol.split] can applies only for Ok(<string>) value",
       {
         cause: {
           value: this.value,
           type: typeof this.value,
           status: this.status,
         },
-      },
+      }
+    );
+  }
+
+  [Symbol.search]<
+    const TError = TUndefinedBehaviorError<{
+      readonly message: `[Symbol.search] can applies only for Ok(<string>) value`;
+      readonly cause: {
+        readonly value: TInput;
+        readonly error: TErr;
+        readonly status: S;
+      };
+      readonly stack: ToStack<["Symbol.search", `IsNever: ${IsNever<TInput>}`]>;
+    }>
+  >(
+    string: TInput
+  ): IsNever<TInput> extends true
+    ? TError
+    : S extends (typeof Status)["Err"]
+    ? TError
+    : number {
+    if (this.isErr()) {
+      throw this.error;
+    }
+    if (this.isOk() && typeof this.value === "string") {
+      return (string as string).search(this.value) as never;
+    }
+    throw new UndefinedBehaviorError(
+      "[Symbol.search] can applies only for Ok(<string>) value",
+      {
+        cause: {
+          value: this.value,
+          type: typeof this.value,
+          status: this.status,
+        },
+      }
     );
   }
 
   /**
    * @protected
-   * Iterator support for `Option`.
+   * Iterator support for `Result`.
    *
-   * _Note: This method will only yeild if the Option is Some._
+   * _Note: This method will only yeild if the Result is Ok
    */
-  async *[Symbol.asyncIterator]<
-    Arr = T extends Iterable<infer V> ? Awaited<V> : never,
-  >(): AsyncIterator<Arr> {
+  [Symbol.asyncIterator](): IsNever<TInput> extends true
+    ? never
+    : S extends (typeof Status)["Err"]
+    ? never
+    : TInput extends {
+        readonly [Symbol.asyncIterator]: () => infer _ extends
+          | AsyncIterator<any>
+          | Iterator<any>
+          | Generator<any>;
+      }
+    ? _ extends Generator<infer A>
+      ? AsyncIteratorObject<A>
+      : _ extends AsyncGenerator<infer A>
+      ? AsyncIteratorObject<A>
+      : _
+    : never {
     if (this.isErr()) {
       throw this.error;
     }
@@ -806,32 +1016,39 @@ export class Result<const T, const E, const S extends Status = Status> {
       this.isOk() &&
       typeof this.value === "object" &&
       this.value !== null &&
-      typeof (this.value as any)[Symbol.iterator] === "function"
+      typeof (this.value as any)[Symbol.asyncIterator] === "function"
     ) {
-      return (this.value as any)[Symbol.iterator]();
+      return (this.value as any)[Symbol.asyncIterator]();
     }
     throw new UndefinedBehaviorError(
-      `[Symbol.iterator] can applies only for Some(<Iterable>) value`,
+      "[Symbol.asyncIterator] can applies only for Some(<AsyncIterable>) value",
       {
         cause: {
           value: this.value,
           type: typeof this.value,
           status: this.status,
         },
-      },
+      }
     );
   }
-  [customInspectSymbol](depth: number, options: any, inspect: Function) {
-    const name = this.isOk() ? "Ok" : "Err";
-    const value = this.isOk() ? this.value : this.error;
 
+  [customInspectSymbol](depth: number, options: any, inspect: Function) {
+    const name = this.status!;
+    const value = this.isOk() ? this.value : this.error;
     if (depth < 0) {
       return options.stylize(name, "special");
     }
     const newOptions = Object.assign({}, options, {
       depth: options.depth === null ? null : options.depth - 1,
     });
-    const inner = inspect(value, newOptions).replace(/\n/g, `\n$`);
+    const inner = inspect(value, newOptions);
+    if (name === "Err" && value instanceof Error) {
+      const cause = value.cause ? inspect(value.cause, newOptions) : "";
+      return `${options.stylize(name, "special")}(${options.stylize(
+        value.name,
+        "regexp"
+      )}: ${value.message})) ${cause}\n${value.stack}`;
+    }
     return `${options.stylize(name, "special")}(${inner})`;
   }
 }
@@ -855,10 +1072,10 @@ export class Result<const T, const E, const S extends Status = Status> {
  *  // Do something
  * }
  */
-export function Ok<const T, const E = unknown>(
-  value?: T | null,
-): Result<T, E, Status.Ok> {
-  return Result.Ok(value) as Result<T, E, Status.Ok>;
+export function Ok<const T, const E = never>(
+  value?: T | null
+): Result<T, E, typeof Status.Ok> {
+  return Result.Ok(value) as Result<T, E, typeof Status.Ok>;
 }
 
 Object.defineProperty(Ok, Symbol.hasInstance, {
@@ -890,9 +1107,9 @@ Object.defineProperty(Ok, Symbol.hasInstance, {
  * }
  */
 export function Err<const T, const E = unknown>(
-  err: E,
-): Result<T, E, Status.Err> {
-  return Result.Err(err) as Result<T, E, Status.Err>;
+  err: E
+): Result<T, E, typeof Status.Err> {
+  return Result.Err(err) as Result<T, E, typeof Status.Err>;
 }
 
 Object.defineProperty(Err, Symbol.hasInstance, {

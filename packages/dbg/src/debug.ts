@@ -28,13 +28,13 @@ type InspectionString<
 > = `${Prefix}${string}${Delimiter}${string}`;
 type InspectionResult<
   Delimiter extends string = typeof DEFAULT_DELIMITER,
-  Prefix extends string = typeof DEFAULT_PREFIX,
+  Prefix extends string = typeof DEFAULT_PREFIX
 > = {
   /**
    * Print message that using for `console.log`.
-   * 
+   *
    * You can disable `console.log` printing by using {@link Options.skipConsoleLog} in options.
-   * 
+   *
    * @type string
    */
   message: InspectionString<Delimiter, Prefix>;
@@ -45,12 +45,21 @@ type InspectionResult<
   /**
    * Result of the `typeof` operator for incoming value
    */
-  type: 'number' | 'string' | 'boolean' | 'bigint' | 'symbol' | 'function' | 'object' | 'null' | 'undefined'
+  type:
+    | "number"
+    | "string"
+    | "boolean"
+    | "bigint"
+    | "symbol"
+    | "function"
+    | "object"
+    | "null"
+    | "undefined";
   /**
    * variable value.
    */
   value: unknown;
-  delimiter: Delimiter,
+  delimiter: Delimiter;
   prefix: Prefix;
   // prototype?: unknown;
   // constructor?: unknown;
@@ -61,17 +70,16 @@ type InspectionResult<
 const USAGE = `
 const a = 123;
 dbg(() => a); // a: 123
-`
+`;
 
-export const DEFAULT_DELIMITER = ': ';
+export const DEFAULT_DELIMITER = ": ";
 
-export const DEFAULT_PREFIX = 'dbg | ';
+export const DEFAULT_PREFIX = "dbg | ";
 
 type Options<
   Delimiter extends string = typeof DEFAULT_DELIMITER,
-  Prefix extends string = typeof DEFAULT_PREFIX,
+  Prefix extends string = typeof DEFAULT_PREFIX
 > = {
-
   /**
    * symbol which appends before expression: `{name}{delimiter}{value}`
    *
@@ -96,22 +104,21 @@ type Options<
    * @default
    * console.log
    */
-  outputFunction?: (...args: unknown[]) => void
-}
-
+  outputFunction?: (...args: unknown[]) => void;
+};
 
 /**
  * Uses `console.log` for printing information about your variable.
- * 
+ *
  * **NOTE:** always need to use anonumous arrow function. See examples for more.
- * 
+ *
  * ## Performance Awarenes
  * Since `dbg` prints all information about variable as `String`.
  * Your whole function with it's body will be printed in console.
- * 
+ *
  * ## override delimiter
  * You can pass second argument as options. It supportrs custom `delimiter` and `skipConsoleLog`
- * 
+ *
  * Default delimiter is `:(space)`
  *
  * @example
@@ -132,34 +139,37 @@ type Options<
  */
 export function dbg<
   Delimiter extends string = typeof DEFAULT_DELIMITER,
-  Prefix extends string = typeof DEFAULT_PREFIX,
+  Prefix extends string = typeof DEFAULT_PREFIX
 >(
   f: () => unknown,
-  options?: Options<Delimiter, Prefix>,
+  options?: Options<Delimiter, Prefix>
 ): InspectionResult<Delimiter, Prefix> {
   if (!isLambda(f)) {
-    throw new TypeError(`Cannot print debug info for not for an arrow function.`, { cause: { value: f, type: typeof f, usage: USAGE } })
+    throw new TypeError(
+      "Cannot print debug info for not for an arrow function.",
+      { cause: { value: f, type: typeof f, usage: USAGE } }
+    );
   }
-  const nameOf = f.toString().replace(/(\(\) => )/g, '');
+  const nameOf = f.toString().replace(/(\(\) => )/g, "");
   const originalValue = f();
   const type = typeof originalValue;
 
   let delimiter: Delimiter;
-  if (options && options.delimiter) {
+  if (options?.delimiter) {
     delimiter = options.delimiter;
   } else {
     delimiter = DEFAULT_DELIMITER as Delimiter;
   }
 
   let prefix: Prefix;
-  if (options && options.prefix) {
+  if (options?.prefix) {
     prefix = options.prefix;
   } else {
     prefix = DEFAULT_PREFIX as Prefix;
   }
 
-  let outputFunction;
-  if (options && options.outputFunction) {
+  let outputFunction: Function;
+  if (options?.outputFunction) {
     outputFunction = options.outputFunction;
   } else {
     outputFunction = console.log;
@@ -169,40 +179,52 @@ export function dbg<
 
   let useStringify = true;
 
-  if (typeof originalValue === 'number' && !Number.isSafeInteger(originalValue)) {
+  if (
+    typeof originalValue === "number" &&
+    !Number.isSafeInteger(originalValue)
+  ) {
     value = `${originalValue} (unsafe)`;
     useStringify = false;
   }
-  if (typeof originalValue === 'number' && Number.POSITIVE_INFINITY === originalValue) {
-    value = `Infinity`;
+  if (
+    typeof originalValue === "number" &&
+    Number.POSITIVE_INFINITY === originalValue
+  ) {
+    value = "Infinity";
     useStringify = false;
   }
-  if (typeof originalValue === 'number' && Number.NEGATIVE_INFINITY === originalValue) {
-    value = `-Infinity`;
+  if (
+    typeof originalValue === "number" &&
+    Number.NEGATIVE_INFINITY === originalValue
+  ) {
+    value = "-Infinity";
     useStringify = false;
   }
 
-  if (typeof originalValue === 'number' && Number.isNaN(originalValue)) {
-    value = `NaN`;
+  if (typeof originalValue === "number" && Number.isNaN(originalValue)) {
+    value = "NaN";
     useStringify = false;
   }
 
-  if (typeof originalValue === 'symbol') {
+  if (typeof originalValue === "symbol") {
     value = String(originalValue);
     useStringify = false;
   }
-  if (typeof originalValue === 'bigint') {
+  if (typeof originalValue === "bigint") {
     value = `${originalValue}n`;
     useStringify = false;
   }
-  if (typeof originalValue === 'function') {
+  if (typeof originalValue === "function") {
     value = originalValue.toString();
     useStringify = false;
   }
 
-  const valueStr = useStringify ? JSON.stringify(value) : value as string;
+  const valueStr = useStringify ? JSON.stringify(value) : (value as string);
 
-  const message: InspectionString<Delimiter, Prefix> = `${prefix}${nameOf}${delimiter}${valueStr}`;
+  const message: InspectionString<
+    Delimiter,
+    Prefix
+  > = `${prefix}${nameOf}${delimiter}${valueStr}`;
   outputFunction(message);
 
   const result: InspectionResult<Delimiter, Prefix> = {
@@ -212,12 +234,12 @@ export function dbg<
     type,
     name: nameOf,
     value: originalValue,
-  }
+  };
 
   return result;
 }
 
 // https://stackoverflow.com/a/65570273
 function isLambda(func: unknown): func is () => unknown {
-  return typeof func === 'function' && func.prototype === undefined
+  return typeof func === "function" && func.prototype === undefined;
 }

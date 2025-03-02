@@ -27,7 +27,7 @@ import { setTimeout } from "node:timers/promises";
 import { inspect } from "node:util";
 
 import { Result, Ok, Err } from "../src/result";
-import { Option } from "../src/option";
+import { Option, Some } from "../src/option";
 import { UndefinedBehaviorError } from "../src/utils";
 
 test("isOk should returns true for Ok value", () => {
@@ -565,7 +565,7 @@ test("toString should returns Err(3)", () => {
 test("toJSON should be serializable for JSON.stringify", () => {
   const a = Ok(3);
   const stringifyed = JSON.stringify(a);
-  expect(stringifyed).toBe('{"status":1,"value":3}');
+  expect(stringifyed).toBe('{"status":"Ok","value":3}');
 });
 
 test("equal should returns true for custom comparator value", () => {
@@ -599,6 +599,7 @@ test("[Symbol.iterator] should works", () => {
 test("[Symbol.iterator] should throw for Err", () => {
   const e = Err([1, 2, 3]);
   try {
+    // @ts-expect-error more stricter validation
     for (const v of e) {
     }
   } catch (e) {
@@ -609,6 +610,7 @@ test("[Symbol.iterator] should throw for Err", () => {
 test("[Symbol.iterator] should throw for non Iterable object", () => {
   const a = Ok(1);
   try {
+    // @ts-expect-error more stricter validation
     for (const v of a) {
     }
   } catch (e) {
@@ -623,16 +625,15 @@ test("[Symbol.split] should works for Ok(string) value", () => {
   expect(foo).toStrictEqual(["foo", ""]);
 });
 
-test("[Symbol.split] should work for Ok(RegExp) value", () => {
+test("[Symbol.split] should throw for Ok(RegExp) value", () => {
   const a = Ok(new RegExp("-"));
-  const arr = "2016-01-02".split(a);
-  expect(arr).toBeInstanceOf(Array);
-  expect(arr.length).toBe(3);
-  expect(arr).toStrictEqual(["2016", "01", "02"]);
+  // @ts-expect-error since RegExp is not a string
+  expect(() => "2016-01-02".split(a)).toThrow(UndefinedBehaviorError);
 });
 
-test("[Symbol.split] should throws for non string or RegExp values", () => {
+test("[Symbol.split] should throws for non string values", () => {
   const a = Ok(5);
+  // @ts-expect-error since number is not a string or RegExp
   expect(() => "2016-01-02".split(a)).toThrow(UndefinedBehaviorError);
 });
 
@@ -657,25 +658,32 @@ test("[Symbol.search] should throws error for Err", () => {
 test("[Symbol.search] should throws error for not a string", () => {
   const str = "foobar4";
   const v = Ok(5);
+  // @ts-expect-error only string value are allowed
   expect(() => str.search(v)).toThrow(UndefinedBehaviorError);
 });
 
-test("[Symbol.asyncIterator] should works", async () => {
-  const delays = Ok([
-    setTimeout(500, 1),
-    setTimeout(1300, 2),
-    setTimeout(3500, 3),
-  ]);
+test("[Symbol.asyncIterator] should throw error for object without [Symbol.asyncIterator] implementation", async () => {
+  jest.useFakeTimers();
+  const timer = jest.fn(setTimeout);
+  timer.mockImplementation((_, value) => value);
+
+  const delays = Ok([timer(500, 1), timer(1300, 2)]);
   let el = 1;
-  for await (const delay of delays) {
-    expect(delay).toBe(el);
-    el++;
-  }
+  expect(async () => {
+    // @ts-expect-error only async iterator available here
+    for await (const delay of delays) {
+      expect(delay).toBe(el);
+      el++;
+    }
+  }).rejects.toThrow(UndefinedBehaviorError);
+  expect(timer).toHaveBeenCalledTimes(2);
+  jest.clearAllTimers();
 });
 
 test("[Symbol.asyncIterator] should throw for Err", async () => {
   const a = Err(Promise.resolve(3));
   try {
+    // @ts-expect-error not implements async iterator
     for await (const b of a) {
     }
   } catch (e) {
@@ -683,14 +691,19 @@ test("[Symbol.asyncIterator] should throw for Err", async () => {
   }
 });
 
-test("[Symbol.asyncIterator] should throw for not iterable object", async () => {
-  const a = Ok(Promise.resolve(3));
-  try {
-    for await (const b of a) {
-    }
-  } catch (e) {
-    expect(e).toBeInstanceOf(Error);
-    expect(e).toBeInstanceOf(UndefinedBehaviorError);
+test("[Symbol.asyncIterator] should not throw for object with asyncIterator", async () => {
+  const a = Ok({
+    *[Symbol.asyncIterator]() {
+      yield 1;
+      yield 2;
+      yield 3;
+      return Promise.resolve(4);
+    },
+  });
+  let item = 1;
+  for await (const b of a) {
+    expect(item).toBe(b);
+    item++;
   }
 });
 
@@ -738,6 +751,10 @@ test("inspect.util should works", () => {
   const e = Ok({});
   const ei = inspect(e, { depth: null });
   expect(ei).toBe("Ok({})");
+
+  const err = Err(new Error("qwe"));
+  const erri = inspect(err);
+  expect(erri.startsWith("Err(Error: qwe)")).toBeTruthy();
 });
 
 test("fromPromise should work for non promise value", async () => {
@@ -765,6 +782,45 @@ test("constructor should returns wrapped error", () => {
   expect(r.isErr()).toBe(true);
   expect(r.unwrapErr()).toBeInstanceOf(Error);
 });
+
+test("constructor should returns OK value for normal execution", () => {
+  const r = new Result(() => {
+    return "ok status";
+  });
+  expect(r.isOk()).toBe(true);
+  expect(r.unwrap()).toBe("ok status");
+});
+
+test("constructor should returns Err for error handler usage", () => {
+  const r = new Result((ok, err) => {
+    err(new Error("qwe"));
+  });
+  expect(r.isErr()).toBe(true);
+  expect(r.unwrapErr()).toBeInstanceOf(Error);
+  expect((r.unwrapErr() as Error).message).toBe("qwe");
+});
+
+test("constructor should return Result value from Option", () => {
+  const opt = Some("some value");
+  const r = new Result(() => {
+    return opt;
+  });
+  expect(r.unwrap()).toBe(opt.unwrap());
+});
+
+// test("constructor should fail UndefinedBehaviorError for async function", () => {
+//   const asyncFn = jest.fn(() => Promise.resolve());
+//   expect(() => new Result(asyncFn)).rejects.toThrowError(UndefinedBehaviorError);
+// });
+
+// test("constructor should fail UndefinedBehaviorError for returning promise", () => {
+//   expect(
+//     () =>
+//       new Result(() => {
+//         return Promise.reject(new Error("qwe"));
+//       })
+//   ).toThrowError(UndefinedBehaviorError);
+// });
 
 test("withResolvers should work", () => {
   const { ok, result, err } = Result.withResolvers();

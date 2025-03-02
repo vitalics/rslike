@@ -27,8 +27,8 @@ SOFTWARE.
 import { Async } from "./async.ts";
 import { match } from "./match.ts";
 import { UndefinedBehaviorError } from "./utils.ts";
-import { Option, Some } from "./option.ts";
-import { Result, Err, Ok } from "./result.ts";
+import { type Option, Some } from "./option.ts";
+import { type Result, Err, Ok } from "./result.ts";
 
 /**
  * Function decorator. Combines `Option` and `Result` classes.
@@ -95,7 +95,7 @@ export function Bind<
       { cause: { value: fn, type: typeof fn } },
     );
   }
-  return function (...args: A) {
+  return ((...args: A) => {
     try {
       const result = Reflect.apply(fn, thisArg, args);
       if (result instanceof Promise) {
@@ -106,7 +106,7 @@ export function Bind<
     } catch (e) {
       return Err(e as E);
     }
-  } as never;
+  }) as never;
 }
 
 export default Bind;

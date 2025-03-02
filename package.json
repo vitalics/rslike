@@ -7,8 +7,9 @@
     "test": "pnpm run -r --stream --parallel --color test",
     "build": "pnpm run -r --stream --color build",
     "docs": "pnpm run -r --stream --parallel --color docs",
-    "lint": "eslint packages/*/src --ext .ts --cache",
-    "lint:fix": "pnpm lint --fix",
+    "lint": "biome lint",
+    "lint:fix": "pnpm lint --write",
+    "ci:release": "changeset",
     "ci:version": "changeset version && pnpm install --no-frozen-lockfile",
     "ci:publish": "changeset publish",
     "dx": "husky install"
@@ -17,22 +18,20 @@
     "node": ">=16",
     "pnpm": ">=8"
   },
-  "packageManager": "pnpm@8.6.12",
   "devDependencies": {
+    "@biomejs/biome": "1.9.4",
     "@changesets/cli": "2.26.2",
     "@tsconfig/node18": "18.2.0",
     "@types/jest": "29.5.3",
     "@types/node": "20.4.5",
-    "@typescript-eslint/eslint-plugin": "6.2.0",
-    "@typescript-eslint/parser": "6.2.0",
-    "eslint": "8.45.0",
-    "eslint-plugin-license-header": "0.6.0",
     "husky": "8.0.3",
     "jest": "29.6.1",
     "ts-jest": "29.1.1",
     "ts-node": "10.9.1",
     "tsup": "7.2.0",
-    "typescript": "5.1.6",
+    "tsx": "4.19.1",
+    "typedoc": "0.27.9",
+    "typescript": "5.8.2",
     "zx": "7.2.3"
   },
   "keywords": [
@@ -43,8 +42,5 @@
     "standard"
   ],
   "author": "Vitali Haradkou <vitalicset@yandex.ru>",
-  "license": "MIT",
-  "dependencies": {
-    "typedoc": "0.24.8"
-  }
+  "license": "MIT"
 }

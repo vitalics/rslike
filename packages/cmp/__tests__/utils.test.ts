@@ -13,7 +13,7 @@ test.each(compareCases)(
   (expected, v1, v2) => {
     const actual = compare(v1, v2);
     expect(actual).toBe(expected);
-  },
+  }
 );
 
 test("compare should return 1 for defined object", () => {
@@ -24,7 +24,7 @@ test("compare should return 1 for defined object", () => {
         expect(another).toStrictEqual({ value: 5 });
         return 1;
       },
-    },
+    }
   );
   expect(res).toBe(1);
 });
@@ -54,7 +54,7 @@ test.each(partialEqualsCases)(
   (expected, v1, v2) => {
     const actual = partialEquals(v1, v2);
     expect(actual).toBe(expected);
-  },
+  }
 );
 
 test("partialEquals should return true for object with Symbol.partialCompare implementation", () => {
@@ -65,7 +65,7 @@ test("partialEquals should return true for object with Symbol.partialCompare imp
       [Symbol.partialEquals](this: any, another: any) {
         return this.value == another.value;
       },
-    },
+    }
   );
   expect(res).toBe(true);
 });
@@ -79,8 +79,8 @@ test("partialEquals should throw for Symbol.partialCompare returns not boolean v
           return 4;
         },
       },
-      { value: 5 },
-    ),
+      { value: 5 }
+    )
   ).toThrow(UndefinedBehaviorError);
 });
 test("partialEquals should throw for Symbol.partialCompare returns not boolean value", () => {
@@ -92,15 +92,15 @@ test("partialEquals should throw for Symbol.partialCompare returns not boolean v
         [Symbol.partialEquals](this: any, another: any) {
           return 4;
         },
-      },
-    ),
+      }
+    )
   ).toThrow(UndefinedBehaviorError);
 });
 
 test("partialEquals should throw error for compareFn returns not a boolean", () => {
   // @ts-expect-error
   expect(() => partialEquals({}, {}, () => "qwe")).toThrow(
-    UndefinedBehaviorError,
+    UndefinedBehaviorError
   );
 });
 
@@ -123,7 +123,7 @@ const equalsCases = [
   [true, 5, 5],
   [false, 5, "6"],
   [false, 5, 6],
-  [false, NaN, NaN],
+  [false, Number.NaN, Number.NaN],
   [false, {}, {}],
 ] as const;
 
@@ -132,7 +132,7 @@ test.each(equalsCases)(
   (expected, v1, v2) => {
     const actual = equals(v1, v2);
     expect(actual).toBe(expected);
-  },
+  }
 );
 
 test("equals should return true for object with Symbol.equals implementation", () => {
@@ -143,7 +143,7 @@ test("equals should return true for object with Symbol.equals implementation", (
       [Symbol.equals](this: any, another: any) {
         return this.value == another.value;
       },
-    },
+    }
   );
   expect(res).toBe(true);
 });
@@ -157,8 +157,8 @@ test("equals should throw for Symbol.equals returns not boolean value", () => {
           return 4;
         },
       },
-      { value: 5 },
-    ),
+      { value: 5 }
+    )
   ).toThrow(UndefinedBehaviorError);
 });
 test("equals should throw for Symbol.equals returns not boolean value", () => {
@@ -170,8 +170,8 @@ test("equals should throw for Symbol.equals returns not boolean value", () => {
         [Symbol.equals](this: any, another: any) {
           return 4;
         },
-      },
-    ),
+      }
+    )
   ).toThrow(UndefinedBehaviorError);
 });
 
@@ -188,8 +188,8 @@ test("equals should throw for object which is implemnets Symbol.equals but retur
           return true;
         },
       },
-      {},
-    ),
+      {}
+    )
   ).toBe(true);
 });
 

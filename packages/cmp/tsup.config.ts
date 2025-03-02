@@ -22,21 +22,21 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-import { defineConfig } from 'tsup'
+import { defineConfig } from "tsup";
 
 export default defineConfig(() => ({
-  entry: ['src/index.ts', 'src/globals.ts', 'src/symbols.ts'],
-  format: ['cjs', 'esm'],
+  entry: ["src/index.ts", "src/globals.ts", "src/symbols.ts"],
+  format: ["cjs", "esm"],
   splitting: false,
   clean: true,
   cjsInterop: true,
   dts: true,
-  target: ['node18'],
+  target: ["node18"],
   shims: true,
-  tsconfig: './tsconfig.json',
+  tsconfig: "./tsconfig.json",
   outExtension({ format }) {
     return {
-      js: format === 'cjs' ? '.cjs' : format === 'esm' ? `.mjs` : '.js',
-    }
+      js: format === "cjs" ? ".cjs" : format === "esm" ? ".mjs" : ".js",
+    };
   },
 }));

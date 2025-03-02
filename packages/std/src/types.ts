@@ -22,10 +22,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-export type Fn<R = unknown, A extends unknown[] = [], This = void> = (
-  this: This,
-  ...args: A
-) => R;
+export type Fn<
+  R = unknown,
+  A extends readonly unknown[] = [],
+  This = void
+> = Function & ((this: This, ...args: A) => R);
 
 export type AsyncFn<R = unknown, A extends unknown[] = [], This = void> = Fn<
   Promise<R>,
@@ -38,4 +39,38 @@ export type Box<T> = {
   unwrap(): T;
 };
 
+export type ComparatorFn<Self, Other = Self> = (
+  self: Self,
+  other: Other
+) => boolean;
+
+export type IsNever<T> = [T] extends [never] ? true : false;
+
 export type IsPromise<T> = T extends Promise<any> ? true : false;
+
+type ErrorLike = {
+  readonly name: string;
+  readonly message: string;
+  readonly stack?: string;
+  readonly cause?: unknown;
+};
+
+export type TError<ErrLike extends ErrorLike> = Error & ErrLike;
+
+export type TUndefinedBehaviorError<ErrLike extends Omit<ErrorLike, "name">> =
+  TError<
+    {
+      readonly name: "UndefinedBehaviorError";
+    } & ErrLike
+  >;
+
+export type ToStack<
+  Messages extends readonly string[] = readonly [],
+  R extends string = ""
+> = Messages extends readonly [
+  infer Head extends string,
+  ...infer Tail extends string[]
+]
+  ? `${Head}
+  ${ToStack<Tail, R>}`
+  : R;

@@ -22,7 +22,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-import { None, Option, Some, Err, Ok, Result, Bind, Async } from "./index";
+
+// biome-ignore lint/style/useImportType: this is not types. set in globalThis
+import  { None, Option, Some, Err, Ok, Result, Bind, Async } from "./index";
 
 type NoneFn = typeof None;
 type OptionCtor = typeof Option;
@@ -47,13 +49,21 @@ declare namespace globalThis {
 }
 
 declare global {
+  // biome-ignore lint/suspicious/noRedeclare: <explanation>
   let Some: SomeFn;
+  // biome-ignore lint/suspicious/noRedeclare: <explanation>
   let None: NoneFn;
+  // biome-ignore lint/suspicious/noRedeclare: <explanation>
   let Option: OptionCtor;
+  // biome-ignore lint/suspicious/noRedeclare: <explanation>
   let Err: ErrFn;
+  // biome-ignore lint/suspicious/noRedeclare: <explanation>
   let Ok: OkFn;
+  // biome-ignore lint/suspicious/noRedeclare: <explanation>
   let Result: ResultCtor;
+  // biome-ignore lint/suspicious/noRedeclare: <explanation>
   let Bind: BindFn;
+  // biome-ignore lint/suspicious/noRedeclare: <explanation>
   let Async: AsyncFn;
 }
 

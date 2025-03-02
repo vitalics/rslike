@@ -672,7 +672,7 @@ test('getOrInsertWith should throws an "UndefinedBehavior" for function which re
 
   // @ts-expect-error
   expect(() => a.getOrInsertWith(() => undefined)).toThrow(
-    UndefinedBehaviorError,
+    UndefinedBehaviorError
   );
 });
 
@@ -849,7 +849,7 @@ test("toString should returns None() for None(null)", () => {
 
 test("toJSON should be serializable for JSON.stringify", () => {
   const str = JSON.stringify(Some(3));
-  expect(str).toBe('{"status":1,"value":3}');
+  expect(str).toBe('{"status":"Some","value":3}');
 });
 
 test("[Symbol.iterator] should work for iterable object", () => {
@@ -864,6 +864,7 @@ test("[Symbol.iterator] should work for iterable object", () => {
 test("[Symbol.iterator] should throws UndefinedBehavior error for non iterable value", () => {
   const a = Some(5);
   expect(() => {
+    // @ts-expect-error not iterable
     for (const el of a) {
       expect(el).toBe(5);
     }
@@ -873,6 +874,7 @@ test("[Symbol.iterator] should throws UndefinedBehavior error for non iterable v
 test("[Symbol.iterator] should throws UndefinedBehavior error for non iterable value", () => {
   const a = None();
   expect(() => {
+    // @ts-expect-error not iterable
     for (const el of a) {
       expect(el).toBe(5);
     }
@@ -882,6 +884,7 @@ test("[Symbol.iterator] should throws UndefinedBehavior error for non iterable v
 test("[Symbol.iterator] should throws UndefinedBehavior error for non iterable value", () => {
   const a = None(null);
   expect(() => {
+    // @ts-expect-error not iterable
     for (const el of a) {
       expect(el).toBe(5);
     }
@@ -895,12 +898,9 @@ test("[Symbol.split] should works for Some(string) value", () => {
   expect(foo).toStrictEqual(["foo", ""]);
 });
 
-test("[Symbol.split] should work for Some(RegExp) value", () => {
+test("[Symbol.split] should throw an error for Some(RegExp) value", () => {
   const a = Some(new RegExp("-"));
-  const arr = "2016-01-02".split(a);
-  expect(arr).toBeInstanceOf(Array);
-  expect(arr.length).toBe(3);
-  expect(arr).toStrictEqual(["2016", "01", "02"]);
+  expect(() => "2016-01-02".split(a)).toThrowError(UndefinedBehaviorError);
 });
 
 test("[Symbol.split] should throws for non string or RegExp values", () => {
@@ -923,20 +923,25 @@ test("[Symbol.search] should throws error for not a string", () => {
 
 test("[Symbol.asyncIterator] should works", async () => {
   jest.useFakeTimers();
-  const first = setTimeout(500, 1);
-  const second = setTimeout(1300, 2);
-  const third = setTimeout(3500, 3);
-  const delays = Some([first, second, third]);
+  const qwe = Some({
+    [Symbol.asyncIterator]: async function* () {
+      yield 1;
+      yield 2;
+      return 3;
+    },
+  });
   let el = 1;
-  for await (const delay of delays) {
+  for await (const delay of qwe) {
     expect(delay).toBe(el);
     el++;
   }
+  expect(el).toBe(3);
 });
 
 test("[Symbol.asyncIterator] should throw for not iterable object", async () => {
   const a = Some(Promise.resolve(3));
   try {
+    // @ts-expect-error only asyncIterable available here
     for await (const b of a) {
     }
   } catch (e) {
@@ -948,23 +953,51 @@ test("[Symbol.asyncIterator] should throw for not iterable object", async () => 
 test("Symbol.inspect should works", () => {
   const a = Some(4);
   const ai = inspect(a);
-  expect(ai).toBe("Option<Some, 4>");
+  expect(ai).toBe("Some(4)");
 
   const b = None();
   const bi = inspect(b);
-  expect(bi).toBe("Option<None, >");
+  expect(bi).toBe("None()");
 
   const c = None(null);
   const ci = inspect(c);
-  expect(ci).toBe("Option<None, null>");
+  expect(ci).toBe("None(null)");
 
   const d = Some(4);
   const di = inspect(d, { depth: -3 });
-  expect(di).toBe("Option<Some, 4>");
+  expect(di).toBe("Some(4)");
 
   const e = Some({});
   const ei = inspect(e, { depth: null });
-  expect(ei).toBe("Option<Some, {}>");
+  expect(ei).toBe("Some({})");
+});
+
+test("fromPromise should returns Some for resolved", async () => {
+  const o = await Option.fromPromise(Promise.resolve(4));
+  expect(o.isSome()).toBe(true);
+  expect(o.unwrap()).toBe(4);
+});
+
+test("fromPromise should returns None for rejected", async () => {
+  const o = await Option.fromPromise(Promise.reject("error"));
+  expect(o.isNone()).toBe(true);
+});
+
+test("fromPromise should returns None for async function that throws", async () => {
+  const o = await Option.fromPromise(
+    (async () => {
+      throw new Error("Some Error");
+    })()
+  );
+  expect(o.isNone()).toBe(true);
+});
+test("fromPromise should returns None for async function that throws null", async () => {
+  const o = await Option.fromPromise(
+    (async () => {
+      throw null;
+    })()
+  );
+  expect(o.isNone()).toBe(true);
 });
 
 test("withResolvers should work for some", () => {
@@ -978,6 +1011,34 @@ test("withResolvers should work for none", () => {
   some();
   expect(option.isNone()).toBe(true);
   expect(option[Symbol.toPrimitive]()).toBe(undefined);
+});
+
+test("constructor that return value should work", () => {
+  const a = new Option(() => 4);
+  expect(a.unwrap()).toBe(4);
+});
+
+test("constructor should return None for throwing null or undefined", () => {
+  const o = new Option(() => {
+    throw Promise.resolve("4");
+  });
+  expect(o.isNone()).toBe(true);
+});
+
+test("constructor shoud return same value for Ok", () => {
+  const a = new Option(() => Ok(4));
+  expect(a.unwrap()).toBe(4);
+  expect(a.isSome()).toBe(true);
+});
+
+test("constructor shoud return None value for Ok(undefined)", () => {
+  const a = new Option(() => Ok(undefined));
+  expect(a.isNone()).toBe(true);
+});
+
+test("constructor shoud return None value for Ok(null)", () => {
+  const a = new Option(() => Ok(null));
+  expect(a.isNone()).toBe(true);
 });
 
 test("withResolvers should work for none null", () => {

@@ -25,30 +25,28 @@ SOFTWARE.
 import { UndefinedBehaviorError, assertArgument } from "./utils.ts";
 import { Option } from "./option.ts";
 import { Result } from "./result.ts";
-import { Fn } from "./types.ts";
+import type { Fn } from "./types.ts";
 
-type OkCb<I, R> =
-  I extends Promise<infer V>
-    ? OkCb<V, Promise<R>>
-    : I extends Option<infer Some>
-      ? Fn<R, [value: Some]>
-      : I extends Result<infer Ok, unknown>
-        ? Ok extends Option<infer O>
-          ? Fn<R, [value: O]>
-          : Fn<R, [value: Ok]>
-        : I extends boolean
-          ? Fn<R, [true]>
-          : never;
-type ErrCb<I, R> =
-  I extends Promise<infer V>
-    ? OkCb<V, R>
-    : I extends Option<unknown>
-      ? Fn<R>
-      : I extends Result<unknown, infer E>
-        ? Fn<R, [error: E]>
-        : I extends boolean
-          ? Fn<R, [false]>
-          : never;
+type OkCb<I, R> = I extends Promise<infer V>
+  ? OkCb<V, Promise<R>>
+  : I extends Option<infer Some>
+  ? Fn<R, [value: Some]>
+  : I extends Result<infer Ok, unknown>
+  ? Ok extends Option<infer O>
+    ? Fn<R, [value: O]>
+    : Fn<R, [value: Ok]>
+  : I extends boolean
+  ? Fn<R, [true]>
+  : never;
+type ErrCb<I, R> = I extends Promise<infer V>
+  ? OkCb<V, R>
+  : I extends Option<unknown>
+  ? Fn<R>
+  : I extends Result<unknown, infer E>
+  ? Fn<R, [error: E]>
+  : I extends boolean
+  ? Fn<R, [false]>
+  : Fn<unknown, [unknown]>;
 
 /**
  * matches the `boolean` or `Option` or `Result` and calls callback functions.
@@ -88,14 +86,14 @@ export function match<
   const R,
   I extends
     | Promise<I>
-    | Option<unknown>
-    | Result<Option<unknown>, unknown>
-    | Result<unknown, unknown>
-    | boolean,
+    | Option<any, any>
+    | Result<Option<any, any>, any>
+    | Result<any, any>
+    | boolean
 >(
   value: I,
   okOrSomeCb: OkCb<I, R>,
-  errOrNoneCb: ErrCb<I, R>,
+  errOrNoneCb: ErrCb<I, R>
 ): I extends Promise<any> ? Promise<R> : R {
   assertArgument("match", okOrSomeCb, "function");
   assertArgument("match", errOrNoneCb, "function");
@@ -104,7 +102,8 @@ export function match<
       return okOrSomeCb(true as never);
     }
     return errOrNoneCb(false);
-  } else if (value instanceof Result) {
+  }
+  if (value instanceof Result) {
     if (value.isOk()) {
       const unwrapped = value!.unwrap();
       if (unwrapped instanceof Option) {
@@ -116,9 +115,10 @@ export function match<
       return okOrSomeCb(unwrapped);
     }
     return (errOrNoneCb as OkCb<Result<unknown, unknown>, R>)(
-      value.unwrapErr(),
+      value.unwrapErr()
     ) as never;
-  } else if (value instanceof Option) {
+  }
+  if (value instanceof Option) {
     if (value.isSome()) {
       return (okOrSomeCb as OkCb<Option<unknown>, R>)(value.unwrap()) as never;
     }
@@ -132,6 +132,6 @@ export function match<
         type: typeof value,
         ctor: (value as object).constructor?.name,
       },
-    },
+    }
   );
 }
