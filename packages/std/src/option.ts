@@ -36,10 +36,10 @@ import {
 } from "./utils.ts";
 
 /** Option possible statuses */
-const Status = {
+const Status = Object.freeze({
   None: "None",
   Some: "Some",
-} as const;
+} as const);
 
 type StatusKey = keyof typeof Status;
 
@@ -1067,10 +1067,15 @@ export class Option<
     return this.value;
   }
 
-  toString() {
-    return `${this.status}(${this.status === Status.None ? "" : this.value})`;
+  toString(): `${S}(${string})` {
+    return `${this.status}(${this.status === Status.None ? "" : this.value})` as never;
   }
 
+  /**
+   * This internal method using for `JSON.stringify` serialization. Please avoid using this method directly.
+   * @internal
+   * @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/stringify#tojson_behavior MDN. toJSON behavior}
+   */
   toJSON() {
     return {
       status: this.status,

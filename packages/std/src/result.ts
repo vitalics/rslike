@@ -38,10 +38,10 @@ import type {
 } from "./types.ts";
 
 /** Result possible status */
-const Status = {
+const Status = Object.freeze({
   Err: "Err",
   Ok: "Ok",
-} as const;
+} as const);
 
 type StatusKey = keyof typeof Status;
 
@@ -851,12 +851,17 @@ export class Result<
     return undefined;
   }
 
-  toString() {
+  toString(): `${S}(${string})` {
     return `${this.status}(${
       this.status === Status.Err ? this.error : this.value
-    })`;
+    })` as never;
   }
 
+  /**
+   * This internal method using for `JSON.stringify` serialization. Please avoid using this method directly.
+   * @internal
+   * @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/stringify#tojson_behavior MDN. toJSON behavior}
+   */
   toJSON() {
     return {
       status: this.status,
