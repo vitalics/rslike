@@ -1,5 +1,12 @@
 # @rslike/cmp
 
+## 3.1.1
+
+### Patch Changes
+
+- Updated dependencies [b4303ba]
+  - @rslike/std@3.1.1
+
 ## 3.1.0
 
 ### Minor Changes
