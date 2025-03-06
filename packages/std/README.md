@@ -21,11 +21,12 @@ NPM:
 npm i @rslike/std
 ```
 
-YARN/PNPM:
+YARN/PNPM/Bun:
 
 ```bash
 yarn add @rslike/std
 pnpm add @rslike/std
+bun add @rslike/std
 ```
 
 ## Wiki
@@ -122,6 +123,10 @@ r.isOk(); // true
 r.unwrap(); // 123
 ```
 
+### UndefinedBehaviorError
+
+Error that occurs when an operation is not supported, or when result is unpredictable.
+
 ### Option
 
 Type `Option` represents an optional value: every `Option` is either `Some` and contains a value, or `None`, and does not. `Option` have a number of uses:
@@ -139,123 +144,163 @@ Type `Option` represents an optional value: every `Option` is either `Some` and 
 
 ##### Some(T)
 
-represents Some value
+represents Some value.
+
+```ts
+const a = Some(123);
+
+const b = Some(null); // None()
+```
+
+**NOTE:** `Some(undefined)` and `Some(null)` automatically converted to `None()`.
+
+`Some` function is also instance of `Option` class and `Some` function.
+
+```ts
+Some(4) instanceof Option; // true
+Some(4) instanceof Some; // true,
+
+Some(4) instanceof None; // false
+```
 
 ##### None
 
 Represents nullish(`null` or `undefiend`) value
 
-#### Symbols
+```ts
+const a = None(); // Option<undefined>
+const a = None(null); // Option<null>
+```
 
-##### Symbol.toPrimitive
-
-> since 3.x.x
-
-Returns `value` from `Option`
-
-##### Symbol.toStringTag
-
-> since 3.x.x
-
-##### Symbol.asyncIterator
-
-> since 3.x.x
-
-See [MDN docs](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol/asyncIterator) for more
-
-**Note**: This method will only yeild if the `Option` is `Some`
-
-**Note**: throws `UndefinedBehaviorError` for `Some(value)` if `value` is not implements `Symbol.asyncIterator`
-
-##### Symbol.iterator
-
-> since 3.x.x
-
-See [MDN docs](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol/iterator) for more
-
-**Note**: This method will only yeild if the `Option` is `Some`
-
-**Note**: throws `UndefinedBehaviorError` for `Some(value)` if `value` is not implements `Symbol.iterator`
-
-Example:
+`None` function is also instance of `Option`class and `None` function.
 
 ```ts
-const a = Some([1, 2, 3]);
-for (const el of a) {
-  console.log("element is:", el);
-}
-// will prints
-// element is: 1
-// element is: 2
-// element is: 3
+const a = Some(123);
+const b = None();
 
-const b = Some(1);
-// will throws, Symbol.iterator is not suported for number
-for (const el of b) {
-  console.log("element is:", el);
-}
+a instanceof Option; // true
+b instanceof Option; // true
 
-const c = Some({
-  [Symbol.iterator]() {
-    return 1;
-  },
+a instanceof Some; // true
+a instanceof None; // false
+
+b instanceof Some; // false
+b instanceof None; // true
+```
+
+#### constructor(executor)
+
+- `executor` - function that receives a `some` and `none` functions as arguments.
+
+  - `some(value)` - function that receives a value and returns `Option` instance in `Some` status.
+    **NOTE:** `some(undefined)` and `some(null)` automatically converted to `None()`.
+
+  - `none(reason)` - function that returns `Option` instance in `None` status.
+
+**NOTE:** throws `UndefinedBehaviorError` if value returns Promise, or `executor` function is async.
+
+```ts
+// return/throw results
+const a = new Option(() => 4); // Option<number>
+a.isSome(); // true
+
+const b = new Option(() => {
+  throw new Error("error");
 });
+b.isNone(); // true
 
-for (const el of c) {
-  console.log("iterable:", el);
+// control flow functions
+const c = new Option((some, none) => {
+  return Math.random() > 0.5 ? some(42) : none();
+}); // Option<number>
+
+// automatic conversion
+const d = new Option((some) => {
+  some(null);
+});
+d.isSome(); // false
+d.isNone(); // true
+```
+
+The next code will throws `UndefinedBehaviorError`
+
+```ts
+new Option((some, none) => {
+  // throws since return Promise
+  return Promise.resolve(Math.random() > 0.5 ? some(42) : none());
+}); // throws UndefinedBehaviorError
+
+new Option(async (some, none) => {
+  // throws since async function
+  return some(5);
+}); // throws UndefinedBehaviorError
+```
+
+#### Static fields/methods
+
+##### Status
+
+Returns object with possible statuses
+
+```ts
+Option.Status = {
+  Some: "Some",
+  None: "None",
+};
+```
+
+##### fromPromise/fromAsync
+
+Converts a `Promise` into an `Option`.
+
+We recommend using `Bind` function to handle functions since it allows to handle both regular and async functions and transform it into `Result<Option<T>, E>`.
+
+```ts
+await Option.fromPromise(Promise.resolve(42)); // Option<number>
+await Option.fromPromise<Error>(Promise.reject(new Error("error"))); // Option<Error>
+async function doAction() {
+  return 42;
 }
-// will prints
-// iterable: 1
+
+await Option.fromPromise(doAction()); // Option<number>
+// but best solution is to use Bind function
+const doActionSafe = Bind(doAction);
+
+await doActionSafe(); // Result<Option<number>, unknown>
 ```
 
-##### Symbol.split
+##### withResolvers
 
-> implemented since 3.x.x version
-
-See [MDN docs](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol/split) for more
-
-**NOTE:** throws `UndefinedBehaviorError` if wrapped value is not a `string` or `RegExp`
-
-example:
+Returns an object with option and `some`, `none` functions. Similar to [`Promise.withResolvers`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/withResolvers)
 
 ```ts
-const a = Some("bar");
+const { option, some, none } = Option.withResolvers();
 
-"foobar".split(a); // ["foo", ""]
+console.log(some(2)); // (value: number) => Option<number>
+console.log(option.unwrap()); // 2
+
+none(); // doing noting. result is already set to 2
 ```
 
-##### Symbol.search
+##### is(value)
 
-> implemented since 3.x.x version
+Returns `true` if the `value` instance of `Option`.
 
-See [MDN docs](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol/search) for more
+##### None
 
-**NOTE:** throws `UndefinedBehaviorError` if wrapped value is not a `string` or `RegExp`
+Similar to `None` function.
 
-##### Symbol.inspect
+##### Some
 
-> `util.inspect` is a server feature
+Similar to `Some` function.
 
-The `util.inspect()` method returns a string representation of object that is intended for debugging.
-
-See more about [Symbol.inspect](https://nodejs.org/api/util.html#utilinspectobject-showhidden-depth-colors)
-
-Example:
-
-```ts
-import util from "node:util";
-
-const a = Some(4);
-util.inspect(a); // Some(4)
-```
-
-#### Methods
+#### Instance fields/methods
 
 ##### expect
 
 Returns the contained `Some` value, consuming the self value.
 
-```typescript
+```ts
 const x = Some("value");
 x.expect("fruits are healthy") === "value"; // true
 
@@ -271,7 +316,7 @@ Because this function may throws, its use is generally discouraged. Instead, pre
 
 Throws an error when value is `None`
 
-```typescript
+```ts
 const x = Some("air");
 x.unwrap() === "air";
 
@@ -338,13 +383,13 @@ const k = 21;
 const x = Some("foo");
 x.mapOrElse(
   () => 2 * k,
-  (v) => v.length,
+  (v) => v.length
 ) === 3;
 
 const x: Option<string> = None();
 x.mapOrElse(
   () => 2 * k,
-  (v) => v.length,
+  (v) => v.length
 ) === 42;
 ```
 
@@ -489,10 +534,7 @@ If self is `Some(s)` and other is `Some(o)`, this method returns `Some(f(s, o))`
 
 ```ts
 class Point {
-  constructor(
-    readonly x: number,
-    readonly y: number,
-  ) {}
+  constructor(readonly x: number, readonly y: number) {}
   static create(x: number, y: number) {
     return new Point(x, y);
   }
@@ -500,7 +542,7 @@ class Point {
 const x = Some(17.5);
 const y = Some(42.7);
 
-x.zipWith(y, Point.create) === Some({ x: 17.5, y: 42.7 });
+x.zipWith(y, Point.create); // Some({ x: 17.5, y: 42.7 });
 ```
 
 ##### unzip
@@ -657,40 +699,74 @@ The `andThen` and `orElse` methods take a function as input, and only evaluate t
 
 This is an example of using methods like `andThen` and or in a pipeline of method calls. Early stages of the pipeline pass failure values (`None`) through unchanged, and continue processing on success values (`Some`). Toward the end, or substitutes an error message if it receives None.
 
-### Result
+##### toString
 
-`Result<T, E>` is the type used for returning and propagating errors. It is an enum with the variants, `Ok(T)`, representing success and containing a value, and `Err(E)`, representing error and containing an error value.
+Returns string representation of the `Option` value.
 
-#### Functions
+```ts
+Some(3).toString(); // Some(3)
+None(null).toString(); // None(null)
+```
 
-##### Ok(T)
+##### valueOf
 
-Represents success with `T` value.
+Returns self value. Not recommended for use but can be useful in some cases.
 
-##### Err(E)
+```ts
+Some(3).valueOf(); // 3
+None(null).valueOf(); // null
+None().valueOf(); // undefined
+None("some string").valueOf(); // some string
+```
 
-Represents fail with some error inside.
+##### toJSON
+
+Returns JSON representation of the `Option` value. This method is used by `JSON.stringify()`.
+
+Not recommended for use but can be useful in some cases.
+
+```ts
+Some(1).toJSON(); // { status: 'Some', value: 1 };
+None().toJSON(); // { status: 'None', value: undefined };
+None(null).toJSON(); // { status: 'None', value: null };
+```
 
 #### Symbols
 
 ##### Symbol.toPrimitive
 
+> since 3.x.x
+
+Returns `value` from `Option`
+
 ##### Symbol.toStringTag
 
+> since 3.x.x
+
+##### Symbol.asyncIterator
+
+> since 3.x.x
+
+See [MDN docs](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol/asyncIterator) for more
+
+**Note**: This method will only yeild if the `Option` is `Some`
+
+**Note**: throws `UndefinedBehaviorError` for `Some(value)` if `value` is not implements `Symbol.asyncIterator`
+
 ##### Symbol.iterator
+
+> since 3.x.x
 
 See [MDN docs](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol/iterator) for more
 
 **Note**: This method will only yeild if the `Option` is `Some`
 
-**Note**: throws `UndefinedBehaviorError` for `Ok(value)` if `value` is not implements `Symbol.iterator`
-
-`Err` value is not iterable.
+**Note**: throws `UndefinedBehaviorError` for `Some(value)` if `value` is not implements `Symbol.iterator`
 
 Example:
 
 ```ts
-const a = Ok([1, 2, 3]);
+const a = Some([1, 2, 3]);
 for (const el of a) {
   console.log("element is:", el);
 }
@@ -699,13 +775,13 @@ for (const el of a) {
 // element is: 2
 // element is: 3
 
-const b = Ok(1);
+const b = Some(1);
 // will throws, Symbol.iterator is not suported for number
 for (const el of b) {
   console.log("element is:", el);
 }
 
-const c = Ok({
+const c = Some({
   [Symbol.iterator]() {
     return 1;
   },
@@ -718,21 +794,29 @@ for (const el of c) {
 // iterable: 1
 ```
 
-##### Symbol.asyncIterator
-
-> since 3.x.x
-
-See [MDN docs](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol/asyncIterator) for more
-
-**Note**: This method will only yeild if the `Option` is `Some`
-
-**Note**: throws `UndefinedBehaviorError` for `Some(value)` if `value` is not implements `Symbol.asyncIterator`
-
 ##### Symbol.split
+
+> implemented since 3.x.x version
+
+See [MDN docs](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol/split) for more
+
+**NOTE:** throws `UndefinedBehaviorError` if wrapped value is not a `string` or `RegExp`
+
+example:
+
+```ts
+const a = Some("bar");
+
+"foobar".split(a); // ["foo", ""]
+```
 
 ##### Symbol.search
 
-##### Symbol.inspect
+> implemented since 3.x.x version
+
+See [MDN docs](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol/search) for more
+
+**NOTE:** throws `UndefinedBehaviorError` if wrapped value is not a `string` or `RegExp`
 
 ##### Symbol.inspect
 
@@ -747,12 +831,137 @@ Example:
 ```ts
 import util from "node:util";
 
-const a = Ok(4);
-util.inspect(a); // Ok(4)
-util.inspect(Err("some error")); // Err('some error')
+const a = Some(4);
+util.inspect(a); // Some(4)
 ```
 
-#### Methods
+### Result
+
+`Result<T, E>` is the type used for returning and propagating errors. It is an enum with the variants, `Ok(T)`, representing success and containing a value, and `Err(E)`, representing error and containing an error value.
+
+#### Functions
+
+##### Ok(T)
+
+Represents success with `T` value.
+
+`Ok` function is also instance of `Result`class and `Ok` function.
+
+```ts
+const aOk = Ok(123);
+const aErr = Err(123);
+
+aOk instanceof Result; // true
+aOk instanceof Ok; // true
+aOk instanceof Err; // false
+
+aErr instanceof Result; // true
+aErr instanceof Ok; // false
+aErr instanceof Err; // true
+```
+
+##### Err(E)
+
+Represents fail with some error inside.
+
+```ts
+const aErr = Err(123);
+
+aErr.isErr(); // true
+aErr.unwrapErr(); // 123
+aErr.unwrap(); // throws since aErr is Err
+```
+
+`Err` function is also instance of `Result`class and `Err` function.
+
+```ts
+const aErr = Err(123);
+aErr instanceof Result; // true
+aErr instanceof Err; // true
+aErr instanceof Ok; // false
+```
+
+#### constructor(executor)
+
+- `executor` - function that receives a `some` and `none` functions as arguments. Return value is used as `Ok`. If executor throws an error, it is used as `Err`.
+  - `ok(value)` - function that receives a value and returns `Ok(value)`
+  - `err(reason)` - function that receives a reason and returns `Err(reason)`
+
+**NOTE:** Throws `UndefinedBehaviorError` if `executor` is not a function or `executor` returns a `Promise` or `executor` is async function
+
+```ts
+// normal function execution
+const r1 = new Result(() => {
+  throw new Error("qwe");
+});
+r1.isErr(); // true
+r1.unwrapErr(); // Error('qwe')
+
+const r2 = new Result(() => {
+  return "some success";
+});
+r2.isOk(); // true
+r2.unwrap(); // "some success"
+
+// using control flow functions
+const r3 = new Result((ok, err) => {
+  // return is not needed
+  Math.random() > 0.5 ? ok("success") : err("error");
+});
+
+// Note: async functions or Promise return will throw an error. use `fromPromise` or `fromAsync`
+new Result(async () => {
+  // throws
+  await Promise.resolve();
+});
+new Result(() => Promise.resolve()); // throws
+Result.fromPromise(Promise.resolve("okay")); // OK. Result<okay>
+```
+
+#### Static methods/fields
+
+##### fromPromise/fromAsync
+
+transforms given promise into a `Result`.
+
+```ts
+const r = await Result.fromPromise(Promise.resolve("okay"));
+r.unwrap(); // okay
+
+const r2 = await Result.fromPromise(Promise.reject("error"));
+r2.unwrapErr(); // error
+```
+
+##### Status
+
+Static property that returns object with all possible statuses.
+
+##### withResolvers
+
+Returns an object with option and `ok`, `err` functions. Similar to [`Promise.withResolvers`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/withResolvers)
+
+```ts
+const { result, ok, err } = Result.withResolvers();
+
+ok(2);
+console.log(option.unwrap()); // 2
+
+err("qwe"); // doing noting. result is already set to 2
+```
+
+##### is(value)
+
+Returns true if the `value` is an instance of `Result`.
+
+##### ok/Ok
+
+returns `Ok` value if the `value` is an instance of `Result`. Same as `Ok` function.
+
+##### err/Err
+
+returns `Err` value if the `value` is an instance of `Result`. Same as `Err` function.
+
+#### Methods/Fields
 
 ##### expect
 
@@ -908,13 +1117,13 @@ let k = 21;
 const x: Result<string, string> = Ok("foo");
 x.mapOrElse(
   (err) => k * 2,
-  (v) => v.length,
+  (v) => v.length
 ); // 3
 
 const y: Result<string, string> = Err("bar");
 y.mapOrElse(
   (e) => k * 2,
-  (v) => v.length,
+  (v) => v.length
 ); // 42
 ```
 
@@ -1083,3 +1292,119 @@ The `andThen` and `orElse` methods take a function as input, and only evaluate t
 | `orElse`  | Err(e) | e              | Err(d)          | Err(d) |
 | `orElse`  | Err(e) | e              | Ok(y)           | Ok(y)  |
 | `orElse`  | Ok(x)  | (not provided) | (not evaluated) | Ok(x)  |
+
+##### toString
+
+Returns string representation of the `Result` value.
+
+```ts
+Ok(3).toString(); // Ok(3)
+Err(null).toString(); // Err(null)
+```
+
+##### valueOf
+
+Returns self value. Not recommended for use but can be useful in some cases.
+
+```ts
+Ok(3).valueOf(); // 3
+Err(null).valueOf(); // null
+Err("qwe").valueOf(); // qwe
+```
+
+##### toJSON
+
+Returns JSON representation of the `Result` value. This method is used by `JSON.stringify()`.
+
+Not recommended for use but can be useful in some cases.
+
+```ts
+Ok(1).toJSON(); // { status: 'Ok', value: 1 };
+Err(null).toJSON(); // { status: 'Err', value: null };
+Err("qwe").toJSON(); // { status: 'Err', value: 'qwe' };
+```
+
+#### Symbols
+
+##### Symbol.toPrimitive
+
+##### Symbol.toStringTag
+
+##### Symbol.iterator
+
+> since 3.x.x
+
+See [MDN docs](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol/iterator) for more
+
+**Note**: This method will only yeild if the `Option` is `Some`
+
+**Note**: throws `UndefinedBehaviorError` for `Ok(value)` if `value` is not implements `Symbol.iterator`
+
+`Err` value is not iterable.
+
+Example:
+
+```ts
+const a = Ok([1, 2, 3]);
+for (const el of a) {
+  console.log("element is:", el);
+}
+// will prints
+// element is: 1
+// element is: 2
+// element is: 3
+
+const b = Ok(1);
+// will throws, Symbol.iterator is not suported for number
+for (const el of b) {
+  console.log("element is:", el);
+}
+
+const c = Ok({
+  [Symbol.iterator]() {
+    return 1;
+  },
+});
+
+for (const el of c) {
+  console.log("iterable:", el);
+}
+// will prints
+// iterable: 1
+```
+
+##### Symbol.asyncIterator
+
+> since 3.x.x
+
+See [MDN docs](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol/asyncIterator) for more
+
+**Note**: This method will only yeild if the `Option` is `Some`
+
+**Note**: throws `UndefinedBehaviorError` for `Some(value)` if `value` is not implements `Symbol.asyncIterator`
+
+##### Symbol.split
+
+> since 3.x.x
+
+##### Symbol.search
+
+> since 3.x.x
+
+##### Symbol.inspect
+
+> since 3.x.x
+
+`util.inspect` is a node.js feature. See [util.inspect docs](https://nodejs.org/api/util.html#custom-inspection-functions-on-objects)
+
+The `util.inspect()` method returns a string representation of object that is intended for debugging.
+
+Example:
+
+```ts
+import util from "node:util";
+
+const a = Ok(4);
+util.inspect(a); // Ok(4)
+util.inspect(Err("some error")); // Err('some error')
+```
