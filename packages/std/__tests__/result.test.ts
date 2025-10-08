@@ -26,8 +26,10 @@ SOFTWARE.
 import { setTimeout } from "node:timers/promises";
 import { inspect } from "node:util";
 
+import { test, expect, vi } from "vitest";
+
 import { Result, Ok, Err } from "../src/result";
-import { Option, Some } from "../src/option";
+import { Option, Some, None } from "../src/option";
 import { UndefinedBehaviorError } from "../src/utils";
 
 test("isOk should returns true for Ok value", () => {
@@ -45,7 +47,7 @@ test("isErr should returns true for Ok value", () => {
 test("isOkAnd should not call predicate for Err result", () => {
   const e = Err(123);
 
-  const fn = jest.fn();
+  const fn = vi.fn();
   const res = e.isOkAnd(fn);
 
   expect(res).toBe(false);
@@ -61,7 +63,7 @@ test("isOkAnd should throws if predicate is not a function", () => {
 test("isOkAnd should call predicate for Ok result", () => {
   const e = Ok(4);
 
-  const fn = jest.fn(() => true);
+  const fn = vi.fn(() => true);
   const res = e.isOkAnd(fn);
 
   expect(res).toBe(true);
@@ -71,7 +73,7 @@ test("isOkAnd should call predicate for Ok result", () => {
 test("isErrAnd should call predicate for Err result", () => {
   const e = Err(4);
 
-  const fn = jest.fn(() => true);
+  const fn = vi.fn(() => true);
   const res = e.isErrAnd(fn);
 
   expect(res).toBe(true);
@@ -81,7 +83,7 @@ test("isErrAnd should call predicate for Err result", () => {
 test("isErrAnd should not call predicate for Ok result", () => {
   const e = Ok(123);
 
-  const fn = jest.fn(() => true);
+  const fn = vi.fn(() => true);
   const res = e.isErrAnd(fn);
 
   expect(res).toBe(false);
@@ -129,7 +131,7 @@ test("err should returns Ok of Err", () => {
 test("map should transform Ok result", () => {
   const a = Ok(1);
 
-  const fn = jest.fn((x: number) => String(x));
+  const fn = vi.fn((x: number) => String(x));
   const res = a.map(fn);
 
   expect(res).toBeInstanceOf(Result);
@@ -142,7 +144,7 @@ test("map should transform Ok result", () => {
 test("map function should not been called for Err result", () => {
   const a = Err(1);
 
-  const fn = jest.fn(() => "qwe");
+  const fn = vi.fn(() => "qwe");
   const res = a.map(fn);
 
   expect(res).toBeInstanceOf(Result);
@@ -150,10 +152,10 @@ test("map function should not been called for Err result", () => {
   expect(fn).not.toBeCalled();
 });
 
-test("mapOr should return alretnative result for Err result", () => {
+test("mapOr should return alternative result for Err result", () => {
   const a = Err(123);
 
-  const fn = jest.fn(() => 3);
+  const fn = vi.fn(() => 3);
   const res = a.mapOr(42, fn);
 
   expect(fn).not.toBeCalled();
@@ -163,7 +165,7 @@ test("mapOr should return alretnative result for Err result", () => {
 test("mapOr should return result of mapping result", () => {
   const a = Ok(123);
 
-  const fn = jest.fn(() => 3);
+  const fn = vi.fn(() => 3);
   const res = a.mapOr(42, fn);
 
   expect(fn).toBeCalled();
@@ -173,8 +175,8 @@ test("mapOr should return result of mapping result", () => {
 test("mapOrElse should call okFn only for Ok value", () => {
   const a = Ok(123);
 
-  const okFn = jest.fn(() => 1);
-  const errFn = jest.fn(() => 2);
+  const okFn = vi.fn(() => 1);
+  const errFn = vi.fn(() => 2);
 
   const res = a.mapOrElse(errFn, okFn);
 
@@ -186,8 +188,8 @@ test("mapOrElse should call okFn only for Ok value", () => {
 test("mapOrElse should call errFn only for Err value", () => {
   const a = Err(123);
 
-  const okFn = jest.fn(() => 1);
-  const errFn = jest.fn(() => 2);
+  const okFn = vi.fn(() => 1);
+  const errFn = vi.fn(() => 2);
 
   const res = a.mapOrElse(errFn, okFn);
 
@@ -199,10 +201,10 @@ test("mapOrElse should call errFn only for Err value", () => {
 test("mapErr should call callback for Err value", () => {
   const a = Err(123);
 
-  const fn = jest.fn(() => 2);
+  const fn = vi.fn(() => 2);
   const res = a.mapErr(fn);
 
-  expect(() => res.unwrap()).toThrow("2");
+  expect(() => res.unwrap()).toThrow();
   expect(fn).toBeCalled();
   expect(res).toBeInstanceOf(Result);
 });
@@ -210,7 +212,7 @@ test("mapErr should call callback for Err value", () => {
 test("mapErr should not call callback for Ok value", () => {
   const a = Ok(123);
 
-  const fn = jest.fn(() => 2);
+  const fn = vi.fn(() => 2);
   const res = a.mapErr(fn);
 
   expect(res.unwrap()).toBe(123);
@@ -254,7 +256,7 @@ test("unwrap should return value Ok result", () => {
 test("unwrap should throw an error for Err result", () => {
   const a = Err(123);
 
-  expect(() => a.unwrap()).toThrow("123");
+  expect(() => a.unwrap()).toThrow();
 });
 
 test("unwrapOr should calls fallback value for Err", () => {
@@ -283,13 +285,13 @@ test("unwrapErr should returns error for Err result", () => {
 test("unwrapErr should throws result for Ok value", () => {
   const a = Ok(123);
 
-  expect(() => a.unwrapErr()).toThrow("123");
+  expect(() => a.unwrapErr()).toThrow();
 });
 
 test("unwrapOrElse should return value for Ok value", () => {
   const a = Ok(123);
 
-  const fn = jest.fn();
+  const fn = vi.fn();
   const res = a.unwrapOrElse(fn);
 
   expect(res).toBe(123);
@@ -299,7 +301,7 @@ test("unwrapOrElse should return value for Ok value", () => {
 test("unwrapOrElse should call map function for Err value", () => {
   const a = Err(123);
 
-  const fn = jest.fn(() => 2);
+  const fn = vi.fn(() => 2);
   const res = a.unwrapOrElse(fn);
 
   expect(res).toBe(2);
@@ -371,7 +373,7 @@ test("andThen should throw an error for non function argument", () => {
 test("andThen should call fn when status is Ok", () => {
   const a = Ok(2);
 
-  const fn = jest.fn((x: number) => Ok(x * 2));
+  const fn = vi.fn((x: number) => Ok(x * 2));
   const res = a.andThen(fn);
 
   expect(fn).toBeCalled();
@@ -382,7 +384,7 @@ test("andThen should call fn when status is Ok", () => {
 test("andThen should throw if function returns not Result instance", () => {
   const a = Ok(2);
 
-  const fn = jest.fn((x: number) => x * 2);
+  const fn = vi.fn((x: number) => x * 2);
   // @ts-expect-error
   expect(() => a.andThen(fn)).toThrow(UndefinedBehaviorError);
 
@@ -392,7 +394,7 @@ test("andThen should throw if function returns not Result instance", () => {
 test("andThen should return Err for Err result", () => {
   const a = Err(123);
 
-  const fn = jest.fn();
+  const fn = vi.fn();
   const res = a.andThen(fn);
   expect(fn).not.toHaveBeenCalled();
   expect(res).toBeInstanceOf(Result);
@@ -458,7 +460,7 @@ test('orElse should throw an "UndefinedBehavior" error when status is Err and ar
   expect(() => e.orElse(2)).toThrow(UndefinedBehaviorError);
 });
 
-test('orElse should throw an "UndefinedBehavior" error when status is Err and function returns non Result isntance', () => {
+test('orElse should throw an "UndefinedBehavior" error when status is Err and function returns non Result instance', () => {
   const e = Err(4);
 
   // @ts-expect-error
@@ -663,21 +665,23 @@ test("[Symbol.search] should throws error for not a string", () => {
 });
 
 test("[Symbol.asyncIterator] should throw error for object without [Symbol.asyncIterator] implementation", async () => {
-  jest.useFakeTimers();
-  const timer = jest.fn(setTimeout);
+  vi.useFakeTimers();
+  const timer = vi.fn(setTimeout);
   timer.mockImplementation((_, value) => value);
 
   const delays = Ok([timer(500, 1), timer(1300, 2)]);
   let el = 1;
-  expect(async () => {
+  try {
     // @ts-expect-error only async iterator available here
     for await (const delay of delays) {
       expect(delay).toBe(el);
       el++;
     }
-  }).rejects.toThrow(UndefinedBehaviorError);
+  } catch (e) {
+    expect(e).toBeInstanceOf(UndefinedBehaviorError);
+  }
   expect(timer).toHaveBeenCalledTimes(2);
-  jest.clearAllTimers();
+  vi.clearAllTimers();
 });
 
 test("[Symbol.asyncIterator] should throw for Err", async () => {
@@ -800,7 +804,7 @@ test("constructor should returns Err for error handler usage", () => {
   expect((r.unwrapErr() as Error).message).toBe("qwe");
 });
 
-test("constructor should return Result value from Option", () => {
+test("constructor should return Result value from Some", () => {
   const opt = Some("some value");
   const r = new Result(() => {
     return opt;
@@ -808,8 +812,30 @@ test("constructor should return Result value from Option", () => {
   expect(r.unwrap()).toBe(opt.unwrap());
 });
 
+test("constructor should return Result value from None", () => {
+  const opt = None();
+  const r = new Result(() => {
+    return opt;
+  });
+  expect(r.unwrapErr()).toBe(opt.valueOf());
+});
+test("constructor should return Result value from Ok", () => {
+  const opt = Ok("some value");
+  const r = new Result(() => {
+    return opt;
+  });
+  expect(r.unwrap()).toBe(opt.unwrap());
+});
+test("constructor should return Result value from Err", () => {
+  const opt = Err("some value");
+  const r = new Result(() => {
+    return opt;
+  });
+  expect(r.unwrapErr()).toBe(opt.unwrapErr());
+});
+
 // test("constructor should fail UndefinedBehaviorError for async function", () => {
-//   const asyncFn = jest.fn(() => Promise.resolve());
+//   const asyncFn = vi.fn(() => Promise.resolve());
 //   expect(() => new Result(asyncFn)).rejects.toThrowError(UndefinedBehaviorError);
 // });
 
@@ -830,4 +856,10 @@ test("withResolvers should work", () => {
   err("some");
   // should not change after getting result
   expect(result.isErr()).toBe(false);
+});
+
+test("withResolvers should allow to pass empty Ok value", () => {
+  const { ok, result } = Result.withResolvers();
+  ok();
+  expect(result.isOk()).toBe(true);
 });

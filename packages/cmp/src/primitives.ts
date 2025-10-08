@@ -213,7 +213,7 @@ declare global {
   }
 }
 
-Number.prototype[Symbol.compare] = function (this, another) {
+Number.prototype[kCompare] = function (this, another) {
   if (
     typeof another === "object" &&
     another !== null &&

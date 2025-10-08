@@ -45,7 +45,7 @@ const Status = Object.freeze({
 
 type StatusKey = keyof typeof Status;
 
-type Resolver<T> = (value: T) => void;
+type Resolver<T> = (value?: T) => void;
 type Rejecter<E> = (reason?: E) => void;
 export type Executor<T, E, R = T> = (
   resolve: Resolver<T>,
@@ -108,14 +108,14 @@ export class Result<
   private status: S | undefined;
 
   constructor(executor: Executor<TInput, TErr>) {
-    const resolve: Resolver<TInput> = (value) => {
+    const okFn: Resolver<TInput> = (value) => {
       if (!this.status) {
-        this.value = value;
+        this.value = value ?? null;
         this.status = Status.Ok as S;
       }
     };
 
-    const reject: Rejecter<TErr> = (error) => {
+    const errorFn: Rejecter<TErr> = (error) => {
       if (!this.status) {
         this.error = error;
         this.status = Status.Err as S;
@@ -125,7 +125,7 @@ export class Result<
     assertArgument("constructor", executor, "function");
     let executionResult: unknown;
     try {
-      executionResult = executor(resolve, reject);
+      executionResult = executor(okFn, errorFn);
       if (
         executionResult &&
         typeof executionResult === "object" &&
@@ -136,14 +136,9 @@ export class Result<
           `You passed an async function in constructor or executor returned a promise. Only synchronous functions are allowed. Use "Result.fromPromise" or "Result.fromAsync" instead.`
         );
         // fail promise anyway with error as declared before
-        executionResult.then(
-          () => {
-            throw err;
-          },
-          () => {
-            throw err;
-          }
-        );
+        executionResult.then(() => {
+          throw err;
+        });
         throw err;
         // biome-ignore lint/style/noUselessElse: <explanation>
       } else if (executionResult instanceof Result) {
@@ -152,12 +147,12 @@ export class Result<
         // biome-ignore lint/style/noUselessElse: <explanation>
       } else if (executionResult instanceof Option) {
         if (executionResult.isSome()) {
-          resolve(executionResult.unwrap());
+          okFn(executionResult.unwrap());
         } else {
-          reject(executionResult.valueOf());
+          errorFn(executionResult.valueOf());
         }
       } else if (executionResult !== undefined) {
-        resolve(executionResult as TInput);
+        okFn(executionResult as TInput);
       }
     } catch (err) {
       if (
@@ -170,7 +165,7 @@ export class Result<
         throw err;
         // biome-ignore lint/style/noUselessElse: <explanation>
       } else {
-        reject(err as TErr);
+        errorFn(err as TErr);
       }
     }
   }
@@ -577,7 +572,7 @@ export class Result<
     : Result<TInput, TErr> {
     if (!(res instanceof Result)) {
       throw new UndefinedBehaviorError(
-        `Method "and" should accepts isntance of Result`,
+        `Method "and" should accepts instance of Result`,
         { cause: { value: res } }
       );
     }
@@ -675,7 +670,7 @@ export class Result<
    * Err(3).orElse(sq).orElse(err) === Ok(9); // true
    * Err(3).orElse(err).orElse(err) === Err(3); // true
    * @throws `UndefinedBehaviorError` if `fn` argument is not a function
-   * @throws `UndefinedBehaviorError` if `fn` result is not an isntance of `Result`
+   * @throws `UndefinedBehaviorError` if `fn` result is not an instance of `Result`
    * @param fn
    * @return {*}  {Result<T, F>}
    */
@@ -735,10 +730,12 @@ export class Result<
    * const {ok, result} = Result.withResolvers()
    * ok(3)
    * result.unwrap() // 3
+   * result.isOk() // true
+   *
    */
   static withResolvers<const T, const E>() {
-    let ok: Resolver<T>;
-    let err: Rejecter<E>;
+    var ok: Resolver<T>;
+    var err: Rejecter<E>;
 
     const result = new Result<T, E>((res, rej) => {
       ok = res;
@@ -772,9 +769,9 @@ export class Result<
   static async fromPromise<const P, const E>(
     promiseLike: P | Promise<P> | PromiseLike<P>
   ): Promise<Result<Awaited<P>, E>> {
-    let result: Result<Awaited<P>, E>;
+    var result: Result<Awaited<P>, E>;
     try {
-      const v = await promiseLike;
+      var v = await promiseLike;
       result = Ok(v) as never;
     } catch (e) {
       result = Err(e as E);
@@ -886,7 +883,7 @@ export class Result<
    * @protected
    * Iterator support for `Option`.
    *
-   * _Note: This method will only yeild if the Result is Ok
+   * _Note: This method will only yield if the Result is Ok
    */
   [Symbol.iterator](): IsNever<TInput> extends true
     ? never
@@ -996,7 +993,7 @@ export class Result<
    * @protected
    * Iterator support for `Result`.
    *
-   * _Note: This method will only yeild if the Result is Ok
+   * _Note: This method will only yield if the Result is Ok
    */
   [Symbol.asyncIterator](): IsNever<TInput> extends true
     ? never

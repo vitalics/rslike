@@ -24,6 +24,8 @@ SOFTWARE.
 
 import { Async } from "../src/async";
 
+import { test, expect } from "vitest";
+
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 
 test("Async should resolves undefined as Ok(None())", async () => {

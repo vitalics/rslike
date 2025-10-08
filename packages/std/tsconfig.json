@@ -5,7 +5,7 @@
     "declaration": true,
     "emitDeclarationOnly": true,
     "lib": ["ES2023"],
-    "types": ["node", "jest"],
+    "types": ["node"],
     "skipLibCheck": true,
     "allowImportingTsExtensions": true,
     "moduleResolution": "bundler",

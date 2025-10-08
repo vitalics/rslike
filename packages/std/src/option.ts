@@ -106,6 +106,9 @@ export class Option<
     assertArgument("constructor", executor, "function");
     let executionResult: unknown;
     try {
+      const err = new UndefinedBehaviorError(
+        `You passed an async function in constructor. Only synchronous functions are allowed. Use "Option.fromPromise" or "Option.fromAsync" instead.`
+      );
       const executionResult = executor(some, none);
       if (
         executionResult &&
@@ -113,18 +116,7 @@ export class Option<
         "then" in executionResult &&
         typeof executionResult.then === "function"
       ) {
-        const err = new UndefinedBehaviorError(
-          `You passed an async function in constructor. Only synchronous functions are allowed. Use "Option.fromPromise" or "Option.fromAsync" instead.`
-        );
-        // fail promise anyway with error as declared before
-        executionResult.then(
-          () => {
-            throw err;
-          },
-          () => {
-            throw err;
-          }
-        );
+        throw err;
       } else if (executionResult instanceof Option) {
         // biome-ignore lint/correctness/noConstructorReturn: already option, return it
         return executionResult;
@@ -143,19 +135,13 @@ export class Option<
         some(executionResult);
       } else {
         // noop, in case of withResolvers
-        // debugger;
+        /* istanbul ignore if -- @preserve */
       }
-    } catch (err) {
-      if (
-        err instanceof UndefinedBehaviorError &&
-        executionResult &&
-        typeof executionResult === "object" &&
-        "then" in executionResult &&
-        typeof executionResult.then === "function"
-      ) {
-        throw err;
+    } catch (e) {
+      if (e instanceof UndefinedBehaviorError) {
+        throw e;
       }
-      none(err);
+      none(e);
     }
   }
 
@@ -204,7 +190,11 @@ export class Option<
    * x.unwrap() // fails
    * @return {*}
    */
-  unwrap(): NonNullable<T> {
+  unwrap(): S extends typeof Status.None
+    ? never
+    : T extends void | null | undefined
+    ? never
+    : NonNullable<T> {
     if (
       this.status === Status.None ||
       this.value === null ||
@@ -214,7 +204,7 @@ export class Option<
         cause: { status: this.status, value: this.value },
       });
     }
-    return this.value!;
+    return this.value! as never;
   }
   /**
    * Returns the contained `Some` value or a provided default.
@@ -518,7 +508,7 @@ export class Option<
    * If the option already contains a value, the old value is dropped.
    *
    * See also `getOrInsert`, which doesn’t update the value if the option already contains `Some`.
-   *
+   * @see {@link Option.getOrInsert}
    * @example
    * const opt = None();
    * const val = opt.insert(1);
@@ -1063,12 +1053,18 @@ export class Option<
     );
   }
 
+  /**
+   * Returns raw value.
+   * @note This method is used for internal purposes and should not be used directly.
+   */
   valueOf() {
     return this.value;
   }
 
   toString(): `${S}(${string})` {
-    return `${this.status}(${this.status === Status.None ? "" : this.value})` as never;
+    return `${this.status}(${
+      this.status === Status.None ? "" : this.value
+    })` as never;
   }
 
   /**

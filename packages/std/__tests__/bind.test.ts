@@ -23,11 +23,13 @@ SOFTWARE.
 */
 
 /* eslint-disable @typescript-eslint/ban-ts-comment */
+import { test, expect, vi } from 'vitest'
 
 import { Bind } from '../src/bind';
 import { Option } from '../src/option';
 import { Result } from '../src/result';
 import { UndefinedBehaviorError } from '../src/utils'
+
 
 test('Bind should throw undefined behavior when not a function is provided', () => {
   // @ts-expect-error
@@ -70,7 +72,7 @@ test('Bind should not throw for async function', async () => {
 });
 
 test('Bind should use this argument correctly', () => {
-  const fn = jest.fn(function (this: { b: number }) {
+  const fn = vi.fn(function (this: { b: number }) {
     expect(this.b).toBe(2);
     return this.b + 1;
   });
