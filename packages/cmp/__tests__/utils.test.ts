@@ -1,3 +1,5 @@
+import { test, expect } from "vitest";
+
 import { UndefinedBehaviorError } from "@rslike/std";
 import "../src/globals";
 import { compare, partialEquals, equals } from "../src/utils";
@@ -207,4 +209,9 @@ test("equals should pass for 2 objects without Symbol.equals", () => {
   expect(equals({}, null)).toBe(false);
   expect(equals({}, {})).toBe(false);
   expect(equals([], [])).toBe(false);
+});
+
+test("compare should throw an error for not a number returns result", () => {
+  // @ts-expect-error should throw
+  expect(() => compare({}, {}, () => "qwe")).toThrow(UndefinedBehaviorError);
 });

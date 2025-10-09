@@ -23,6 +23,7 @@ SOFTWARE.
 */
 
 /* eslint-disable @typescript-eslint/ban-ts-comment */
+import { test, expect, vi } from 'vitest'
 
 import { match } from "../src/match";
 import { UndefinedBehaviorError } from "../src/utils";
@@ -52,7 +53,7 @@ test("match should throw an error for non function Err callback", () => {
 });
 
 test("match should return ok funtion result for Ok", () => {
-  const fn = jest.fn((a) => a);
+  const fn = vi.fn((a) => a);
   const res = match(Ok(5), fn, () => 1);
 
   expect(res).toBe(5);
@@ -61,7 +62,7 @@ test("match should return ok funtion result for Ok", () => {
 });
 
 test("match should return err funtion result for Err", () => {
-  const fn = jest.fn((a) => a);
+  const fn = vi.fn((a) => a);
   const res = match(Err(5), () => 2, fn);
 
   expect(res).toBe(5);
@@ -70,7 +71,7 @@ test("match should return err funtion result for Err", () => {
 });
 
 test("match should return value funtion result for Some", () => {
-  const fn = jest.fn((a) => a);
+  const fn = vi.fn((a) => a);
   const res = match(Some(5), fn, () => 1);
 
   expect(res).toBe(5);
@@ -79,7 +80,7 @@ test("match should return value funtion result for Some", () => {
 });
 
 test("match should return value funtion result for None", () => {
-  const fn = jest.fn(() => 1 as const);
+  const fn = vi.fn(() => 1 as const);
   const res = match(None(), fn, fn);
 
   expect(res).toBe(1);
@@ -87,7 +88,7 @@ test("match should return value funtion result for None", () => {
 });
 
 test("match should work with bind without double unwrapping", async () => {
-  const asyncFn = jest.fn(async (v: number) => v * v);
+  const asyncFn = vi.fn(async (v: number) => v * v);
 
   const safeFn = Bind(asyncFn);
 
@@ -128,10 +129,10 @@ test("match should work for false result", () => {
 });
 
 test("match should call error cb for Ok(None)", () => {
-  const fn = jest.fn(() => null);
+  const fn = vi.fn(() => null);
   const fnAsync = Bind(fn);
-  const errCb = jest.fn();
-  const okCb = jest.fn();
+  const errCb = vi.fn();
+  const okCb = vi.fn();
   match(fnAsync(), okCb, errCb);
   expect(errCb).toBeCalled();
   expect(okCb).not.toBeCalled();

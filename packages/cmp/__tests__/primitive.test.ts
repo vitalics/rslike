@@ -1,3 +1,5 @@
+import { test, expect } from "vitest";
+
 import { UndefinedBehaviorError } from "@rslike/std";
 import "../src/globals";
 import "../src/primitives";
@@ -16,7 +18,7 @@ test.each(numberCases)(
   (result, first, second) => {
     const actualResult = first[Symbol.compare](second);
     expect(actualResult).toBe(result);
-  },
+  }
 );
 
 test.each(numberCases)(
@@ -24,7 +26,7 @@ test.each(numberCases)(
   (result, first, second) => {
     const actualResult = new Number(first)[Symbol.compare](second);
     expect(actualResult).toBe(result);
-  },
+  }
 );
 
 const negativeCases = [
@@ -39,16 +41,16 @@ test.each(negativeCases)(
   "number should throw UndefinedBehaviorError for '%s' which does not implements Symbol.compare trait",
   (value) => {
     expect(() => (5)[Symbol.compare](value)).toThrow(UndefinedBehaviorError);
-  },
+  }
 );
 
 test.each(negativeCases)(
   "number should throw UndefinedBehaviorError for '%s' which does not implements Symbol.compare trait",
   (value) => {
     expect(() => new Number(5)[Symbol.compare](value)).toThrow(
-      UndefinedBehaviorError,
+      UndefinedBehaviorError
     );
-  },
+  }
 );
 
 test("number should throw error for string", () => {
@@ -67,7 +69,7 @@ test("Number[Symbol.compare] should throw an error for object which is implement
       [Symbol.compare]() {
         return true;
       },
-    }),
+    })
   ).toThrow(UndefinedBehaviorError);
 });
 
@@ -95,7 +97,7 @@ test("Number[Symbol.equals] should throw an error for object with Symbol.equals 
       [Symbol.equals]() {
         return true;
       },
-    }),
+    })
   ).toBe(true);
 });
 
@@ -105,7 +107,7 @@ test("Number[Symbol.partialEquals] should throw an error for object with Symbol.
       [Symbol.partialEquals]() {
         return "asd";
       },
-    }),
+    })
   ).toThrow(UndefinedBehaviorError);
 });
 
@@ -115,7 +117,7 @@ test("Number[Symbol.partialEquals] should not an error for object with Symbol.pa
       [Symbol.partialEquals]() {
         return true;
       },
-    }),
+    })
   ).toBe(true);
 });
 
@@ -125,7 +127,7 @@ test("Number[Symbol.equals] should throw an error for object with Symbol.equals 
       [Symbol.equals]() {
         return "asd";
       },
-    }),
+    })
   ).toThrow(UndefinedBehaviorError);
 });
 
@@ -136,7 +138,7 @@ test("string should support Symbol.compare", () => {
 
 test.each(negativeCases)("string should throw for '%s' value", (value) => {
   expect(() => String(5)[Symbol.compare](value)).toThrow(
-    UndefinedBehaviorError,
+    UndefinedBehaviorError
   );
 });
 
@@ -155,7 +157,7 @@ test("String[Symbol.compare] should return result for object with Symbol.compare
       [Symbol.compare]() {
         return 2;
       },
-    }),
+    })
   ).toBe(2);
 });
 
@@ -165,7 +167,7 @@ test("String[Symbol.compare] should throw an error for object with Symbol.compar
       [Symbol.compare]() {
         return true;
       },
-    }),
+    })
   ).toThrow(UndefinedBehaviorError);
 });
 
@@ -180,7 +182,7 @@ test("String[Symbol.partialEquals] should returns result for object with Symbol.
       [Symbol.partialEquals]() {
         return Boolean(false);
       },
-    }),
+    })
   ).toBe(false);
 });
 
@@ -190,7 +192,7 @@ test("String[Symbol.partialEquals] should throw an error for object with Symbol.
       [Symbol.partialEquals]() {
         return 2;
       },
-    }),
+    })
   ).toThrow(UndefinedBehaviorError);
 });
 
@@ -205,7 +207,7 @@ test("String[Symbol.equals] should returns result for object with Symbol.equals 
       [Symbol.equals]() {
         return true;
       },
-    }),
+    })
   ).toBe(true);
 });
 
@@ -215,7 +217,7 @@ test("String[Symbol.equals] should throw undefiend behavior for object with Symb
       [Symbol.equals]() {
         return "hello";
       },
-    }),
+    })
   ).toThrow(UndefinedBehaviorError);
 });
 
@@ -239,7 +241,7 @@ test("Boolean[Symbol.partialEquals] should returns result for object with Symbol
       [Symbol.partialEquals]() {
         return Boolean(false);
       },
-    }),
+    })
   ).toBe(false);
 });
 
@@ -249,7 +251,7 @@ test("Boolean[Symbol.partialEquals] should throw an error for object with Symbol
       [Symbol.partialEquals]() {
         return 2;
       },
-    }),
+    })
   ).toThrow(UndefinedBehaviorError);
 });
 
@@ -272,7 +274,7 @@ test("Boolean[Symbol.compare] should return result for object with Symbol.compar
       [Symbol.compare]() {
         return 2;
       },
-    }),
+    })
   ).toBe(2);
 });
 
@@ -282,7 +284,7 @@ test("Boolean[Symbol.compare] should throw an error for object with Symbol.compa
       [Symbol.compare]() {
         return true;
       },
-    }),
+    })
   ).toThrow(UndefinedBehaviorError);
 });
 
@@ -292,7 +294,7 @@ test("Boolean[Symbol.equals] should return value from object which implements Sy
       [Symbol.equals]() {
         return true;
       },
-    }),
+    })
   ).toBe(true);
 });
 test("Boolean[Symbol.equals] should throw error for object which implements Symbol.equals trait and return non boolean result", () => {
@@ -301,7 +303,7 @@ test("Boolean[Symbol.equals] should throw error for object which implements Symb
       [Symbol.equals]() {
         return 4;
       },
-    }),
+    })
   ).toThrow(UndefinedBehaviorError);
 });
 
@@ -320,7 +322,7 @@ test("Boolean[Symbol.partialEquals] should pass for primitives", () => {
       [Symbol.partialEquals]() {
         return true;
       },
-    }),
+    })
   ).toBe(true);
 });
 
@@ -345,7 +347,7 @@ test("Date[Symbol.equals] trait should throw for return not a boolean value", ()
       [Symbol.equals]() {
         return 5;
       },
-    }),
+    })
   ).toThrow(UndefinedBehaviorError);
 });
 
@@ -355,7 +357,7 @@ test("Date should call Symbol.equals trait for object with Symbol.eqauls trait i
       [Symbol.equals]() {
         return true;
       },
-    }),
+    })
   ).toBe(true);
 });
 
@@ -387,7 +389,7 @@ test("Date[Symbol.compare] should work correctly for object with SYmbol.compare 
       [Symbol.compare]() {
         return 1;
       },
-    }),
+    })
   ).toBe(1);
 });
 
@@ -401,7 +403,7 @@ test("Date[Symbol.compare] should throw error for returns not a number result", 
       [Symbol.compare]() {
         return true;
       },
-    }),
+    })
   ).toThrow(UndefinedBehaviorError);
 });
 test("Date should support Symbol.compare", () => {
@@ -413,7 +415,7 @@ test("Date should support Symbol.compare", () => {
 
 test.each(negativeCases)("Date should throw for '%s' value", (value) => {
   expect(() => new Date()[Symbol.compare](value)).toThrow(
-    UndefinedBehaviorError,
+    UndefinedBehaviorError
   );
 });
 
@@ -427,7 +429,7 @@ test("Date should support object with Symbol.partialEquals trait and throw for n
       [Symbol.partialEquals]() {
         return 5;
       },
-    }),
+    })
   ).toThrow(UndefinedBehaviorError);
 });
 
@@ -437,6 +439,6 @@ test("Date should support object with Symbol.partialEquals trait", () => {
       [Symbol.partialEquals]() {
         return true;
       },
-    }),
+    })
   ).toBe(true);
 });

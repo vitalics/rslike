@@ -22,9 +22,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-/* eslint-disable @typescript-eslint/ban-ts-comment */
-import { setTimeout } from "node:timers/promises";
 import { inspect } from "node:util";
+
+import { test, expect, vi } from "vitest";
 
 import { UndefinedBehaviorError } from "../src/utils";
 import { None, Some, Option } from "../src/option";
@@ -78,7 +78,7 @@ test(`Some(null) should be None`, () => {
 
 test("isSomeAnd should called when Some is provided", () => {
   const two = Some(2);
-  const cb = jest.fn((x) => x > 1);
+  const cb = vi.fn((x) => x > 1);
   const result = two.isSomeAnd(cb);
 
   expect(cb).toBeCalled();
@@ -88,7 +88,7 @@ test("isSomeAnd should called when Some is provided", () => {
 
 test("isSomeAnd should called when Some is provided", () => {
   const two = Some(0);
-  const cb = jest.fn((x) => x > 1);
+  const cb = vi.fn((x) => x > 1);
   const result = two.isSomeAnd(cb);
 
   expect(cb).toBeCalled();
@@ -98,7 +98,7 @@ test("isSomeAnd should called when Some is provided", () => {
 
 test("isSomeAnd should not be called when None is provided", () => {
   const two = None();
-  const cb = jest.fn((x) => x > 1);
+  const cb = vi.fn((x) => x > 1);
   const result = two.isSomeAnd(cb);
 
   expect(cb).not.toBeCalled();
@@ -141,7 +141,7 @@ test("unwrapOr should return fallback when None is provided", () => {
 
 test("unwrapOrElse should not calls when Some is provided", () => {
   const a = Some(123);
-  const fn = jest.fn();
+  const fn = vi.fn();
   const res = a.unwrapOrElse(fn);
 
   expect(fn).not.toBeCalled();
@@ -150,7 +150,7 @@ test("unwrapOrElse should not calls when Some is provided", () => {
 
 test("unwrapOrElse should calls when None is provided", () => {
   const a = None<number>();
-  const fn = jest.fn(() => 15);
+  const fn = vi.fn(() => 15);
   const res = a.unwrapOrElse(fn);
 
   expect(fn).toBeCalled();
@@ -160,7 +160,7 @@ test("unwrapOrElse should calls when None is provided", () => {
 
 test("map should be evaluated for Some value", () => {
   const a = Some("Hello world!");
-  const fn = jest.fn((s: string) => s.length);
+  const fn = vi.fn((s: string) => s.length);
   const res = a.map(fn);
 
   expect(+res).toBe(12);
@@ -171,7 +171,7 @@ test("map should be evaluated for Some value", () => {
 
 test("map should not be called for None value", () => {
   const a = None<string>();
-  const fn = jest.fn((s: string) => s.length);
+  const fn = vi.fn((s: string) => s.length);
   const res = a.map(fn);
 
   expect(res.isNone()).toBe(true);
@@ -181,7 +181,7 @@ test("map should not be called for None value", () => {
 
 test("mapOr should be called predicate for Some value", () => {
   const a = Some("QWE");
-  const fn = jest.fn((s: string) => s.length);
+  const fn = vi.fn((s: string) => s.length);
   const result = a.mapOr(42, fn);
 
   expect(result).toBe(3);
@@ -190,7 +190,7 @@ test("mapOr should be called predicate for Some value", () => {
 test("mapOr should be returns fallback value for None value", () => {
   const a = None<string>();
 
-  const fn = jest.fn((s: string) => s.length);
+  const fn = vi.fn((s: string) => s.length);
   const result = a.mapOr(42, fn);
 
   expect(result).toBe(42);
@@ -199,8 +199,8 @@ test("mapOr should be returns fallback value for None value", () => {
 
 test("mapOrElse should be calls 2 function for Some value", () => {
   const x = Some("foo");
-  const fn1 = jest.fn(() => 2);
-  const fn2 = jest.fn((v: string) => {
+  const fn1 = vi.fn(() => 2);
+  const fn2 = vi.fn((v: string) => {
     expect(v).toBe("foo");
     return v.length;
   });
@@ -212,8 +212,8 @@ test("mapOrElse should be calls 2 function for Some value", () => {
 });
 test("mapOrElse should be calls 1 function for None value", () => {
   const x = None<string>();
-  const fn1 = jest.fn(() => 2);
-  const fn2 = jest.fn((v: string) => {
+  const fn1 = vi.fn(() => 2);
+  const fn2 = vi.fn((v: string) => {
     return v.length;
   });
   const result = x.mapOrElse(fn1, fn2);
@@ -242,7 +242,7 @@ test("okOr should returns Err as Result instance for None value", () => {
 test("okOrElse callback should not be called for Some value", () => {
   const a = Some("foo");
 
-  const fn = jest.fn();
+  const fn = vi.fn();
   const result = a.okOrElse(fn);
 
   expect(String(a)).toBe(String(result));
@@ -253,7 +253,7 @@ test("okOrElse callback should not be called for Some value", () => {
 test("okOrElse callback should be called for None value", () => {
   const a = None<string>();
 
-  const fn = jest.fn(() => "Error!");
+  const fn = vi.fn(() => "Error!");
   const result = a.okOrElse(fn);
 
   expect(result.isErr()).toBe(true);
@@ -302,7 +302,7 @@ test("and should throw if provided argument is not an Option isntance", () => {
 test("andThen should not have been called if 1 Option is None", () => {
   const a = None<number>();
 
-  const fn = jest.fn();
+  const fn = vi.fn();
   const result = a.andThen(fn);
   expect(result.isNone()).toBe(true);
   expect(result.isSome()).toBe(false);
@@ -330,7 +330,7 @@ test("andThen should calls function", () => {
 test("filter predicate should not been called when option is None", () => {
   const a = None<string>();
 
-  const fn = jest.fn();
+  const fn = vi.fn();
   const result = a.filter(fn);
 
   expect(result.isNone()).toBe(true);
@@ -339,7 +339,7 @@ test("filter predicate should not been called when option is None", () => {
 
 test("filter predicate should been called when option is Some", () => {
   const a = Some(4);
-  const fn = jest.fn((x) => x % 2 === 0);
+  const fn = vi.fn((x) => x % 2 === 0);
   const result = a.filter(fn);
 
   expect(result.isSome()).toBe(true);
@@ -349,7 +349,7 @@ test("filter predicate should been called when option is Some", () => {
 
 test("filter predicate should been called and returns None when option is Some and predicate is returns false", () => {
   const a = Some(3);
-  const fn = jest.fn((x) => x % 2 === 0);
+  const fn = vi.fn((x) => x % 2 === 0);
   const result = a.filter(fn);
 
   expect(result.isNone()).toBe(true);
@@ -358,7 +358,7 @@ test("filter predicate should been called and returns None when option is Some a
 
 test("filter predicate should been called and returns Some when option is Some and predicate is returns true", () => {
   const a = Some(4);
-  const fn = jest.fn((x) => x % 2 === 0);
+  const fn = vi.fn((x) => x % 2 === 0);
   const result = a.filter(fn);
 
   expect(result.isNone()).toBeFalsy();
@@ -538,7 +538,7 @@ test("zipWith should returns None if given Option is None", () => {
 test("zipWith should returns Some for given Option is Some", () => {
   const a = Some(1);
 
-  const fn = jest.fn(() => 4);
+  const fn = vi.fn(() => 4);
   const res = a.zipWith(Some(2), fn);
 
   expect(res.isSome()).toBe(true);
@@ -922,7 +922,7 @@ test("[Symbol.search] should throws error for not a string", () => {
 });
 
 test("[Symbol.asyncIterator] should works", async () => {
-  jest.useFakeTimers();
+  vi.useFakeTimers();
   const qwe = Some({
     [Symbol.asyncIterator]: async function* () {
       yield 1;
@@ -1025,20 +1025,50 @@ test("constructor should return None for throwing null or undefined", () => {
   expect(o.isNone()).toBe(true);
 });
 
-test("constructor shoud return same value for Ok", () => {
+test("constructor should return same value for Ok", () => {
   const a = new Option(() => Ok(4));
   expect(a.unwrap()).toBe(4);
   expect(a.isSome()).toBe(true);
 });
 
-test("constructor shoud return None value for Ok(undefined)", () => {
+test("constructor should return None value for Ok(undefined)", () => {
   const a = new Option(() => Ok(undefined));
   expect(a.isNone()).toBe(true);
 });
 
-test("constructor shoud return None value for Ok(null)", () => {
+test("constructor should return None value for Ok(null)", () => {
   const a = new Option(() => Ok(null));
   expect(a.isNone()).toBe(true);
+});
+
+test("constructor should return None value for Err()", () => {
+  const a = new Option(() => Err("Some String"));
+  expect(a.isNone()).toBe(true);
+});
+
+test("constructor should fail for async function", async () => {
+  try {
+    await (async () => new Option(async (some) => some(4)))();
+  } catch (e) {
+    expect(e).toBeInstanceOf(UndefinedBehaviorError);
+  }
+});
+
+test.skip("constructor should fail for async throw", async (ctx) => {
+  try {
+    await (async () =>
+      new Option(async (some) => {
+        throw 4;
+      }))();
+  } catch (e) {
+    expect(e).toBeInstanceOf(UndefinedBehaviorError);
+  }
+});
+
+test("constructor should pass external option value", async () => {
+  const a = new Option(() => Option.Some(4));
+  expect(a).toBeInstanceOf(Option);
+  expect(a.unwrap()).toBe(4);
 });
 
 test("withResolvers should work for none null", () => {

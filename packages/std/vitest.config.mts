@@ -22,14 +22,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-/** @type {import('ts-jest').JestConfigWithTsJest} */
-module.exports = {
-  preset: 'ts-jest',
-  testEnvironment: 'node',
-  collectCoverage: true,
-  testMatch: ['__tests__/**/*.[jt]s?(x)', '**/?(*.)+(spec|test).[tj]s?(x)'],
-  collectCoverageFrom: ['src/**/*.ts', '!src/errors.ts', '!src/*.d.ts', '!src/globals.ts', '!src/index.ts'],
-  clearMocks: true,
-  verbose: true,
-  // moduleFileExtensions: ['mts', 'cts', 'cjs', 'mjs', 'js'],
-};
+import { defineConfig, defaultExclude } from "vitest/config";
+
+export default defineConfig({
+  test: {
+    coverage: {
+      provider: "istanbul",
+      reporter: ["text", "json", "html"],
+      exclude: [...defaultExclude, "./src/globals.ts"],
+    },
+  },
+});

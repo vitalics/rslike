@@ -8,8 +8,7 @@
       "ES2023"
     ],
     "types": [
-      "node",
-      "jest"
+      "node"
     ],
     "skipLibCheck": true,
     "allowImportingTsExtensions": true
