@@ -107,7 +107,7 @@ export class Option<
     let executionResult: unknown;
     try {
       const err = new UndefinedBehaviorError(
-        `You passed an async function in constructor. Only synchronous functions are allowed. Use "Option.fromPromise" or "Option.fromAsync" instead.`
+        `You passed an async function in constructor. Only synchronous functions are allowed. Use "Option.fromPromise" or "Option.fromAsync" instead.`,
       );
       const executionResult = executor(some, none);
       if (
