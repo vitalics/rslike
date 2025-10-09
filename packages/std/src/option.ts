@@ -193,8 +193,8 @@ export class Option<
   unwrap(): S extends typeof Status.None
     ? never
     : T extends void | null | undefined
-    ? never
-    : NonNullable<T> {
+      ? never
+      : NonNullable<T> {
     if (
       this.status === Status.None ||
       this.value === null ||
