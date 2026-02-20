@@ -734,8 +734,8 @@ export class Result<
    *
    */
   static withResolvers<const T, const E>() {
-    var ok: Resolver<T>;
-    var err: Rejecter<E>;
+    let ok: Resolver<T>;
+    let err: Rejecter<E>;
 
     const result = new Result<T, E>((res, rej) => {
       ok = res;
@@ -769,9 +769,9 @@ export class Result<
   static async fromPromise<const P, const E>(
     promiseLike: P | Promise<P> | PromiseLike<P>
   ): Promise<Result<Awaited<P>, E>> {
-    var result: Result<Awaited<P>, E>;
+    let result: Result<Awaited<P>, E>;
     try {
-      var v = await promiseLike;
+      const v = await promiseLike;
       result = Ok(Some(v)) as never;
     } catch (e) {
       result = Err(e as E);

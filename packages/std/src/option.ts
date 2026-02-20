@@ -117,9 +117,11 @@ export class Option<
         typeof executionResult.then === "function"
       ) {
         throw err;
+      // biome-ignore lint/style/noUselessElse: <explanation>
       } else if (executionResult instanceof Option) {
         // biome-ignore lint/correctness/noConstructorReturn: already option, return it
         return executionResult;
+      // biome-ignore lint/style/noUselessElse: <explanation>
       } else if (executionResult instanceof Result) {
         if (executionResult.isOk()) {
           const unwrapped = executionResult.unwrap();
