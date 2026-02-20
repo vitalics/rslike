@@ -58,7 +58,7 @@ type ErrCb<I, R> = I extends Promise<infer V>
  * If incoming arguments is not `Option` or `Result` or callback functions is not a functions then it throws an `UndefinedBehavior` error.
  *
  * Ok(Some()) - Will trigger Ok callback
- * Ok(None) - will trigger Ok callback
+ * Ok(None()) - will trigger Err/None callback
  * @see {@link https://github.com/vitalics/rslike/wiki/Match Wiki}
  * @example
  * const resFromBackend = await Async(await (await fetch('<args>')).json())

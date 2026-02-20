@@ -61,6 +61,11 @@ type InspectionResult<
   value: unknown;
   delimiter: Delimiter;
   prefix: Prefix;
+  /**
+   * `true` when the value was created via {@link createTrackedProxy} and is
+   * therefore known to be a `Proxy`. Always `false` for plain values.
+   */
+  isProxy: boolean;
   // prototype?: unknown;
   // constructor?: unknown;
 };
@@ -150,9 +155,10 @@ export function dbg<
       { cause: { value: f, type: typeof f, usage: USAGE } }
     );
   }
-  const nameOf = f.toString().replace(/(\(\) => )/g, "");
+  const nameOf = f.toString().replace(/^\(\)\s*=>\s*/, "");
   const originalValue = f();
   const type = typeof originalValue;
+  const proxyDetected = isProxy(originalValue);
 
   let delimiter: Delimiter;
   if (options?.delimiter) {
@@ -221,10 +227,11 @@ export function dbg<
 
   const valueStr = useStringify ? JSON.stringify(value) : (value as string);
 
+  const displayName = proxyDetected ? `${nameOf} (Proxy)` : nameOf;
   const message: InspectionString<
     Delimiter,
     Prefix
-  > = `${prefix}${nameOf}${delimiter}${valueStr}`;
+  > = `${prefix}${displayName}${delimiter}${valueStr}`;
   outputFunction(message);
 
   const result: InspectionResult<Delimiter, Prefix> = {
@@ -234,6 +241,7 @@ export function dbg<
     type,
     name: nameOf,
     value: originalValue,
+    isProxy: proxyDetected,
   };
 
   return result;
@@ -242,4 +250,69 @@ export function dbg<
 // https://stackoverflow.com/a/65570273
 function isLambda(func: unknown): func is () => unknown {
   return typeof func === "function" && func.prototype === undefined;
+}
+
+/**
+ * Registry of all `Proxy` instances created after this module was imported.
+ *
+ * Populated automatically by intercepting the global `Proxy` constructor —
+ * no user-side changes are required.
+ */
+const proxyRegistry = new WeakSet<object>();
+
+/**
+ * Intercept the global `Proxy` constructor so that every `new Proxy(...)` and
+ * `Proxy.revocable(...)` call made **after this module is imported** is
+ * registered in {@link proxyRegistry}.
+ *
+ * The native `Proxy` constructor is saved first so that the interception
+ * itself does not trigger infinite recursion.
+ */
+const _NativeProxy = Proxy;
+
+// Replace global Proxy with an intercepting proxy-of-Proxy.
+globalThis.Proxy = new _NativeProxy(_NativeProxy, {
+  // `new Proxy(target, handler)` path
+  construct(Target, args: [object, ProxyHandler<object>]) {
+    const instance = new Target(...args);
+    proxyRegistry.add(instance);
+    return instance;
+  },
+  // Property access — intercept `Proxy.revocable`
+  get(Target, key, receiver) {
+    if (key === "revocable") {
+      return <T extends object>(target: T, handler: ProxyHandler<T>) => {
+        const result = _NativeProxy.revocable(target, handler);
+        proxyRegistry.add(result.proxy);
+        return result;
+      };
+    }
+    return Reflect.get(Target, key, receiver);
+  },
+}) as typeof Proxy;
+
+/**
+ * Returns `true` if `value` is a `Proxy` instance created **after**
+ * `@rslike/dbg` was first imported.
+ *
+ * Detection is fully transparent — no changes to user code are required.
+ * Proxies created before this module was loaded cannot be detected.
+ *
+ * @example
+ * ```ts
+ * import "@rslike/dbg"; // or import { dbg } from "@rslike/dbg"
+ *
+ * const p = new Proxy({ x: 1 }, {});
+ * isProxy(p);           // true
+ * isProxy({ x: 1 });   // false
+ * ```
+ */
+export function isProxy(value: unknown): boolean {
+  if (
+    value === null ||
+    (typeof value !== "object" && typeof value !== "function")
+  ) {
+    return false;
+  }
+  return proxyRegistry.has(value as object);
 }

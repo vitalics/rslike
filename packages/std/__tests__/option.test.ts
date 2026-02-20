@@ -370,21 +370,16 @@ test("xor shoud returns None when argument is not Option", () => {
   const a = Some(123);
 
   // @ts-expect-error
-  const res = a.xor(1234);
-
-  expect(res).toBeInstanceOf(Option);
-  expect(res.isSome()).toBe(true);
-  expect(res.unwrap()).toBe(123);
+  expect(() => a.xor(1234)).toThrow(UndefinedBehaviorError);
 });
 
-test("xor should return Some for (Some, Some) pair", () => {
+test("xor should return None for (Some, Some) pair — Rust semantics", () => {
   const a = Some(123);
 
   const res = a.xor(Some(12));
 
   expect(res).toBeInstanceOf(Option);
-  expect(res.isSome()).toBe(true);
-  expect(res.unwrap()).toBe(123);
+  expect(res.isNone()).toBe(true);
 });
 
 test("xor should return Some for (None, Some) pair", () => {
@@ -1054,15 +1049,13 @@ test("constructor should fail for async function", async () => {
   }
 });
 
-test.skip("constructor should fail for async throw", async (ctx) => {
-  try {
-    await (async () =>
+test("constructor should fail for async throw", () => {
+  expect(
+    () =>
       new Option(async (some) => {
-        throw 4;
-      }))();
-  } catch (e) {
-    expect(e).toBeInstanceOf(UndefinedBehaviorError);
-  }
+        some(1);
+      }),
+  ).toThrow(UndefinedBehaviorError);
 });
 
 test("constructor should pass external option value", async () => {
@@ -1076,4 +1069,53 @@ test("withResolvers should work for none null", () => {
   some(null);
   expect(option.isNone()).toBe(true);
   expect(option[Symbol.toPrimitive]()).toBe(null);
+});
+
+// ── New coverage: Rust/std semantic fixes ──
+
+test("xor returns None when both are Some (Bug 3: xor wrong semantics)", () => {
+  expect(Some(1).xor(Some(2)).isNone()).toBe(true);
+});
+
+test("xor returns self when only self is Some (Bug 3)", () => {
+  const s = Some(1).xor(None());
+  expect(s.isSome()).toBe(true);
+  expect(s.unwrap()).toBe(1);
+});
+
+test("xor returns optb when only optb is Some (Bug 3)", () => {
+  const s = None<number>().xor(Some(2));
+  expect(s.isSome()).toBe(true);
+  expect(s.unwrap()).toBe(2);
+});
+
+test("xor returns None when both are None (Bug 3)", () => {
+  expect(None().xor(None()).isNone()).toBe(true);
+});
+
+test("flatten on None returns None explicitly (Bug 5: accidental correctness)", () => {
+  expect(None().flatten().isNone()).toBe(true);
+});
+
+test("flatten on Some(Some(x)) returns Some(x) (Bug 5)", () => {
+  expect(Some(Some(6)).flatten().unwrap()).toBe(6);
+});
+
+test("flatten on Some(None()) returns None (Bug 5)", () => {
+  expect(Some(None()).flatten().isNone()).toBe(true);
+});
+
+test("take on Some returns Some and leaves None in place (Bug 7: missing take)", () => {
+  const x = Some(2);
+  const y = x.take();
+  expect(x.isNone()).toBe(true);
+  expect(y.isSome()).toBe(true);
+  expect(y.unwrap()).toBe(2);
+});
+
+test("take on None returns None and stays None (Bug 7)", () => {
+  const x = None();
+  const y = x.take();
+  expect(x.isNone()).toBe(true);
+  expect(y.isNone()).toBe(true);
 });

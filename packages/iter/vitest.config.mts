@@ -22,7 +22,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-import { dbg } from "./debug.ts";
+import { defineConfig, defaultExclude } from "vitest/config";
 
-export default dbg;
-export { dbg };
+export default defineConfig({
+  test: {
+    coverage: {
+      provider: "istanbul",
+      reporter: ["text", "json", "html"],
+      exclude: [...defaultExclude, "./src/globals.ts"],
+    },
+  },
+});

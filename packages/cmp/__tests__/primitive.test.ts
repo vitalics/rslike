@@ -442,3 +442,54 @@ test("Date should support object with Symbol.partialEquals trait", () => {
     })
   ).toBe(true);
 });
+
+// ── New coverage ─────────────────────────────────────────────────────
+
+test("Number[Symbol.equals] primitive fallback — strict equality", () => {
+  expect((5)[Symbol.equals](5)).toBe(true);
+  expect((5)[Symbol.equals](6)).toBe(false);
+  expect((0)[Symbol.equals](0)).toBe(true);
+  expect((0)[Symbol.equals](-0)).toBe(true);
+});
+
+test("Number[Symbol.partialEquals] primitive fallback — loose equality", () => {
+  expect((5)[Symbol.partialEquals](5)).toBe(true);
+  expect((5)[Symbol.partialEquals]("5")).toBe(true);
+  expect((5)[Symbol.partialEquals](6)).toBe(false);
+  expect((0)[Symbol.partialEquals](false)).toBe(true);
+});
+
+test("String[Symbol.equals] inequality", () => {
+  expect("qwe"[Symbol.equals]("asd")).toBe(false);
+  expect(""[Symbol.equals]("nonempty")).toBe(false);
+});
+
+test("String[Symbol.partialEquals] with number via loose == operator", () => {
+  expect("5"[Symbol.partialEquals](5)).toBe(true);
+  expect("0"[Symbol.partialEquals](0)).toBe(true);
+  expect("1"[Symbol.partialEquals](2)).toBe(false);
+});
+
+test("Boolean[Symbol.equals] plain booleans use === operator", () => {
+  expect(true[Symbol.equals](true)).toBe(true);
+  expect(false[Symbol.equals](false)).toBe(true);
+  expect(true[Symbol.equals](false)).toBe(false);
+  expect(false[Symbol.equals](true)).toBe(false);
+});
+
+test("Boolean[Symbol.partialEquals] with undefined falls through to return false", () => {
+  expect(false[Symbol.partialEquals](undefined)).toBe(false);
+  expect(true[Symbol.partialEquals](undefined)).toBe(false);
+});
+
+test("Date[Symbol.compare] with string date — greater and less", () => {
+  const now = new Date();
+  const future = new Date(now.valueOf() + 1000).toISOString();
+  expect(now[Symbol.compare](future)).toBe(-1);
+  const past = new Date(now.valueOf() - 1000).toISOString();
+  expect(now[Symbol.compare](past)).toBe(1);
+});
+
+test("Date[Symbol.compare] with invalid date string throws UndefinedBehaviorError", () => {
+  expect(() => new Date()[Symbol.compare]("not-a-date")).toThrow(UndefinedBehaviorError);
+});

@@ -137,3 +137,26 @@ test("match should call error cb for Ok(None)", () => {
   expect(errCb).toBeCalled();
   expect(okCb).not.toBeCalled();
 });
+
+// ── New coverage ──
+
+test("match should unwrap Ok(Some(x)) and pass inner value to okCb", () => {
+  const res = match(Ok(Some(42)), (v) => v, () => -1);
+
+  expect(res).toBe(42);
+});
+
+test("match should call errCb for Ok(None()) directly without Bind", () => {
+  const errCb = vi.fn(() => "none");
+  const okCb = vi.fn();
+  const res = match(Ok(None()), okCb, errCb);
+
+  expect(okCb).not.toBeCalled();
+  expect(errCb).toBeCalled();
+  expect(res).toBe("none");
+});
+
+test("match should throw UndefinedBehaviorError when first callback is not a function", () => {
+  // @ts-expect-error
+  expect(() => match(Some(5), 2, () => 3)).toThrow(UndefinedBehaviorError);
+});

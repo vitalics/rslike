@@ -22,7 +22,22 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-import { dbg } from "./debug.ts";
+import { defineConfig } from "tsup";
 
-export default dbg;
-export { dbg };
+export default defineConfig(() => ({
+  entry: ["src/index.ts"],
+  format: ["cjs", "esm"],
+  external: ["./index"],
+  splitting: false,
+  clean: true,
+  cjsInterop: true,
+  dts: true,
+  target: ["node18"],
+  shims: true,
+  tsconfig: "./tsconfig.json",
+  outExtension({ format }) {
+    return {
+      js: format === "cjs" ? ".cjs" : format === "esm" ? ".mjs" : ".js",
+    };
+  },
+}));

@@ -22,7 +22,4 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-import { dbg } from "./debug.ts";
-
-export default dbg;
-export { dbg };
+export * from "./src/index";

@@ -764,13 +764,13 @@ test("inspect.util should works", () => {
 test("fromPromise should work for non promise value", async () => {
   const a = await Result.fromPromise(2);
   expect(a.isOk()).toBeTruthy();
-  expect(a.unwrap()).toBe(2);
+  expect((a.unwrap() as Option<number>).unwrap()).toBe(2);
 });
 
 test("fromPromise should work for promise value", async () => {
   const a = await Result.fromPromise(Promise.resolve(2));
   expect(a.isOk()).toBeTruthy();
-  expect(a.unwrap()).toBe(2);
+  expect((a.unwrap() as Option<number>).unwrap()).toBe(2);
 });
 
 test("fromPromise should work for promise reject value", async () => {
@@ -862,4 +862,44 @@ test("withResolvers should allow to pass empty Ok value", () => {
   const { ok, result } = Result.withResolvers();
   ok();
   expect(result.isOk()).toBe(true);
+});
+
+// ── New coverage: Rust/std semantic fixes ──
+
+test("isErrAnd passes actual error value to predicate (Bug 1: this.err → this.error)", () => {
+  const r = Err(new Error("boom"));
+  expect(r.isErrAnd(e => e instanceof Error && e.message === "boom")).toBe(true);
+});
+
+test("isErrAnd returns false for Ok regardless of predicate", () => {
+  const r = Ok(5);
+  expect(r.isErrAnd(() => true)).toBe(false);
+});
+
+test("expect throws even when reason is empty string (Bug 2: reason && guard)", () => {
+  expect(() => Err("fail").expect("")).toThrow();
+});
+
+test("expect does not throw for Ok with any reason string", () => {
+  expect(Ok(42).expect("")).toBe(42);
+  expect(Ok(42).expect("reason")).toBe(42);
+});
+
+test("Result.fromPromise wraps resolved value in Some (Bug 6: Ok(v) → Ok(Some(v)))", async () => {
+  const r = await Result.fromPromise(Promise.resolve(42));
+  expect(r.isOk()).toBe(true);
+  expect(r.unwrap()).toBeInstanceOf(Option);
+  expect((r.unwrap() as Option<number>).unwrap()).toBe(42);
+});
+
+test("Result.fromPromise gives Ok(None()) for undefined resolve (Bug 6)", async () => {
+  const r = await Result.fromPromise(Promise.resolve(undefined));
+  expect(r.isOk()).toBe(true);
+  expect((r.unwrap() as Option<undefined>).isNone()).toBe(true);
+});
+
+test("Result.fromPromise gives Err on rejection (Bug 6)", async () => {
+  const r = await Result.fromPromise(Promise.reject(new Error("oops")));
+  expect(r.isErr()).toBe(true);
+  expect(r.unwrapErr()).toBeInstanceOf(Error);
 });

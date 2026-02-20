@@ -99,3 +99,39 @@ test('Bind should not throw an error', () => {
 
   expect(res.isErr()).toBe(true);
 })
+
+// ── New coverage ──
+
+test('Bind wraps () => undefined as Ok(None())', () => {
+  const b = Bind(() => undefined);
+  const res = b();
+
+  expect(res.isOk()).toBeTruthy();
+  expect(res.unwrap().isNone()).toBeTruthy();
+});
+
+test('Bind forwards multiple arguments to the wrapped function', () => {
+  const add = Bind((a: number, b: number) => a + b);
+  const res = add(3, 4);
+
+  expect(res.isOk()).toBeTruthy();
+  expect(res.unwrap().unwrap()).toBe(7);
+});
+
+test('Bind wraps async Promise.reject(new Error()) as Err(Error)', async () => {
+  const b = Bind(() => Promise.reject(new Error("async fail")));
+  const res = await b();
+
+  expect(res.isErr()).toBeTruthy();
+  expect(res.unwrapErr()).toBeInstanceOf(Error);
+  expect((res.unwrapErr() as Error).message).toBe("async fail");
+});
+
+test('Bind wraps sync throw of Error object as Err(Error)', () => {
+  const b = Bind(() => { throw new Error("boom"); });
+  const res = b();
+
+  expect(res.isErr()).toBeTruthy();
+  expect(res.unwrapErr()).toBeInstanceOf(Error);
+  expect((res.unwrapErr() as Error).message).toBe("boom");
+});
