@@ -55,3 +55,38 @@ test("Async should resolves Promise.reject(null) as Err(null)", async () => {
   expect(a.isErr()).toBeTruthy();
   expect(a.unwrapErr()).toBe(null);
 });
+
+// ── New coverage ──
+
+test("Async should resolve Promise.resolve(<number>) as Ok(Some(value))", async () => {
+  const a = await Async(Promise.resolve(42));
+
+  expect(a.isOk()).toBeTruthy();
+  expect(a.unwrap().isSome()).toBeTruthy();
+  expect(a.unwrap().unwrap()).toBe(42);
+});
+
+test("Async should resolve Promise.resolve(<object>) as Ok(Some(obj)) with same reference", async () => {
+  const obj = { x: 1 };
+  const a = await Async(Promise.resolve(obj));
+
+  expect(a.isOk()).toBeTruthy();
+  expect(a.unwrap().isSome()).toBeTruthy();
+  expect(a.unwrap().unwrap()).toBe(obj);
+});
+
+test("Async should resolve Promise.reject(new Error()) as Err(Error)", async () => {
+  const err = new Error("fail");
+  const a = await Async(Promise.reject(err));
+
+  expect(a.isErr()).toBeTruthy();
+  expect(a.unwrapErr()).toBe(err);
+  expect(a.unwrapErr()).toBeInstanceOf(Error);
+});
+
+test("Async should resolve Promise.reject(<string>) as Err(<string>)", async () => {
+  const a = await Async(Promise.reject("oops"));
+
+  expect(a.isErr()).toBeTruthy();
+  expect(a.unwrapErr()).toBe("oops");
+});

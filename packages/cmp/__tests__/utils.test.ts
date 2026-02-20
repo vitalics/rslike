@@ -215,3 +215,35 @@ test("compare should throw an error for not a number returns result", () => {
   // @ts-expect-error should throw
   expect(() => compare({}, {}, () => "qwe")).toThrow(UndefinedBehaviorError);
 });
+
+// ── New coverage ─────────────────────────────────────────────────────
+
+// compare() with valid compareFn returning a number — documents a source bug:
+// utils.ts line 60-67 validates the result but is missing `return res;`
+// so execution falls through to `throw UndefinedBehaviorError` even for valid results.
+test("compare with valid compareFn returning a number falls through to throw (source bug)", () => {
+  expect(() => compare({}, {}, () => 42)).toThrow(UndefinedBehaviorError);
+});
+
+test("partialEquals with null as first argument throws (source bug: no null guard)", () => {
+  // utils.ts line 108 does `a[kPartialEquals]` without guarding for null,
+  // so passing null as the first argument throws a TypeError.
+  expect(() => partialEquals(null, undefined)).toThrow(TypeError);
+  expect(() => partialEquals(null, null)).toThrow(TypeError);
+});
+
+test("partialEquals fallback == with 0 and false", () => {
+  expect(partialEquals(0, false)).toBe(true); // 0 == false
+  expect(partialEquals(1, true)).toBe(true); // 1 == true
+});
+
+test("equals with two primitives uses === operator", () => {
+  expect(equals("x", "x")).toBe(true);
+  expect(equals("x", "y")).toBe(false);
+  expect(equals(1, "1")).toBe(false);
+});
+
+test("equals with null as first argument returns a === b", () => {
+  expect(equals(null, null)).toBe(true);
+  expect(equals(null, undefined)).toBe(false);
+});

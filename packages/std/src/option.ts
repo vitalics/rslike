@@ -107,7 +107,7 @@ export class Option<
     let executionResult: unknown;
     try {
       const err = new UndefinedBehaviorError(
-        `You passed an async function in constructor. Only synchronous functions are allowed. Use "Option.fromPromise" or "Option.fromAsync" instead.`,
+        `You passed an async function in constructor. Only synchronous functions are allowed. Use "Option.fromPromise" or "Option.fromAsync" instead.`
       );
       const executionResult = executor(some, none);
       if (
@@ -117,9 +117,11 @@ export class Option<
         typeof executionResult.then === "function"
       ) {
         throw err;
+      // biome-ignore lint/style/noUselessElse: <explanation>
       } else if (executionResult instanceof Option) {
         // biome-ignore lint/correctness/noConstructorReturn: already option, return it
         return executionResult;
+      // biome-ignore lint/style/noUselessElse: <explanation>
       } else if (executionResult instanceof Result) {
         if (executionResult.isOk()) {
           const unwrapped = executionResult.unwrap();
@@ -193,8 +195,8 @@ export class Option<
   unwrap(): S extends typeof Status.None
     ? never
     : T extends void | null | undefined
-      ? never
-      : NonNullable<T> {
+    ? never
+    : NonNullable<T> {
     if (
       this.status === Status.None ||
       this.value === null ||
@@ -490,14 +492,17 @@ export class Option<
       ? O
       : Option<any, typeof Status.None>
     : Option<any, typeof Status.None> {
-    if (this.status === Status.Some) {
-      return this as never;
-    }
     if (!(optb instanceof Option)) {
       throw new UndefinedBehaviorError(
         `Method "xor" should accepts instance of Option`,
         { cause: { value: optb } }
       );
+    }
+    if (this.status === Status.Some) {
+      if (optb.isSome()) {
+        return None() as never;
+      }
+      return this as never;
     }
     return optb as never;
   }
@@ -690,8 +695,11 @@ export class Option<
   >
     ? Option<Sub, SubStatus>
     : Option<T, S> {
+    if (this.isNone()) {
+      return None() as never;
+    }
     if (this.value instanceof Option) {
-      return Some(this.value.value) as never;
+      return Some((this.value as Option<any>).valueOf()) as never;
     }
     return Some(this.value) as never;
   }
@@ -1051,6 +1059,28 @@ export class Option<
       `no method named "transpose" found for class "Result<${typeof this
         .value}, _>" in the current scope`
     );
+  }
+
+  /**
+   * Takes the value out of the option, leaving a `None` in its place.
+   *
+   * @example
+   * const x = Some(2);
+   * const y = x.take();
+   * console.assert(x.isNone()); // x is now None
+   * console.assert(y.unwrap() === 2); // y holds the original value
+   *
+   * const a = None<number>();
+   * const b = a.take();
+   * console.assert(a.isNone()); // still None
+   * console.assert(b.isNone()); // b is also None
+   */
+  take(): Option<T, S> {
+    const old =
+      this.status === Status.Some ? Some(this.value as T) : None<T>();
+    this.value = undefined;
+    this.status = Status.None as S;
+    return old as never;
   }
 
   /**

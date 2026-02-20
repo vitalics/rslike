@@ -1,89 +1,249 @@
 # @rslike/dbg
 
-Never use `console.log` to debug again
+Never use `console.log` to debug again.
 
-## Inspect Variables
-
-Have you ever printed variables or expressions to debug your program? If you've ever typed something like
-
-```ts
-console.log(foo('123'))
-```
-
-or the more thorough
-
-```typescript
-console.log("foo('123')", foo('123'))
-```
-
-then `@rslike/dbg` will put a smile on your face. With arguments, `dbg` inspects itself and prints both its own arguments and the values of those arguments.
-
-```ts
-import {dbg} from '@rslike/dbg'
-
-function foo(i){
-  return i + 333;
-}
-
-dbg(() => foo(123))
-```
-
-Prints:
-
-``` bash
-foo(123): 456
-```
-
-Similarry,
-
-```ts
-const d = {'key': {1: 'one'}}
-dbg(() => d['key'][1])
-
-class Klass{
-  static attr = 'yep'
-}
-dbg(() => Klass.attr)
-```
+Inspired by Python's [icecream](https://github.com/gruns/icecream) library — `dbg` prints both the expression source and its value, so you always know what you're looking at.
 
 ## Installation
 
-NPM:
-
 ```bash
 npm i @rslike/dbg
-```
-
-YARN/PNPM:
-
-```bash
 yarn add @rslike/dbg
 pnpm add @rslike/dbg
 ```
 
-## WIKI
+## Quick start
 
-Available by link: https://github.com/vitalics/rslike/wiki/Debug
+```ts
+import { dbg } from "@rslike/dbg";
 
-## Related packages
+const a = 123;
+dbg(() => a);
+// dbg | a: 123
+```
 
-- [std](https://www.npmjs.com/package/@rslike/std)
-- [cmp](https://www.npmjs.com/package/@rslike/cmp)
+Instead of writing:
+
+```ts
+console.log("foo(123)", foo(123));
+// foo(123) 456
+```
+
+Write:
+
+```ts
+dbg(() => foo(123));
+// dbg | foo(123): 456
+```
 
 ## API
 
-### dbg(fn, [opts])
+### `dbg(fn, [options])`
 
-- `fn` - arrow function.
-- `opts` - object with next arguments
-  - `prefix` - prefix before message. Default is `dbg | `
-  - `outputFunction` - function to print output. Default is `console.log`
-  - `delimiter` - delimiter between variable name and it's value.
+```ts
+import { dbg } from "@rslike/dbg";
+```
 
-Returns an object with next fields:
+#### Parameters
 
-- `name` - variable name
-- `type` - returns from `typeof` operator.
-- `value` - variable value.
-- `prefix` - called prefix from options
-- `delimiter` - called delimiter from options
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `fn` | `() => unknown` | Arrow function wrapping the expression to inspect. **Must be an arrow function.** |
+| `options` | `Options` (optional) | Configuration object (see below) |
+
+#### Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `prefix` | `string` | `"dbg | "` | String prepended to every output line |
+| `delimiter` | `string` | `": "` | String between the expression name and its value |
+| `outputFunction` | `(...args: unknown[]) => void` | `console.log` | Function used to print the message |
+
+#### Return value
+
+`dbg` returns an `InspectionResult` object:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | `string` | Source text of the expression inside the arrow function |
+| `type` | `string` | Result of `typeof` on the value |
+| `value` | `unknown` | The actual runtime value |
+| `message` | `string` | The full formatted string that was printed |
+| `prefix` | `string` | The prefix that was used |
+| `delimiter` | `string` | The delimiter that was used |
+| `isProxy` | `boolean` | `true` when the value was created with `new Proxy()` or `Proxy.revocable()` |
+
+#### Throws
+
+`TypeError` when `fn` is not an arrow function.
+
+## Examples
+
+### Basic values
+
+```ts
+const name = "Alice";
+dbg(() => name);
+// dbg | name: "Alice"
+
+const count = 42;
+dbg(() => count);
+// dbg | count: 42
+
+const active = true;
+dbg(() => active);
+// dbg | active: true
+```
+
+### Objects and arrays
+
+```ts
+const user = { id: 1, name: "Alice" };
+dbg(() => user);
+// dbg | user: {"id":1,"name":"Alice"}
+
+const scores = [10, 20, 30];
+dbg(() => scores);
+// dbg | scores: [10,20,30]
+```
+
+### Expressions and property access
+
+```ts
+const obj = { x: 42 };
+dbg(() => obj.x);
+// dbg | obj.x: 42
+
+function double(n: number) { return n * 2; }
+dbg(() => double(21));
+// dbg | double(21): 42
+```
+
+### Special numbers
+
+```ts
+dbg(() => Infinity);   // dbg | Infinity: Infinity
+dbg(() => -Infinity);  // dbg | -Infinity: -Infinity
+dbg(() => NaN);        // dbg | NaN: NaN
+
+const big = Number.MAX_SAFE_INTEGER + 1;
+dbg(() => big);        // dbg | big: 9007199254740992 (unsafe)
+```
+
+### BigInt and Symbol
+
+```ts
+const n = 123n;
+dbg(() => n);
+// dbg | n: 123n
+
+const sym = Symbol("token");
+dbg(() => sym);
+// dbg | sym: Symbol(token)
+```
+
+### Functions
+
+```ts
+function add(a: number, b: number) { return a + b; }
+dbg(() => add);
+// dbg | add: function add(a, b) { return a + b; }
+```
+
+### Proxy detection
+
+`@rslike/dbg` automatically detects `Proxy` objects created after the module is first imported — no changes to your code required.
+
+```ts
+import { dbg, isProxy } from "@rslike/dbg";
+
+const target = { value: 1 };
+const p = new Proxy(target, {});
+
+dbg(() => p);
+// dbg | p (Proxy): {"value":1}
+
+isProxy(p);       // true
+isProxy(target);  // false
+```
+
+Works with `Proxy.revocable` too:
+
+```ts
+const { proxy } = Proxy.revocable({ x: 1 }, {});
+isProxy(proxy);  // true
+```
+
+> **Note:** Proxies created before `@rslike/dbg` is first imported cannot be detected.
+
+### Custom options
+
+```ts
+// Custom delimiter
+const x = 99;
+dbg(() => x, { delimiter: " = " });
+// dbg | x = 99
+
+// Custom prefix
+dbg(() => x, { prefix: "[DEBUG] " });
+// [DEBUG] x: 99
+
+// Redirect output (e.g. to console.warn or a logger)
+dbg(() => x, { outputFunction: console.warn });
+
+// Silence output entirely while still getting the return value
+const noop = () => {};
+const { name, value, type } = dbg(() => x, { outputFunction: noop });
+```
+
+### Using the return value
+
+```ts
+const a = [1, 2, 3];
+const result = dbg(() => a);
+
+result.name;      // "a"
+result.value;     // [1, 2, 3]
+result.type;      // "object"
+result.message;   // "dbg | a: [1,2,3]"
+result.isProxy;   // false
+```
+
+## `isProxy(value)`
+
+```ts
+import { isProxy } from "@rslike/dbg";
+```
+
+Returns `true` if `value` is a `Proxy` instance created after `@rslike/dbg` was first imported.
+
+```ts
+isProxy(new Proxy({}, {}));  // true
+isProxy({});                  // false
+isProxy(null);                // false
+isProxy(42);                  // false
+```
+
+## Performance note
+
+`dbg` calls `.toString()` on the arrow function to extract the expression name. For functions with large bodies passed as values (rather than called), this prints the entire function source. Wrap such values normally:
+
+```ts
+function huge() { /* ... */ }
+
+// prints the entire function body — can be noisy
+dbg(() => huge);
+
+// just call the function and inspect the result instead
+dbg(() => huge());
+```
+
+## Related packages
+
+- [@rslike/std](https://www.npmjs.com/package/@rslike/std) — `Option`, `Result`, `UndefinedBehaviorError`
+- [@rslike/cmp](https://www.npmjs.com/package/@rslike/cmp) — comparison traits
+- [@rslike/iter](https://www.npmjs.com/package/@rslike/iter) — lazy iterators
+
+## WIKI
+
+https://github.com/vitalics/rslike/wiki/Debug

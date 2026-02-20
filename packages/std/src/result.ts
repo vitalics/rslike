@@ -185,7 +185,7 @@ export class Result<
    * @return {*}  {T}
    */
   expect(reason: string): S extends typeof Status.Err ? never : TInput {
-    if (reason && this.status === Status.Err) {
+    if (this.status === Status.Err) {
       throw new Error(reason, { cause: this.error });
     }
     return this.value as never;
@@ -320,7 +320,7 @@ export class Result<
       return false as never;
     }
     assertArgument("isErrAnd", predicate, "function");
-    const res = predicate(this.err as TErr);
+    const res = predicate(this.error as TErr);
     assertArgument("isErrAnd", res, "boolean");
     return res as never;
   }
@@ -734,8 +734,8 @@ export class Result<
    *
    */
   static withResolvers<const T, const E>() {
-    var ok: Resolver<T>;
-    var err: Rejecter<E>;
+    let ok: Resolver<T>;
+    let err: Rejecter<E>;
 
     const result = new Result<T, E>((res, rej) => {
       ok = res;
@@ -769,10 +769,10 @@ export class Result<
   static async fromPromise<const P, const E>(
     promiseLike: P | Promise<P> | PromiseLike<P>
   ): Promise<Result<Awaited<P>, E>> {
-    var result: Result<Awaited<P>, E>;
+    let result: Result<Awaited<P>, E>;
     try {
-      var v = await promiseLike;
-      result = Ok(v) as never;
+      const v = await promiseLike;
+      result = Ok(Some(v)) as never;
     } catch (e) {
       result = Err(e as E);
     }

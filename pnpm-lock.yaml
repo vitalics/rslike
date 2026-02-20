@@ -59,6 +59,19 @@ importers:
 
   packages/dbg: {}
 
+  packages/iter:
+    dependencies:
+      '@rslike/cmp':
+        specifier: workspace:*
+        version: link:../cmp
+      '@rslike/std':
+        specifier: workspace:*
+        version: link:../std
+    devDependencies:
+      vitest:
+        specifier: 3.2.4
+        version: 3.2.4(@types/node@20.4.5)(tsx@4.19.1)(yaml@2.7.0)
+
   packages/std:
     dependencies:
       chalk:
@@ -1848,7 +1861,7 @@ packages:
 
   glob@7.2.3:
     resolution: {integrity: sha512-nFR0zLpU2YCaRxwoCJvL6UvCH2JFyFVIvwTLsIf21AuHlMskA1hhTdk+LlYJtOlYt9v6dvszD2BGRqBL+iQK9Q==}
-    deprecated: Glob versions prior to v9 are no longer supported
+    deprecated: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
 
   globalthis@1.0.3:
     resolution: {integrity: sha512-sFdI5LyBiNTHjRd7cGPWapiHWMOXKyuBNX/cWJ3NfzrZQVa8GI/8cofCl74AOVqq9W5kNmguTIzJ/1s2gyI9wA==}
