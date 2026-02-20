@@ -1,5 +1,18 @@
 # @rslike/std
 
+## 1.0.0
+
+### Major Changes
+
+- 2c89d8f: Initial implementation
+
+### Patch Changes
+
+- Updated dependencies [2c89d8f]
+- Updated dependencies [2c89d8f]
+  - @rslike/cmp@3.2.1
+  - @rslike/std@3.3.0
+
 ## 3.2.0
 
 ### Minor Changes
