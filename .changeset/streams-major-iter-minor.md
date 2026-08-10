@@ -1,6 +1,6 @@
 ---
 "@rslike/streams": major
-"@rslike/iter": major
+"@rslike/iter": minor
 ---
 
 streams: promote to a stable major release.
@@ -39,8 +39,6 @@ adapter chains outperform equivalent Node.js `Transform` pipelines
 streams: `NodeSinkAdapter` swallows the `'error'` event it already reports
 as `Err` from `send()`/`close()` — write failures no longer crash the
 process with an unhandled `'error'`.
-
-iter: promote to a stable major release.
 
 iter: new `IntoIterLike<T, TNext>` interface — analog of Rust's
 `IntoIterator`: a value that can produce a fresh independent pull-based
