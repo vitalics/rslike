@@ -25,9 +25,8 @@ SOFTWARE.
 import { defineConfig } from "tsup";
 
 export default defineConfig(() => ({
-  entry: ["src/index.ts"],
+  entry: ["src/index.ts", "src/globals.ts", "src/parIter.ts", "src/workerParIter.ts", "src/asyncIter.ts"],
   format: ["cjs", "esm"],
-  external: ["./index"],
   splitting: false,
   clean: true,
   cjsInterop: true,

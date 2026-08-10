@@ -1,6 +1,6 @@
 import { test, expect, vi } from "vitest";
 import { Option, Some, None } from "@rslike/std";
-import { Iter, Peekable, iter } from "../src/index";
+import { Iter, Peekable, DoubleEndedIter, iter, doubleEndedIter, type IterLike } from "../src/index";
 import { kCompare, kEquals } from "@rslike/cmp";
 
 // ── Iter.from() ────────────────────────────────────────────────────
@@ -348,6 +348,18 @@ test("peekable next works normally", () => {
   expect(p.next().unwrap()).toBe(1);
   expect(p.next().unwrap()).toBe(2);
   expect(p.next().isNone()).toBe(true);
+});
+
+test("peek then collect returns all elements including peeked", () => {
+  const p = iter([1, 2, 3]).peekable();
+  expect(p.peek().unwrap()).toBe(1);
+  expect(p.collect()).toEqual([1, 2, 3]);
+});
+
+test("peek then fold includes peeked element", () => {
+  const p = iter([1, 2, 3]).peekable();
+  p.peek();
+  expect(p.fold(0, (a, b) => a + b)).toBe(6);
 });
 
 // ── collect / toArray ──────────────────────────────────────────────
@@ -823,4 +835,265 @@ test("Iter.from with filter_map chain", () => {
     .filter_map(n => n > 20 ? Some(`Value: ${n}`) : None())
     .collect();
   expect(result).toEqual(["Value: 40", "Value: 60"]);
+});
+
+// ── mapWhile ───────────────────────────────────────────────────────
+
+test("mapWhile yields mapped values while fn returns Some", () => {
+  const result = iter(["1", "2", "x", "3"])
+    .mapWhile(s => /^\d+$/.test(s) ? Some(Number(s)) : None())
+    .collect();
+  expect(result).toEqual([1, 2]);
+});
+
+test("mapWhile on empty iterator", () => {
+  expect(iter<number>([]).mapWhile(x => Some(x)).collect()).toEqual([]);
+});
+
+test("mapWhile all Some yields all", () => {
+  expect(iter([1, 2, 3]).mapWhile(x => Some(x * 2)).collect()).toEqual([2, 4, 6]);
+});
+
+test("mapWhile first None yields nothing", () => {
+  expect(iter([1, 2, 3]).mapWhile(() => None<number>()).collect()).toEqual([]);
+});
+
+test("mapWhile stays exhausted after None", () => {
+  const it = iter([1, 2, 3]).mapWhile(() => None<number>());
+  it.next();
+  expect(it.next().isNone()).toBe(true);
+});
+
+test("mapWhile is lazy", () => {
+  const fn = vi.fn((x: number) => Some(x));
+  iter([1, 2, 3]).mapWhile(fn);
+  expect(fn).not.toHaveBeenCalled();
+});
+
+// ── scan ───────────────────────────────────────────────────────────
+
+test("scan yields running accumulator values", () => {
+  const result = iter([1, 2, 3, 4])
+    .scan(0, (acc, x) => Some([acc + x, acc + x] as const))
+    .collect();
+  expect(result).toEqual([1, 3, 6, 10]);
+});
+
+test("scan stops at None", () => {
+  const result = iter([1, 2, 3, 4])
+    .scan(0, (acc, x) => acc + x > 5 ? None() : Some([acc + x, acc + x] as const))
+    .collect();
+  expect(result).toEqual([1, 3]);
+});
+
+test("scan state and output types can differ", () => {
+  const result = iter([1, 2, 3])
+    .scan(0, (acc, x) => Some([acc + x, `sum:${acc + x}`] as const))
+    .collect();
+  expect(result).toEqual(["sum:1", "sum:3", "sum:6"]);
+});
+
+test("scan on empty iterator", () => {
+  expect(iter<number>([]).scan(0, (acc, x) => Some([acc + x, x] as const)).collect()).toEqual([]);
+});
+
+test("scan is lazy", () => {
+  const fn = vi.fn((acc: number, x: number) => Some([acc + x, x] as const));
+  iter([1, 2, 3]).scan(0, fn);
+  expect(fn).not.toHaveBeenCalled();
+});
+
+// ── intersperse ────────────────────────────────────────────────────
+
+test("intersperse places separator between elements", () => {
+  expect(iter([1, 2, 3]).intersperse(0).collect()).toEqual([1, 0, 2, 0, 3]);
+});
+
+test("intersperse with single element yields no separator", () => {
+  expect(iter([1]).intersperse(0).collect()).toEqual([1]);
+});
+
+test("intersperse on empty iterator", () => {
+  expect(iter<number>([]).intersperse(0).collect()).toEqual([]);
+});
+
+test("intersperse is lazy", () => {
+  const gen = (function* () { yield 1; yield 2; yield 3; })();
+  const it = iter(gen).intersperse(0);
+  expect(it.next().unwrap()).toBe(1);
+  expect(it.next().unwrap()).toBe(0);
+});
+
+// ── cycle ──────────────────────────────────────────────────────────
+
+test("cycle repeats elements endlessly", () => {
+  expect(iter([1, 2, 3]).cycle().take(7).collect()).toEqual([1, 2, 3, 1, 2, 3, 1]);
+});
+
+test("cycle on empty iterator stays empty", () => {
+  expect(iter<number>([]).cycle().take(3).collect()).toEqual([]);
+});
+
+test("cycle with single element", () => {
+  expect(iter([42]).cycle().take(4).collect()).toEqual([42, 42, 42, 42]);
+});
+
+test("cycle is lazy until first consumer call", () => {
+  const it = iter([1, 2]).cycle();
+  expect(it.next().unwrap()).toBe(1);
+  expect(it.next().unwrap()).toBe(2);
+  expect(it.next().unwrap()).toBe(1);
+});
+
+// ── chunks ─────────────────────────────────────────────────────────
+
+test("chunks yields arrays of n elements", () => {
+  expect(iter([1, 2, 3, 4, 5]).chunks(2).collect()).toEqual([[1, 2], [3, 4], [5]]);
+});
+
+test("chunks with exact multiple", () => {
+  expect(iter([1, 2, 3, 4]).chunks(2).collect()).toEqual([[1, 2], [3, 4]]);
+});
+
+test("chunks larger than source", () => {
+  expect(iter([1, 2]).chunks(5).collect()).toEqual([[1, 2]]);
+});
+
+test("chunks on empty iterator", () => {
+  expect(iter<number>([]).chunks(2).collect()).toEqual([]);
+});
+
+test("chunks throws on size < 1", () => {
+  expect(() => iter([1, 2, 3]).chunks(0)).toThrow(RangeError);
+});
+
+test("chunks is lazy", () => {
+  const it = iter([1, 2, 3, 4]).chunks(3);
+  expect(it.next().unwrap()).toEqual([1, 2, 3]);
+  expect(it.next().unwrap()).toEqual([4]);
+  expect(it.next().isNone()).toBe(true);
+});
+
+// ── findMap ────────────────────────────────────────────────────────
+
+test("findMap returns first Some result", () => {
+  const result = iter(["a", "1", "b", "2"])
+    .findMap(s => /^\d+$/.test(s) ? Some(Number(s)) : None());
+  expect(result.isSome()).toBe(true);
+  expect(result.unwrap()).toBe(1);
+});
+
+test("findMap returns None when all fn results are None", () => {
+  const result = iter([1, 2, 3]).findMap(() => None<number>());
+  expect(result.isNone()).toBe(true);
+});
+
+test("findMap on empty iterator", () => {
+  expect(iter<number>([]).findMap(x => Some(x)).isNone()).toBe(true);
+});
+
+test("findMap short-circuits", () => {
+  const fn = vi.fn((x: number) => x === 2 ? Some(x) : None<number>());
+  iter([1, 2, 3, 4]).findMap(fn);
+  expect(fn).toHaveBeenCalledTimes(2);
+});
+
+// ── partition ──────────────────────────────────────────────────────
+
+test("partition splits elements by predicate", () => {
+  expect(iter([1, 2, 3, 4, 5]).partition(x => x % 2 === 0)).toEqual([[2, 4], [1, 3, 5]]);
+});
+
+test("partition with all matching", () => {
+  expect(iter([2, 4]).partition(x => x % 2 === 0)).toEqual([[2, 4], []]);
+});
+
+test("partition with none matching", () => {
+  expect(iter([1, 3]).partition(x => x % 2 === 0)).toEqual([[], [1, 3]]);
+});
+
+test("partition on empty iterator", () => {
+  expect(iter<number>([]).partition(() => true)).toEqual([[], []]);
+});
+
+// ── collect(ctor) ──────────────────────────────────────────────────
+
+test("collect() with no ctor returns plain array", () => {
+  expect(iter([1, 2, 3]).collect()).toEqual([1, 2, 3]);
+});
+
+test("collect(Array) returns plain array, not nested", () => {
+  const result = iter([1, 2, 3]).collect(Array);
+  expect(result).toEqual([1, 2, 3]);
+  expect(Array.isArray(result)).toBe(true);
+});
+
+test("collect(Set) dedupes", () => {
+  const result = iter([1, 2, 2, 3, 3, 3]).collect(Set);
+  expect(result).toBeInstanceOf(Set);
+  expect([...result]).toEqual([1, 2, 3]);
+});
+
+test("collect(Map) from pairs", () => {
+  const result = iter([["a", 1], ["b", 2]] as [string, number][]).collect(Map);
+  expect(result).toBeInstanceOf(Map);
+  expect(result.get("a")).toBe(1);
+  expect(result.get("b")).toBe(2);
+});
+
+test("collect(Map) from zip", () => {
+  const result = iter(["a", "b"]).zip(iter([1, 2])).collect(Map);
+  expect(result).toBeInstanceOf(Map);
+  expect(result.get("b")).toBe(2);
+});
+
+test("collect(Iter) returns a re-iterable Iter", () => {
+  const result = iter([1, 2, 3]).map(x => x * 2).collect(Iter);
+  expect(result).toBeInstanceOf(Iter);
+  expect(result.collect()).toEqual([2, 4, 6]);
+});
+
+test("collect(DoubleEndedIter) supports nextBack", () => {
+  const result = iter([1, 2, 3]).collect(DoubleEndedIter);
+  expect(result).toBeInstanceOf(DoubleEndedIter);
+  expect(result.nextBack().unwrap()).toBe(3);
+  expect(result.next().unwrap()).toBe(1);
+});
+
+test("collect with custom ctor", () => {
+  class Wrapper<T> {
+    constructor(readonly items: T[]) {}
+    get length() { return this.items.length; }
+  }
+  const result = iter([1, 2, 3]).collect(Wrapper);
+  expect(result).toBeInstanceOf(Wrapper);
+  expect(result.items).toEqual([1, 2, 3]);
+  expect(result.length).toBe(3);
+});
+
+test("collect(WeakSet) with objects", () => {
+  const a = {}, b = {};
+  const result = iter([a, b, a]).collect(WeakSet);
+  expect(result).toBeInstanceOf(WeakSet);
+  expect(result.has(a)).toBe(true);
+});
+
+test("collect(ctor) on empty iterator", () => {
+  expect(iter<number>([]).collect(Set).size).toBe(0);
+  expect(iter<number>([]).collect(Array)).toEqual([]);
+});
+
+// ── IterLike ───────────────────────────────────────────────────────
+
+test("IterLike accepts Iter, Peekable and DoubleEndedIter structurally", () => {
+  function drain(it: IterLike<number>): number {
+    let sum = 0;
+    for (let r = it.next(); r.isSome(); r = it.next()) {
+      sum += r.unwrap();
+    }
+    return sum;
+  }
+  expect(drain(iter([1, 2, 3]))).toBe(6);
+  expect(drain(iter([1, 2, 3]).peekable())).toBe(6);
+  expect(drain(doubleEndedIter([1, 2, 3]))).toBe(6);
 });

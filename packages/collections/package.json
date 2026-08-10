@@ -1,0 +1,110 @@
+{
+  "name": "@rslike/collections",
+  "version": "0.0.0",
+  "description": "Rust-inspired collections library — Array, Map, Set (and readonly variants) with Option-based safe access and lazy iterator integration",
+  "private": false,
+  "main": "./dist/index.cjs",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsup",
+    "docs": "pnpm typedoc src/index.ts",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "bench": "vitest bench"
+  },
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./map": {
+      "import": {
+        "types": "./dist/map.d.mts",
+        "default": "./dist/map.mjs"
+      },
+      "require": {
+        "types": "./dist/map.d.ts",
+        "default": "./dist/map.cjs"
+      }
+    },
+    "./array": {
+      "import": {
+        "types": "./dist/array.d.mts",
+        "default": "./dist/array.mjs"
+      },
+      "require": {
+        "types": "./dist/array.d.ts",
+        "default": "./dist/array.cjs"
+      }
+    },
+    "./readonly-array": {
+      "import": {
+        "types": "./dist/readonly-array.d.mts",
+        "default": "./dist/readonly-array.mjs"
+      },
+      "require": {
+        "types": "./dist/readonly-array.d.ts",
+        "default": "./dist/readonly-array.cjs"
+      }
+    },
+    "./set": {
+      "import": {
+        "types": "./dist/set.d.mts",
+        "default": "./dist/set.mjs"
+      },
+      "require": {
+        "types": "./dist/set.d.ts",
+        "default": "./dist/set.cjs"
+      }
+    },
+    "./readonly-map": {
+      "import": {
+        "types": "./dist/readonly-map.d.mts",
+        "default": "./dist/readonly-map.mjs"
+      },
+      "require": {
+        "types": "./dist/readonly-map.d.ts",
+        "default": "./dist/readonly-map.cjs"
+      }
+    },
+    "./readonly-set": {
+      "import": {
+        "types": "./dist/readonly-set.d.mts",
+        "default": "./dist/readonly-set.mjs"
+      },
+      "require": {
+        "types": "./dist/readonly-set.d.ts",
+        "default": "./dist/readonly-set.cjs"
+      }
+    }
+  },
+  "keywords": [
+    "collections",
+    "array",
+    "map",
+    "set",
+    "readonly",
+    "iterator",
+    "option",
+    "rust like",
+    "rust"
+  ],
+  "author": "Vitali Haradkou",
+  "license": "MIT",
+  "homepage": "https://github.com/vitalics/rslike/blob/main/packages/collections/README.md",
+  "bugs": {
+    "url": "https://github.com/vitalics/rslike/issues",
+    "email": "vitalicset@yandex.ru"
+  },
+  "packageManager": "pnpm@10.11.0",
+  "dependencies": {
+    "@rslike/std": "workspace:*",
+    "@rslike/iter": "workspace:*"
+  }
+}

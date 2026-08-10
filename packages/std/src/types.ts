@@ -22,6 +22,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+import { WELL_KNOWN_CLONE_API } from "./symbols.ts";
+
 export type Fn<
   R = unknown,
   A extends readonly unknown[] = [],
@@ -74,3 +76,25 @@ export type ToStack<
   ? `${Head}
   ${ToStack<Tail, R>}`
   : R;
+
+/**
+ * Cloneable interface that requires to implement `clone` function.
+ * Modeled after Rust's `Clone` trait.
+ *
+ * The `[WELL_KNOWN_CLONE_API]` member is **optional** — implement it
+ * (typically delegating to `clone()`) when the type should be explicitly
+ * discoverable by generic clone-based code; `clone(value)` checks the
+ * symbol first and falls back to the `clone()` method.
+ *
+ * @example
+ * class Point implements Cloneable<Point> {
+ *   constructor(public x: number, public y: number) {}
+ *   clone(): Point {
+ *     return new Point(this.x, this.y);
+ *   }
+ * }
+ */
+export interface Cloneable<T = unknown> {
+  clone(): T;
+  [WELL_KNOWN_CLONE_API]?(): T;
+}

@@ -23,6 +23,8 @@ SOFTWARE.
 */
 
 import { Err, Ok, Result } from "./result.ts";
+import { clone, type Cloneable } from "./clone.ts";
+import { WELL_KNOWN_CLONE_API } from "./symbols.ts";
 import type {
   ComparatorFn,
   IsNever,
@@ -40,6 +42,12 @@ const Status = Object.freeze({
   None: "None",
   Some: "Some",
 } as const);
+
+/**
+ * Internal sentinel used by static fast-path constructors (Some/None).
+ * Never exported — prevents external code from bypassing the executor.
+ */
+const _FAST = Symbol("rslike.option.fast");
 
 type StatusKey = keyof typeof Status;
 
@@ -79,11 +87,14 @@ export class Option<
     : [T] extends [null]
     ? typeof Status.None
     : (typeof Status)[StatusKey]
-> {
+> implements Cloneable<Option<T, S>> {
   private value: T | null | undefined;
   private status: S | undefined;
 
-  constructor(executor: Executor<T>) {
+  /** @internal Fast-path constructor — bypasses executor machinery. */
+  constructor(executor: Executor<T>);
+  constructor(executor: Executor<T> | symbol) {
+    if (executor === _FAST) return;
     const some: SomeFn<T> = (value) => {
       if (!this.status) {
         if (value === undefined || value === null) {
@@ -109,7 +120,7 @@ export class Option<
       const err = new UndefinedBehaviorError(
         `You passed an async function in constructor. Only synchronous functions are allowed. Use "Option.fromPromise" or "Option.fromAsync" instead.`
       );
-      const executionResult = executor(some, none);
+      executionResult = (executor as Executor<T>)(some, none);
       if (
         executionResult &&
         typeof executionResult === "object" &&
@@ -117,11 +128,11 @@ export class Option<
         typeof executionResult.then === "function"
       ) {
         throw err;
-      // biome-ignore lint/style/noUselessElse: <explanation>
+        // biome-ignore lint/style/noUselessElse: <explanation>
       } else if (executionResult instanceof Option) {
         // biome-ignore lint/correctness/noConstructorReturn: already option, return it
         return executionResult;
-      // biome-ignore lint/style/noUselessElse: <explanation>
+        // biome-ignore lint/style/noUselessElse: <explanation>
       } else if (executionResult instanceof Result) {
         if (executionResult.isOk()) {
           const unwrapped = executionResult.unwrap();
@@ -134,7 +145,7 @@ export class Option<
           none(executionResult.valueOf());
         }
       } else if (executionResult !== undefined && executionResult !== null) {
-        some(executionResult);
+        some(executionResult as T);
       } else {
         // noop, in case of withResolvers
         /* istanbul ignore if -- @preserve */
@@ -194,7 +205,7 @@ export class Option<
    */
   unwrap(): S extends typeof Status.None
     ? never
-    : T extends void | null | undefined
+    : [T] extends [void] | [null] | [undefined]
     ? never
     : NonNullable<T> {
     if (
@@ -281,6 +292,39 @@ export class Option<
       return Some(predicate(this.value as T)) as never;
     }
     return None() as never;
+  }
+
+  /**
+   * Returns a copy of the `Option`, cloning the contained value (if `Some`).
+   * Modeled after Rust's `Option::clone` — requires the value to be cloneable.
+   *
+   * The contained value is cloned via {@link clone}:
+   * the `Cloneable` trait (a `clone()` method) if the value implements it,
+   * `structuredClone` for plain data, or identity for primitives.
+   *
+   * @example
+   * const x = Some({ a: 1 });
+   * const y = x.clone();
+   * y === x;            // false — different Option instances
+   * y.unwrap() === x.unwrap(); // false — different inner objects
+   *
+   * None().clone(); // None()
+   * @throws `UndefinedBehaviorError` if the contained value is not cloneable
+   * @return a new `Option` instance with a cloned value
+   */
+  clone(): Option<T, S> {
+    if (this.status === Status.Some) {
+      return Some(clone(this.value as T)) as unknown as Option<T, S>;
+    }
+    return None() as unknown as Option<T, S>;
+  }
+
+  /**
+   * Well-known `Cloneable` trait symbol — delegates to {@link clone}.
+   * Allows generic clone-based code (`clone(value)`) to dispatch here.
+   */
+  [WELL_KNOWN_CLONE_API](): Option<T, S> {
+    return this.clone();
   }
 
   /**
@@ -707,22 +751,27 @@ export class Option<
   /**
    * Some value of type `T`.
    */
-  static Some<const T = undefined>(
-    value: T = undefined as T
-  ): T extends undefined | null
-    ? Option<T, typeof Status.None>
-    : Option<NonNullable<T>, typeof Status.Some> {
+  static Some<const T = undefined>(value: T = undefined as T): Option<T> {
     if (value === undefined || value === null) {
-      return new Option((_, none) => none(value)) as never;
+      const opt = new Option<T, typeof Status.None>(_FAST as unknown as Executor<T>);
+      opt.value = value;
+      opt.status = Status.None as never;
+      return opt as never;
     }
-    return new Option<T, typeof Status.Some>((some) => some(value)) as never;
+    const opt = new Option<T, typeof Status.Some>(_FAST as unknown as Executor<T>);
+    opt.value = value;
+    opt.status = Status.Some as never;
+    return opt as never;
   }
 
   /**
    * No value.
    */
   static None<T = undefined>(value: undefined | null = undefined) {
-    return new Option<T, typeof Status.None>((_, none) => none(value as never));
+    const opt = new Option<T, typeof Status.None>(_FAST as unknown as Executor<T>);
+    opt.value = value as never;
+    opt.status = Status.None as never;
+    return opt;
   }
 
   /** represents no value */
@@ -1076,8 +1125,7 @@ export class Option<
    * console.assert(b.isNone()); // b is also None
    */
   take(): Option<T, S> {
-    const old =
-      this.status === Status.Some ? Some(this.value as T) : None<T>();
+    const old = this.status === Status.Some ? Some(this.value as T) : None<T>();
     this.value = undefined;
     this.status = Status.None as S;
     return old as never;
@@ -1326,8 +1374,8 @@ Object.defineProperty(Some, Symbol.hasInstance, {
  * }
  * ```
  */
-export function None<const T>(value: null | undefined = undefined) {
-  return Option.None<T>(value);
+export function None<const T>(value: null | undefined = undefined): Option<T> {
+  return Option.None<T>(value) as Option<T>;
 }
 
 Object.defineProperty(None, Symbol.hasInstance, {

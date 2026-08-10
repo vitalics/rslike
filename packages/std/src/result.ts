@@ -28,6 +28,8 @@ import {
   customInspectSymbol,
 } from "./utils.ts";
 import { None, Option, Some } from "./option.ts";
+import { clone, type Cloneable } from "./clone.ts";
+import { WELL_KNOWN_CLONE_API } from "./symbols.ts";
 import type {
   ComparatorFn,
   Fn,
@@ -42,6 +44,12 @@ const Status = Object.freeze({
   Err: "Err",
   Ok: "Ok",
 } as const);
+
+/**
+ * Internal sentinel used by static fast-path constructors (Ok/Err).
+ * Never exported — prevents external code from bypassing the executor.
+ */
+const _FAST = Symbol("rslike.result.fast");
 
 type StatusKey = keyof typeof Status;
 
@@ -102,12 +110,15 @@ export class Result<
   const S extends (typeof Status)[StatusKey] = IsNever<TInput> extends true
     ? typeof Status.Err
     : (typeof Status)[StatusKey]
-> {
+> implements Cloneable<Result<TInput, TErr, S>> {
   private value: TInput | null = null;
   private error: TErr | null | undefined = undefined;
   private status: S | undefined;
 
-  constructor(executor: Executor<TInput, TErr>) {
+  /** @internal Fast-path constructor — bypasses executor machinery. */
+  constructor(executor: Executor<TInput, TErr>);
+  constructor(executor: Executor<TInput, TErr> | symbol) {
+    if (executor === _FAST) return;
     const okFn: Resolver<TInput> = (value) => {
       if (!this.status) {
         this.value = value ?? null;
@@ -125,7 +136,7 @@ export class Result<
     assertArgument("constructor", executor, "function");
     let executionResult: unknown;
     try {
-      executionResult = executor(okFn, errorFn);
+      executionResult = (executor as Executor<TInput, TErr>)(okFn, errorFn);
       if (
         executionResult &&
         typeof executionResult === "object" &&
@@ -478,6 +489,39 @@ export class Result<
     }
     return this as never;
   }
+
+  /**
+   * Returns a copy of the `Result`, cloning the contained value (or error).
+   * Modeled after Rust's `Result::clone` — requires the value/error to be cloneable.
+   *
+   * The contained value (or error) is cloned via {@link clone}:
+   * the `Cloneable` trait (a `clone()` method) if it is implemented,
+   * `structuredClone` for plain data, or identity for primitives.
+   *
+   * @example
+   * const x = Ok({ a: 1 });
+   * const y = x.clone();
+   * y === x;                  // false — different Result instances
+   * y.unwrap() === x.unwrap(); // false — different inner objects
+   *
+   * Err({ code: 13 }).clone(); // Err({ code: 13 })
+   * @throws `UndefinedBehaviorError` if the contained value (or error) is not cloneable
+   * @return a new `Result` instance with a cloned value (or error)
+   */
+  clone(): Result<TInput, TErr, S> {
+    if (this.status === Status.Ok) {
+      return Ok(clone(this.value as TInput)) as unknown as Result<TInput, TErr, S>;
+    }
+    return Err(clone(this.error as TErr)) as unknown as Result<TInput, TErr, S>;
+  }
+
+  /**
+   * Well-known `Cloneable` trait symbol — delegates to {@link clone}.
+   * Allows generic clone-based code (`clone(value)`) to dispatch here.
+   */
+  [WELL_KNOWN_CLONE_API](): Result<TInput, TErr, S> {
+    return this.clone();
+  }
   /**
    * Returns the contained `Err` value, consuming the self value.
    *
@@ -715,10 +759,18 @@ export class Result<
   }
 
   static Ok<const V, const E>(value: V) {
-    return new Result<V, E, typeof Status.Ok>((ok) => ok(value));
+    const res = new Result<V, E, typeof Status.Ok>(_FAST as unknown as Executor<V, E>);
+    res.value = value ?? null;
+    res.status = Status.Ok as never;
+    return res;
   }
   static Err<const V, const ErrorValue>(value: ErrorValue) {
-    return new Result<V, ErrorValue, typeof Status.Err>((_, rej) => rej(value));
+    const res = new Result<V, ErrorValue, typeof Status.Err>(
+      _FAST as unknown as Executor<V, ErrorValue>
+    );
+    res.error = value;
+    res.status = Status.Err as never;
+    return res;
   }
 
   static ok = Result.Ok;

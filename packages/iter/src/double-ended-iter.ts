@@ -157,6 +157,106 @@ export class DoubleEndedIter<const T> extends Iter<T> {
     return None();
   }
 
+  // ── Consumer overrides (bypass generator, use direct array access) ─
+
+  /**
+   * Collects remaining elements into an array via `slice()` — avoids generator overhead.
+   *
+   * Optionally accepts a constructor to collect into a specific collection
+   * (`Array`, `Set`, `Map` for `[K, V]` pairs, `Iter`, `DoubleEndedIter`,
+   * `@rslike/collections` classes). See {@link Iter.collect}.
+   */
+  override collect(): T[];
+  override collect(ctor: ArrayConstructor): T[];
+  override collect<K, V>(
+    this: DoubleEndedIter<readonly [K, V]>,
+    ctor: MapConstructor,
+  ): Map<K, V>;
+  override collect<C>(ctor: new (items: T[]) => C): C;
+  override collect(
+    ctor?: ArrayConstructor | MapConstructor | (new (items: T[]) => unknown),
+  ): unknown {
+    const result = this.#s.items.slice(this.#s.front, this.#s.back + 1) as T[];
+    this.#s.front = this.#s.back + 1;
+    if (ctor === undefined || ctor === Array) {
+      return result;
+    }
+    return new (ctor as new (items: T[]) => unknown)(result);
+  }
+
+  /**
+   * Folds remaining elements from the front using a direct array loop.
+   */
+  override fold<U>(init: U, fn: (acc: U, value: T) => U): U {
+    let acc = init;
+    while (this.#s.front <= this.#s.back) {
+      acc = fn(acc, this.#s.items[this.#s.front++]);
+    }
+    return acc;
+  }
+
+  /**
+   * O(1) count — returns `back - front + 1` without iterating.
+   */
+  override count(): number {
+    const n = Math.max(0, this.#s.back - this.#s.front + 1);
+    this.#s.front = this.#s.back + 1;
+    return n;
+  }
+
+  /**
+   * Finds first matching element from the front via direct array loop.
+   */
+  override find(fn: (value: T) => boolean): AnyOption<T> {
+    while (this.#s.front <= this.#s.back) {
+      const value = this.#s.items[this.#s.front++];
+      if (fn(value)) return Some(value);
+    }
+    return None();
+  }
+
+  /**
+   * Iterates remaining elements from the front via direct array loop.
+   */
+  override forEach(fn: (value: T) => void): void {
+    while (this.#s.front <= this.#s.back) {
+      fn(this.#s.items[this.#s.front++]);
+    }
+  }
+
+  /**
+   * Returns `true` immediately when a matching element is found.
+   */
+  override any(fn: (value: T) => boolean): boolean {
+    while (this.#s.front <= this.#s.back) {
+      if (fn(this.#s.items[this.#s.front++])) return true;
+    }
+    return false;
+  }
+
+  /**
+   * Returns `false` immediately when a non-matching element is found.
+   */
+  override all(fn: (value: T) => boolean): boolean {
+    while (this.#s.front <= this.#s.back) {
+      if (!fn(this.#s.items[this.#s.front++])) return false;
+    }
+    return true;
+  }
+
+  /**
+   * O(1) nth — jumps directly to index without iterating.
+   */
+  override nth(n: number): AnyOption<T> {
+    const idx = this.#s.front + n;
+    if (idx > this.#s.back) {
+      this.#s.front = this.#s.back + 1;
+      return None();
+    }
+    this.#s.front = idx + 1;
+    return Some(this.#s.items[idx]);
+  }
+
   // ── Adapter overrides (preserve DoubleEndedIter) ─────────────────
 
   /**
