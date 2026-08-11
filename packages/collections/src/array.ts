@@ -1,10 +1,33 @@
 import { type Option, Some, None } from "@rslike/std";
-import { Iter, ParIter, DoubleEndedIter, type IntoIterLike } from "@rslike/iter";
+import {
+  Iter,
+  ParIter,
+  DoubleEndedIter,
+  type IntoIterLike,
+} from "@rslike/iter";
 
 import { type IterSource, toIterable } from "./iter-source";
+import type { RsArrayLike } from "./array-like";
 
-export class RSLikeArray<T> implements Iterable<T>, IntoIterLike<T> {
+export class RSLikeArray<T>
+  implements Iterable<T>, IntoIterLike<T>, RsArrayLike<T>
+{
+  /**
+   * ArrayLike numeric indexed access. Indexes are exposed as live accessor
+   * properties reading straight from the internal storage, so values never
+   * go stale after mutations. Writing through an index throws in strict
+   * mode — mutate via the methods instead.
+   */
+  readonly [index: number]: T;
+
   #items: T[];
+  /**
+   * Number of index accessors ever defined on `this`. Accessors are never
+   * deleted on shrink — only hidden — so this value never decreases.
+   */
+  #capacity = 0;
+  /** Cursor backing the `IterLike` contract ({@link next}). */
+  #cursor = 0;
 
   static from<T>(items?: IterSource<T> | null): RSLikeArray<T> {
     return new RSLikeArray(items);
@@ -16,6 +39,49 @@ export class RSLikeArray<T> implements Iterable<T>, IntoIterLike<T> {
    */
   constructor(items?: IterSource<T> | null) {
     this.#items = items ? [...toIterable(items)] : [];
+    this.#syncIndexes(0);
+  }
+
+  /**
+   * Reconciles the visible index range after the length changed from
+   * `prevLength`. Accessors read `#items[i]` on demand, so element values
+   * never need re-mirroring — after `shift()` every index observes its
+   * shifted value for free. Only visibility is managed: grown indexes get
+   * an accessor (or are re-shown), shrunk ones are hidden from own-key
+   * views (`Object.keys`, spread) by turning off `enumerable`. Cost is
+   * O(|length - prevLength|) per mutation, so `pop`/`shift` pay O(1) here
+   * and `push(...k)` pays O(k).
+   */
+  #syncIndexes(prevLength: number): void {
+    const length = this.#items.length;
+    const lo = Math.min(prevLength, length);
+    const hi = Math.max(prevLength, length);
+    for (let i = lo; i < hi; i++) {
+      if (i < this.#capacity) {
+        Reflect.defineProperty(this, i, { enumerable: i < length });
+      } else {
+        const index = i;
+        Reflect.defineProperty(this, index, {
+          get: () => this.#items[index],
+          enumerable: true,
+          configurable: true,
+        });
+      }
+    }
+    if (hi > this.#capacity) this.#capacity = hi;
+  }
+
+  // ── IterLike contract ─────────────────────────────────────────────
+
+  /**
+   * Pull-based iteration over the current contents: `Some(value)` until
+   * the internal cursor passes the end, then `None`. The cursor is
+   * one-shot and shared per instance — for independent, repeatable
+   * passes use {@link iter}.
+   */
+  next(): Option<T> {
+    if (this.#cursor >= this.#items.length) return None();
+    return Some(this.#items[this.#cursor++]);
   }
 
   // ── Safe access (Rust slice / Vec) ────────────────────────────────
@@ -48,14 +114,20 @@ export class RSLikeArray<T> implements Iterable<T>, IntoIterLike<T> {
 
   /** `Vec::pop()` — removes and returns the last element, or None if empty. */
   pop(): Option<T> {
-    if (this.#items.length === 0) return None();
-    return Some(this.#items.pop() as T);
+    const prev = this.#items.length;
+    if (prev === 0) return None();
+    const value = this.#items.pop() as T;
+    this.#syncIndexes(prev);
+    return Some(value);
   }
 
   /** Removes and returns the first element, or None if empty. */
   shift(): Option<T> {
-    if (this.#items.length === 0) return None();
-    return Some(this.#items.shift() as T);
+    const prev = this.#items.length;
+    if (prev === 0) return None();
+    const value = this.#items.shift() as T;
+    this.#syncIndexes(prev);
+    return Some(value);
   }
 
   /** `slice::iter().find()` — None if no element matches. */
@@ -73,7 +145,10 @@ export class RSLikeArray<T> implements Iterable<T>, IntoIterLike<T> {
   // ── Standard methods ──────────────────────────────────────────────
 
   push(...items: T[]): number {
-    return this.#items.push(...items);
+    const prev = this.#items.length;
+    const length = this.#items.push(...items);
+    this.#syncIndexes(prev);
+    return length;
   }
 
   map<U>(fn: (value: T, index: number) => U): RSLikeArray<U> {
