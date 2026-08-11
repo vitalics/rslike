@@ -33,7 +33,7 @@ function isAsyncFn(fn: unknown): boolean {
 function asyncIterationRequired(): UndefinedBehaviorError {
   return new UndefinedBehaviorError(
     "Sync iteration is not supported for truly-async pipelines. " +
-      "Use `for await...of` or an async consumer (`collect`, `fold`, ...) instead."
+      "Use `for await...of` or an async consumer (`collect`, `fold`, ...) instead.",
   );
 }
 
