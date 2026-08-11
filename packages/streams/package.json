@@ -2,6 +2,11 @@
   "name": "@rslike/streams",
   "version": "1.0.0",
   "description": "Rust-inspired fallible async streams — Stream, Sink, Channel with Result-based pull protocol",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vitalics/rslike.git",
+    "directory": "packages/streams"
+  },
   "private": false,
   "main": "./dist/index.cjs",
   "types": "./dist/index.d.ts",

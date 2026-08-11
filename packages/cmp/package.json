@@ -2,6 +2,11 @@
   "name": "@rslike/cmp",
   "version": "3.2.2",
   "description": "JavaScript Comparison package without undefined behavior!",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vitalics/rslike.git",
+    "directory": "packages/cmp"
+  },
   "private": false,
   "main": "./dist/index.cjs",
   "types": "./dist/index.d.ts",

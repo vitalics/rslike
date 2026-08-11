@@ -2,6 +2,11 @@
   "name": "@rslike/collections",
   "version": "0.1.0",
   "description": "Rust-inspired collections library — Array, Map, Set (and readonly variants) with Option-based safe access and lazy iterator integration",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vitalics/rslike.git",
+    "directory": "packages/collections"
+  },
   "private": false,
   "main": "./dist/index.cjs",
   "types": "./dist/index.d.ts",

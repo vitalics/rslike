@@ -2,6 +2,11 @@
   "name": "@rslike/dbg",
   "version": "3.2.0",
   "description": "Never use console.log to debug again!",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vitalics/rslike.git",
+    "directory": "packages/dbg"
+  },
   "private": false,
   "main": "./dist/index.cjs",
   "types": "./dist/index.d.ts",
