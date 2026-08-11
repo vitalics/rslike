@@ -1,6 +1,6 @@
 {
   "name": "@rslike/collections",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Rust-inspired collections library — Array, Map, Set (and readonly variants) with Option-based safe access and lazy iterator integration",
   "private": false,
   "main": "./dist/index.cjs",

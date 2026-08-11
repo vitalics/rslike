@@ -1,7 +1,7 @@
 {
   "name": "@rslike/streams",
-  "version": "0.0.0",
-  "description": "Rust-inspired fallible async streams \u2014 Stream, Sink, Channel with Result-based pull protocol",
+  "version": "1.0.0",
+  "description": "Rust-inspired fallible async streams — Stream, Sink, Channel with Result-based pull protocol",
   "private": false,
   "main": "./dist/index.cjs",
   "types": "./dist/index.d.ts",
