@@ -11,6 +11,9 @@ Wraps any `Iterable<T>` and provides chainable adapter and consumer methods mode
 - `Iter.from(source, mapFn?)` — backward-compatible with `Array.from`
 - `DoubleEndedIter` — iterate from both front and back
 - `Peekable` — look at the next element without consuming it
+- `ParIter` — Rayon-inspired concurrent pipelines via `Promise.all` (IO-bound)
+- `WorkerParIter` — CPU-parallel pipelines on worker threads (Node.js and browser)
+- `AsyncIter` — lazy pull-based async iterator (`for await...of`), Rust's `Stream` analog
 - Integrates with `@rslike/std` (`Option`) and `@rslike/cmp` (`Ord`, `Eq`)
 - First-class CJS and ESM support
 - TypeScript ready — `.d.ts` types included
@@ -96,8 +99,13 @@ Iter.from("abc", (c, i) => `${i}:${c}`).collect(); // ["0:a", "1:b", "2:c"]
 | `.map(fn)` | Transform each element |
 | `.filter(fn)` | Keep elements matching predicate |
 | `.filter_map(fn)` | Map then keep `Some` results (see `@rslike/std`) |
+| `.mapWhile(fn)` | Yield mapped values while `fn` returns `Some`, stop at first `None` |
+| `.scan(init, fn)` | Stateful map — `fn(acc, x)` returns `Some([newAcc, output])` or `None` to stop |
 | `.flatMap(fn)` | Map each element to an iterable and flatten one level |
 | `.flatten()` | Flatten one level of nested iterables |
+| `.chunks(n)` | Yield arrays of at most `n` elements |
+| `.intersperse(sep)` | Insert `sep` between adjacent elements |
+| `.cycle()` | Repeat elements endlessly (buffers the source; pair with `.take()`) |
 | `.enumerate()` | Yield `[index, value]` pairs |
 | `.take(n)` | Yield at most `n` elements |
 | `.skip(n)` | Skip the first `n` elements |
@@ -118,7 +126,7 @@ Iter.from("abc", (c, i) => `${i}:${c}`).collect(); // ["0:a", "1:b", "2:c"]
 
 | Method | Description |
 |---|---|
-| `.collect()` | Gather all elements into an array |
+| `.collect()` | Gather all elements into an array, or into a constructor — `collect(Set)`, `collect(Map)`, `collect(Iter)` |
 | `.toArray()` | Alias for `collect()` |
 | `.forEach(fn)` | Call `fn` on each element |
 | `.fold(init, fn)` | Reduce with an initial value |
@@ -127,6 +135,8 @@ Iter.from("abc", (c, i) => `${i}:${c}`).collect(); // ["0:a", "1:b", "2:c"]
 | `.last()` | Return the last element as `Option<T>` |
 | `.nth(n)` | Return the `n`-th element (0-indexed) as `Option<T>` |
 | `.find(fn)` | First element matching predicate as `Option<T>` |
+| `.findMap(fn)` | First `Some` produced by `fn` as `Option<U>` |
+| `.partition(fn)` | Split into `[matching[], rest[]]` |
 | `.position(fn)` | Index of first match as `Option<number>` |
 | `.any(fn)` | `true` if any element matches |
 | `.all(fn)` | `true` if all elements match |
@@ -193,6 +203,202 @@ doubleEndedIter([1, 2, 3, 2, 1]).rposition(x => x === 2);  // Some(3)
 
 ---
 
+### `ParIter<T>`
+
+Rayon-inspired **concurrent** iterator for IO-bound workloads. Adapters (`map`, `filter`, `chunks`) are lazy — they return a new `ParIter` without executing anything. Only terminal operations (`collect`, `forEach`, `fold`) materialize the source and run all pipeline stages concurrently via `Promise.all`.
+
+Available from the main entry or the dedicated subpath:
+
+```ts
+import { parIter } from "@rslike/iter";
+// or
+import { parIter } from "@rslike/iter/par-iter";
+```
+
+#### Adapters (lazy)
+
+| Method | Description |
+|---|---|
+| `.map(fn)` | Concurrent map — all `fn` calls run via `Promise.all` (supports async) |
+| `.filter(fn)` | Concurrent filter — all predicates run via `Promise.all` (supports async) |
+| `.chunks(n)` | Split items into batches of `n` for controlled concurrency |
+
+#### Consumers (terminal)
+
+| Method | Description |
+|---|---|
+| `.collect()` | Run the pipeline, returns `Promise<T[]>` |
+| `.forEach(fn)` | Collect, then call `fn` on each item concurrently |
+| `.fold(init, fn)` | Collect, then sequentially fold into an accumulator |
+| `.iter()` | Convert the **source** (pipeline not applied) to `Iter<T>` |
+
+```ts
+import { parIter } from "@rslike/iter";
+
+// Concurrent async map
+const doubled = await parIter([1, 2, 3])
+  .map(async v => v * 2)
+  .collect();
+// [2, 4, 6]
+
+// Chained filter + map
+const result = await parIter([1, 2, 3, 4, 5, 6])
+  .filter(v => v % 2 === 0)
+  .map(v => v * 10)
+  .collect();
+// [20, 40, 60]
+
+// Controlled concurrency with chunks
+await parIter(urls)
+  .chunks(3)
+  .forEach(async batch => Promise.all(batch.map(fetch)));
+
+// Reduction
+const sum = await parIter([1, 2, 3, 4]).fold(0, (acc, v) => acc + v); // 10
+```
+
+---
+
+### `WorkerParIter<T>`
+
+CPU-parallel iterator backed by **worker threads** (Node.js `worker_threads` or browser Web Workers, detected at runtime). Adapters (`map`, `filter`) are lazy; only `collect` / `forEach` spawn workers. The whole pipeline is serialized and sent to each worker in one shot — no intermediate round-trips.
+
+Available from the main entry or the dedicated subpath:
+
+```ts
+import { workerParIter } from "@rslike/iter";
+// or
+import { workerParIter } from "@rslike/iter/worker-par-iter";
+```
+
+**Constraints on callbacks:**
+- Must be **pure** — no external variables, imports, or closures (they are serialized via `fn.toString()` and re-created inside the worker)
+- Data must be **structuredClone-able** (plain objects, arrays, primitives)
+- For IO-bound concurrency, prefer `ParIter` instead
+
+#### API
+
+| Method | Description |
+|---|---|
+| `.map(fn)` | Lazy map stage executed inside workers |
+| `.filter(fn)` | Lazy filter stage executed inside workers |
+| `.collect()` | Distribute chunks across workers, returns `Promise<T[]>` |
+| `.forEach(fn)` | Collect via workers, then call `fn` on the **main thread** (closures allowed) |
+| `.iter()` | Convert the **source** (pipeline not applied) to `Iter<T>` |
+| `.parIter()` | Convert the **source** (pipeline not applied) to `ParIter<T>` |
+
+`workerParIter(source, workerCount?)` — `workerCount` defaults to auto-detected parallelism (`os.availableParallelism()` / `navigator.hardwareConcurrency`).
+
+```ts
+import { workerParIter } from "@rslike/iter";
+
+// CPU-bound: filter primes then square them — runs across OS threads
+const result = await workerParIter([2, 3, 4, 5, 6, 7, 8, 9])
+  .filter(n => { for (let i = 2; i * i <= n; i++) if (n % i === 0) return false; return true; })
+  .map(n => n ** 2)
+  .collect();
+// [4, 9, 25, 49]
+```
+
+A `ParIter` can be used as the source — it is collected first, then the worker pipeline runs on its results:
+
+```ts
+import { parIter, workerParIter } from "@rslike/iter";
+
+const par = parIter([1, 2, 3, 4]).map(async v => v * 2);
+const out = await workerParIter(par).map(v => v ** 2).collect();
+// [4, 16, 36, 64]
+```
+
+---
+
+### `AsyncIter<T>`
+
+Lazy **pull-based** async iterator — mirrors `Iter<T>` for asynchronous sources, modeled after Rust's `Stream` trait. Unlike `ParIter` (which materializes everything and runs `Promise.all`), `AsyncIter` produces and transforms elements **one at a time**, preserving laziness and backpressure for infinite or IO-bound sources.
+
+Wraps any `AsyncIterable<T>` (async generators, streams) or plain `Iterable<T>`; adapter callbacks may be async. Implements both `AsyncIterable<T>` (`for await...of`) and `Iterable<PromiseLike<T>>` (sync `for...of` yielding promises).
+
+Available from the main entry or the dedicated subpath:
+
+```ts
+import { asyncIter } from "@rslike/iter";
+// or
+import { asyncIter } from "@rslike/iter/async-iter";
+```
+
+#### Adapters (lazy)
+
+| Method | Description |
+|---|---|
+| `.map(fn)` | Transform each element — `fn` may be async |
+| `.filter(fn)` | Keep elements matching a **sync** predicate (supports type guards) |
+| `.filterAsync(fn)` | Keep elements matching an **async** predicate |
+| `.filterMap(fn)` | Sync `fn` returning `Option<U>`; yield unwrapped `Some` values |
+| `.flatMap(fn)` | Map to a sync iterable and flatten one level |
+| `.flatten()` | Flatten one level of nested sync iterables |
+| `.enumerate()` | Yield `[index, value]` pairs |
+| `.take(n)` / `.skip(n)` | Yield at most `n` / skip first `n` elements |
+| `.takeWhile(fn)` / `.skipWhile(fn)` | Sync predicate variants |
+| `.chain(other)` | Append a sync iterable |
+| `.zip(other)` | Pair with a sync iterable; stops at the shorter side |
+| `.inspect(fn)` | Call `fn` on each element without changing it |
+| `.stepBy(n)` | Yield every `n`-th element |
+
+#### Consumers (async)
+
+| Method | Description |
+|---|---|
+| `.next()` | `Promise<Option<T>>` for the next value |
+| `.collect()` / `.collect(ctor)` | `Promise<T[]>`, or collect into a constructor like `Iter.collect` |
+| `.forEach(fn)` | Call `fn` (may be async) sequentially per element |
+| `.fold(init, fn)` / `.reduce(fn)` | Async reduction; `reduce` returns `Promise<Option<T>>` |
+| `.count()` / `.last()` / `.nth(n)` | Element access |
+| `.find(fn)` / `.findMap(fn)` / `.position(fn)` | Predicates may be async |
+| `.any(fn)` / `.all(fn)` | Predicates may be async |
+| `.sum()` / `.product()` | Numeric reductions |
+| `.min()` / `.max()` / `.minBy(fn)` / `.maxBy(fn)` | Extremes |
+| `.partition(fn)` | Split into `[matching[], rest[]]` |
+| `.unzip()` | Split `[A, B]` pairs into `[A[], B[]]` |
+
+```ts
+import { asyncIter } from "@rslike/iter";
+
+// async generator source, infinite stream
+async function* naturals() { let i = 0; while (true) yield i++; }
+await asyncIter(naturals()).take(3).collect(); // [0, 1, 2]
+
+// async callbacks
+await asyncIter([1, 2, 3, 4])
+  .filterAsync(async v => v % 2 === 0)
+  .map(async v => v * 10)
+  .collect(); // [20, 40]
+
+// for await...of
+for await (const v of asyncIter(fetchUrls()).map(fetch)) { ... }
+
+// sync for...of yielding promises (sync source + sync chain)
+for (const p of asyncIter([1, 2, 3]).map(async v => v * 2)) {
+  console.log(await p); // 2, 4, 6
+}
+```
+
+**Sync iteration rules:** `for...of` (sync) works while the chain is synchronously pullable — a sync source plus sync/structural adapters. `map` with an async fn is fine (promises are chained per element). Truly-async pipelines (async source, `filterAsync`, ...) throw `UndefinedBehaviorError` on sync iteration — use `for await...of` instead.
+
+---
+
+### Globals
+
+All factories and classes can be attached to `globalThis` (useful for REPLs and scripts):
+
+```ts
+import "@rslike/iter/globals";
+
+iter([1, 2, 3]).collect();          // no import needed
+doubleEndedIter([1, 2]).nextBack(); // Some(2)
+```
+
+---
+
 ## Integration with `@rslike/std`
 
 Consumer methods that may return no value (`find`, `reduce`, `last`, `min`, `max`, etc.) return `Option<T>` from `@rslike/std` instead of `T | undefined`.
@@ -218,6 +424,33 @@ iter([1, 2, 3, 4, 5])
   .collect();
 // [40, 50]
 ```
+
+---
+
+## Collecting into collections
+
+Like Rust's `collect`, `.collect()` accepts a constructor to build a specific collection type. Any class constructible from `T[]` works — native `Set`/`Map`/`WeakSet`, `Iter`, `DoubleEndedIter`, or the [@rslike/collections](https://www.npmjs.com/package/@rslike/collections) classes (`Array`, `ReadonlyArray`, `Map`, `ReadonlyMap`, `Set`, `ReadonlySet`):
+
+```ts
+import { iter, doubleEndedIter, Iter } from "@rslike/iter";
+import { ReadonlyArray } from "@rslike/collections";
+
+iter([1, 2, 3]).collect();        // [1, 2, 3] (default)
+iter([1, 2, 3]).collect(Array);   // [1, 2, 3]
+iter([1, 2, 2]).collect(Set);     // Set(2) { 1, 2 }
+
+// Map — requires an iterator of [K, V] pairs
+iter([["a", 1]] as ["a" | "b", number][]).collect(Map); // Map { "a" => 1 }
+iter(["a", "b"]).zip(iter([1, 2])).collect(Map);        // Map { "a" => 1, "b" => 2 }
+
+// Back into an iterator
+iter([1, 2, 3]).map(x => x * 2).collect(Iter); // Iter<number>
+
+// Read-only wrapper from @rslike/collections
+iter([1, 2, 3]).collect(ReadonlyArray);
+```
+
+`collect(ctor)` is supported by `Iter`, `DoubleEndedIter`, `ParIter` (`Promise`-based) and `WorkerParIter` (`Promise`-based).
 
 ---
 

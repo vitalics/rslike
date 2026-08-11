@@ -22,9 +22,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-
 // biome-ignore lint/style/useImportType: this is not types. set in globalThis
-import  { None, Option, Some, Err, Ok, Result, Bind, Async } from "./index";
+import { Async, Bind, Err, None, Ok, Option, Result, Some } from "./index";
 
 type NoneFn = typeof None;
 type OptionCtor = typeof Option;

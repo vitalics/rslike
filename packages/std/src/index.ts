@@ -22,12 +22,39 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-import { Async } from './async.ts';
-import { Bind } from './bind.ts';
-import { UndefinedBehaviorError } from './utils.ts';
-import { match } from './match.ts'
-import { None, Option, Some } from './option.ts';
-import { Err, Ok, Result } from './result.ts';
+import { Async } from "./async.ts";
+import { Bind } from "./bind.ts";
+import { clone } from "./clone.ts";
+import { match } from "./match.ts";
+import { None, Option, Some } from "./option.ts";
+import { Err, Ok, Result } from "./result.ts";
+import { UndefinedBehaviorError } from "./utils.ts";
 
-export default { Async, Bind, Err, Ok, Result, Some, None, Option, UndefinedBehaviorError, match };
-export { Async, Bind, Err, Ok, Result, Some, None, Option, UndefinedBehaviorError, match };
+export default {
+  Async,
+  Bind,
+  Err,
+  Ok,
+  Result,
+  Some,
+  None,
+  Option,
+  UndefinedBehaviorError,
+  match,
+  clone,
+};
+export {
+  Async,
+  Bind,
+  Err,
+  Ok,
+  Result,
+  Some,
+  None,
+  Option,
+  UndefinedBehaviorError,
+  match,
+};
+export { clone } from "./clone.ts";
+export { WELL_KNOWN_CLONE_API } from "./symbols.ts";
+export type { Cloneable } from "./clone.ts";

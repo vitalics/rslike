@@ -9,7 +9,8 @@
     "build": "tsup",
     "docs": "pnpm typedoc src/index.ts",
     "test": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "bench": "vitest bench"
   },
   "exports": {
     ".": {
@@ -31,19 +32,49 @@
         "types": "./dist/globals.d.ts",
         "default": "./dist/globals.cjs"
       }
+    },
+    "./par-iter": {
+      "import": {
+        "types": "./dist/parIter.d.mts",
+        "default": "./dist/parIter.mjs"
+      },
+      "require": {
+        "types": "./dist/parIter.d.ts",
+        "default": "./dist/parIter.cjs"
+      }
+    },
+    "./worker-par-iter": {
+      "import": {
+        "types": "./dist/workerParIter.d.mts",
+        "default": "./dist/workerParIter.mjs"
+      },
+      "require": {
+        "types": "./dist/workerParIter.d.ts",
+        "default": "./dist/workerParIter.cjs"
+      }
+    },
+    "./async-iter": {
+      "import": {
+        "types": "./dist/asyncIter.d.mts",
+        "default": "./dist/asyncIter.mjs"
+      },
+      "require": {
+        "types": "./dist/asyncIter.d.ts",
+        "default": "./dist/asyncIter.cjs"
+      }
     }
   },
   "keywords": [
-    "std",
-    "standard",
-    "undefined behavior",
-    "try",
-    "try/catch",
-    "try/catch/finally",
+    "iter",
+    "iterator",
+    "iteration",
+    "lazy",
+    "generator",
+    "parallel",
+    "worker",
+    "rayon",
     "rust like",
-    "rust",
-    "option",
-    "result"
+    "rust"
   ],
   "author": "Vitali Haradkou",
   "license": "MIT",

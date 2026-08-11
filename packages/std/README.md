@@ -1408,3 +1408,49 @@ const a = Ok(4);
 util.inspect(a); // Ok(4)
 util.inspect(Err("some error")); // Err('some error')
 ```
+
+### Clone / Cloneable
+
+Modeled after Rust's `Clone` trait.
+
+The `Cloneable<T>` interface requires a `clone(): T` method. The well-known symbol member `[WELL_KNOWN_CLONE_API](): T` (registered as `Symbol.for("Symbol.clone")`) is **optional** — implement it (usually by delegating to `clone()`) when the type should be explicitly discoverable by generic clone-based code. `Option`, `Result` and `Enum` implement the full interface out of the box.
+
+The standalone `clone(value)` function clones any value with the following resolution order:
+
+1. Primitives and functions are returned as-is.
+2. Values implementing `[WELL_KNOWN_CLONE_API]()` are cloned through it.
+3. Values with a `clone()` method are cloned through it.
+4. Everything else is deep-cloned via `structuredClone` (plain objects, arrays, `Map`, `Set`, `Date`, typed arrays, ...).
+
+Throws `UndefinedBehaviorError` when the value is neither structured-cloneable nor `Cloneable`.
+
+Example:
+
+```ts
+import { clone, Some, Ok, Err, WELL_KNOWN_CLONE_API, type Cloneable } from "@rslike/std";
+
+// Option / Result
+const x = Some({ a: [1, 2] });
+const y = x.clone();
+y.unwrap() === x.unwrap(); // false — deep-cloned inner value
+
+None().clone();            // None()
+Err({ code: 13 }).clone(); // Err({ code: 13 }) — error is cloned too
+
+// standalone clone() dispatches through the Cloneable trait
+clone(Ok({ v: 1 }));       // Ok({ v: 1 })
+clone({ list: [1, 2] });   // deep copy via structuredClone
+clone(42);                 // 42 — primitives returned as-is
+
+// your own types
+class Point implements Cloneable<Point> {
+  constructor(public x: number, public y: number) {}
+  clone(): Point {
+    return new Point(this.x, this.y);
+  }
+  [WELL_KNOWN_CLONE_API](): Point {
+    return this.clone();
+  }
+}
+clone(new Point(1, 2)); // Point(1, 2)
+```

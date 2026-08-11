@@ -22,31 +22,31 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-import { UndefinedBehaviorError, assertArgument } from "./utils.ts";
 import { Option } from "./option.ts";
 import { Result } from "./result.ts";
 import type { Fn } from "./types.ts";
+import { UndefinedBehaviorError, assertArgument } from "./utils.ts";
 
 type OkCb<I, R> = I extends Promise<infer V>
   ? OkCb<V, Promise<R>>
   : I extends Option<infer Some>
-  ? Fn<R, [value: Some]>
-  : I extends Result<infer Ok, unknown>
-  ? Ok extends Option<infer O>
-    ? Fn<R, [value: O]>
-    : Fn<R, [value: Ok]>
-  : I extends boolean
-  ? Fn<R, [true]>
-  : never;
+    ? Fn<R, [value: Some]>
+    : I extends Result<infer Ok, unknown>
+      ? Ok extends Option<infer O>
+        ? Fn<R, [value: O]>
+        : Fn<R, [value: Ok]>
+      : I extends boolean
+        ? Fn<R, [true]>
+        : never;
 type ErrCb<I, R> = I extends Promise<infer V>
   ? OkCb<V, R>
   : I extends Option<unknown>
-  ? Fn<R>
-  : I extends Result<unknown, infer E>
-  ? Fn<R, [error: E]>
-  : I extends boolean
-  ? Fn<R, [false]>
-  : Fn<unknown, [unknown]>;
+    ? Fn<R>
+    : I extends Result<unknown, infer E>
+      ? Fn<R, [error: E]>
+      : I extends boolean
+        ? Fn<R, [false]>
+        : Fn<unknown, [unknown]>;
 
 /**
  * matches the `boolean` or `Option` or `Result` and calls callback functions.
@@ -89,11 +89,11 @@ export function match<
     | Option<any, any>
     | Result<Option<any, any>, any>
     | Result<any, any>
-    | boolean
+    | boolean,
 >(
   value: I,
   okOrSomeCb: OkCb<I, R>,
-  errOrNoneCb: ErrCb<I, R>
+  errOrNoneCb: ErrCb<I, R>,
 ): I extends Promise<any> ? Promise<R> : R {
   assertArgument("match", okOrSomeCb, "function");
   assertArgument("match", errOrNoneCb, "function");
@@ -115,7 +115,7 @@ export function match<
       return okOrSomeCb(unwrapped);
     }
     return (errOrNoneCb as OkCb<Result<unknown, unknown>, R>)(
-      value.unwrapErr()
+      value.unwrapErr(),
     ) as never;
   }
   if (value instanceof Option) {
@@ -132,6 +132,6 @@ export function match<
         type: typeof value,
         ctor: (value as object).constructor?.name,
       },
-    }
+    },
   );
 }

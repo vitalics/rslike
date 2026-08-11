@@ -9,7 +9,8 @@
     "build": "tsup",
     "docs": "pnpm typedoc src/index.ts",
     "test": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "bench": "vitest bench"
   },
   "exports": {
     ".": {

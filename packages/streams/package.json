@@ -1,0 +1,82 @@
+{
+  "name": "@rslike/streams",
+  "version": "0.0.0",
+  "description": "Rust-inspired fallible async streams \u2014 Stream, Sink, Channel with Result-based pull protocol",
+  "private": false,
+  "main": "./dist/index.cjs",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsup",
+    "docs": "pnpm typedoc src/index.ts",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "bench": "vitest bench"
+  },
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./runtime/node": {
+      "import": {
+        "types": "./dist/runtime/node.d.mts",
+        "default": "./dist/runtime/node.mjs"
+      },
+      "require": {
+        "types": "./dist/runtime/node.d.ts",
+        "default": "./dist/runtime/node.cjs"
+      }
+    },
+    "./runtime/web": {
+      "import": {
+        "types": "./dist/runtime/web.d.mts",
+        "default": "./dist/runtime/web.mjs"
+      },
+      "require": {
+        "types": "./dist/runtime/web.d.ts",
+        "default": "./dist/runtime/web.cjs"
+      }
+    },
+    "./runtime/pure": {
+      "import": {
+        "types": "./dist/runtime/pure.d.mts",
+        "default": "./dist/runtime/pure.mjs"
+      },
+      "require": {
+        "types": "./dist/runtime/pure.d.ts",
+        "default": "./dist/runtime/pure.cjs"
+      }
+    }
+  },
+  "keywords": [
+    "stream",
+    "streams",
+    "sink",
+    "channel",
+    "async",
+    "iterator",
+    "rust like",
+    "rust"
+  ],
+  "author": "Vitali Haradkou",
+  "license": "MIT",
+  "homepage": "https://github.com/vitalics/rslike/blob/main/packages/streams/README.md",
+  "bugs": {
+    "url": "https://github.com/vitalics/rslike/issues",
+    "email": "vitalicset@yandex.ru"
+  },
+  "packageManager": "pnpm@10.11.0",
+  "dependencies": {
+    "@rslike/std": "workspace:*",
+    "@rslike/iter": "workspace:*"
+  },
+  "devDependencies": {
+    "vitest": "3.2.6"
+  }
+}

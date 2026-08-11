@@ -1,14 +1,14 @@
-import { Some, None } from "@rslike/std";
-import { compare, equals, type Ord } from "@rslike/cmp";
-import type { AnyOption } from "./types.ts";
+import { type Ord, compare, equals } from "@rslike/cmp";
+import { None, Some } from "@rslike/std";
+import type { AnyOption, IterLike } from "./types.ts";
 
 /**
  * A lazy iterator class providing Rust-like chainable adapter and consumer methods.
  *
  * Wraps any `Iterable<T>` or iterator factory and provides methods like
  * `map`, `filter`, `take`, `fold`, `collect`, etc. Adapter methods are lazy —
- * they return new `Iter` instances backed by generators. Consumer methods are
- * eager and execute the full chain.
+ * they return new `Iter` instances backed by closure-based pull iterators.
+ * Consumer methods are eager and execute the full chain.
  *
  * Implements `Iterable<T>` so it works with `for...of`, spread, and destructuring.
  *
@@ -23,7 +23,7 @@ import type { AnyOption } from "./types.ts";
  * // [20, 40]
  * ```
  */
-export class Iter<const T> implements Iterable<T> {
+export class Iter<const T> implements Iterable<T>, IterLike<T> {
   #iter: Iterator<T>;
 
   /**
@@ -43,7 +43,10 @@ export class Iter<const T> implements Iterable<T> {
    * ```
    */
   static from<T>(source: Iterable<T>): Iter<T>;
-  static from<T, U>(source: Iterable<T>, mapFn: (value: T, index: number) => U): Iter<U>;
+  static from<T, U>(
+    source: Iterable<T>,
+    mapFn: (value: T, index: number) => U,
+  ): Iter<U>;
   static from<T, U>(
     source: Iterable<T>,
     mapFn?: (value: T, index: number) => U,
@@ -51,12 +54,15 @@ export class Iter<const T> implements Iterable<T> {
     if (mapFn === undefined) {
       return new Iter(source);
     }
-    return new Iter(function* () {
-      let i = 0;
-      for (const value of source) {
-        yield mapFn(value, i++);
-      }
-    });
+    const srcIter = source[Symbol.iterator]();
+    let i = 0;
+    return new Iter<U>(() => ({
+      next(): IteratorResult<U> {
+        const r = srcIter.next();
+        if (r.done) return r as unknown as IteratorResult<U>;
+        return { done: false, value: mapFn(r.value, i++) };
+      },
+    }));
   }
 
   constructor(source: Iterable<T> | (() => Iterator<T>)) {
@@ -103,10 +109,21 @@ export class Iter<const T> implements Iterable<T> {
    */
   map<U>(fn: (value: T) => U): Iter<U> {
     const source = this.#iter;
-    return new Iter(function* () {
-      for (const value of { [Symbol.iterator]: () => source }) {
-        yield fn(value);
-      }
+    return new Iter<U>(() => {
+      // Reuse a single result object — safe because consumers read .value before
+      // calling next() again (collect/fold/filter/etc. all follow this pattern).
+      const yieldResult: IteratorYieldResult<U> = {
+        done: false,
+        value: undefined as unknown as U,
+      };
+      return {
+        next(): IteratorResult<U> {
+          const r = source.next();
+          if (r.done) return r as unknown as IteratorResult<U>;
+          yieldResult.value = fn(r.value);
+          return yieldResult;
+        },
+      };
     });
   }
 
@@ -122,13 +139,15 @@ export class Iter<const T> implements Iterable<T> {
   filter(fn: (value: T) => boolean): Iter<T>;
   filter(fn: (value: T) => boolean): Iter<T> {
     const source = this.#iter;
-    return new Iter(function* () {
-      for (const value of { [Symbol.iterator]: () => source }) {
-        if (fn(value)) {
-          yield value;
+    return new Iter<T>(() => ({
+      next(): IteratorResult<T> {
+        while (true) {
+          const r = source.next();
+          if (r.done) return r;
+          if (fn(r.value)) return r;
         }
-      }
-    });
+      },
+    }));
   }
 
   /**
@@ -141,12 +160,15 @@ export class Iter<const T> implements Iterable<T> {
    */
   enumerate(): Iter<[number, T]> {
     const source = this.#iter;
-    return new Iter(function* () {
+    return new Iter<[number, T]>(() => {
       let i = 0;
-      for (const value of { [Symbol.iterator]: () => source }) {
-        yield [i, value] as [number, T];
-        i++;
-      }
+      return {
+        next(): IteratorResult<[number, T]> {
+          const r = source.next();
+          if (r.done) return r as unknown as IteratorResult<[number, T]>;
+          return { done: false, value: [i++, r.value] };
+        },
+      };
     });
   }
 
@@ -160,12 +182,21 @@ export class Iter<const T> implements Iterable<T> {
    */
   take(n: number): Iter<T> {
     const source = this.#iter;
-    return new Iter(function* () {
-      for (let i = 0; i < n; i++) {
-        const result = source.next();
-        if (result.done) break;
-        yield result.value;
-      }
+    return new Iter<T>(() => {
+      let remaining = n;
+      return {
+        next(): IteratorResult<T> {
+          if (remaining <= 0)
+            return { done: true, value: undefined as unknown as T };
+          const r = source.next();
+          if (r.done) {
+            remaining = 0;
+            return r;
+          }
+          remaining--;
+          return r;
+        },
+      };
     });
   }
 
@@ -179,15 +210,20 @@ export class Iter<const T> implements Iterable<T> {
    */
   skip(n: number): Iter<T> {
     const source = this.#iter;
-    return new Iter(function* () {
-      let skipped = 0;
-      for (const value of { [Symbol.iterator]: () => source }) {
-        if (skipped < n) {
-          skipped++;
-          continue;
-        }
-        yield value;
-      }
+    return new Iter<T>(() => {
+      let skipped = false;
+      return {
+        next(): IteratorResult<T> {
+          if (!skipped) {
+            for (let i = 0; i < n; i++) {
+              const r = source.next();
+              if (r.done) return r;
+            }
+            skipped = true;
+          }
+          return source.next();
+        },
+      };
     });
   }
 
@@ -202,13 +238,19 @@ export class Iter<const T> implements Iterable<T> {
    */
   takeWhile(fn: (value: T) => boolean): Iter<T> {
     const source = this.#iter;
-    return new Iter(function* () {
-      while (true) {
-        const result = source.next();
-        if (result.done) break;
-        if (!fn(result.value)) break;
-        yield result.value;
-      }
+    return new Iter<T>(() => {
+      let done = false;
+      return {
+        next(): IteratorResult<T> {
+          if (done) return { done: true, value: undefined as unknown as T };
+          const r = source.next();
+          if (r.done || !fn(r.value)) {
+            done = true;
+            return { done: true, value: undefined as unknown as T };
+          }
+          return r;
+        },
+      };
     });
   }
 
@@ -223,13 +265,21 @@ export class Iter<const T> implements Iterable<T> {
    */
   skipWhile(fn: (value: T) => boolean): Iter<T> {
     const source = this.#iter;
-    return new Iter(function* () {
+    return new Iter<T>(() => {
       let skipping = true;
-      for (const value of { [Symbol.iterator]: () => source }) {
-        if (skipping && fn(value)) continue;
-        skipping = false;
-        yield value;
-      }
+      return {
+        next(): IteratorResult<T> {
+          while (skipping) {
+            const r = source.next();
+            if (r.done) return r;
+            if (!fn(r.value)) {
+              skipping = false;
+              return r;
+            }
+          }
+          return source.next();
+        },
+      };
     });
   }
 
@@ -244,9 +294,20 @@ export class Iter<const T> implements Iterable<T> {
    */
   chain(other: Iterable<T>): Iter<T> {
     const source = this.#iter;
-    return new Iter(function* () {
-      yield* { [Symbol.iterator]: () => source };
-      yield* other;
+    return new Iter<T>(() => {
+      let onSecond = false;
+      let otherIter: Iterator<T>;
+      return {
+        next(): IteratorResult<T> {
+          if (!onSecond) {
+            const r = source.next();
+            if (!r.done) return r;
+            onSecond = true;
+            otherIter = other[Symbol.iterator]();
+          }
+          return otherIter.next();
+        },
+      };
     });
   }
 
@@ -261,13 +322,17 @@ export class Iter<const T> implements Iterable<T> {
    */
   zip<U>(other: Iterable<U>): Iter<[T, U]> {
     const source = this.#iter;
-    return new Iter(function* () {
+    return new Iter<[T, U]>(() => {
       const otherIter = other[Symbol.iterator]();
-      for (const value of { [Symbol.iterator]: () => source }) {
-        const otherResult = otherIter.next();
-        if (otherResult.done) break;
-        yield [value, otherResult.value] as [T, U];
-      }
+      return {
+        next(): IteratorResult<[T, U]> {
+          const a = source.next();
+          if (a.done) return a as unknown as IteratorResult<[T, U]>;
+          const b = otherIter.next();
+          if (b.done) return b as unknown as IteratorResult<[T, U]>;
+          return { done: false, value: [a.value, b.value] };
+        },
+      };
     });
   }
 
@@ -282,10 +347,22 @@ export class Iter<const T> implements Iterable<T> {
    */
   flatMap<U>(fn: (value: T) => Iterable<U>): Iter<U> {
     const source = this.#iter;
-    return new Iter(function* () {
-      for (const value of { [Symbol.iterator]: () => source }) {
-        yield* fn(value);
-      }
+    return new Iter<U>(() => {
+      let inner: Iterator<U> | undefined;
+      return {
+        next(): IteratorResult<U> {
+          while (true) {
+            if (inner !== undefined) {
+              const r = inner.next();
+              if (!r.done) return r;
+              inner = undefined;
+            }
+            const outer = source.next();
+            if (outer.done) return outer as unknown as IteratorResult<U>;
+            inner = fn(outer.value)[Symbol.iterator]();
+          }
+        },
+      };
     });
   }
 
@@ -308,13 +385,201 @@ export class Iter<const T> implements Iterable<T> {
    */
   filter_map<U>(fn: (value: T) => AnyOption<U>): Iter<U> {
     const source = this.#iter;
-    return new Iter(function* () {
-      for (const value of { [Symbol.iterator]: () => source }) {
-        const result = fn(value);
-        if (result.isSome()) {
-          yield result.unwrap();
-        }
-      }
+    return new Iter<U>(() => {
+      const yieldResult: IteratorYieldResult<U> = {
+        done: false,
+        value: undefined as unknown as U,
+      };
+      return {
+        next(): IteratorResult<U> {
+          while (true) {
+            const r = source.next();
+            if (r.done) return r as unknown as IteratorResult<U>;
+            const result = fn(r.value);
+            if (result.isSome()) {
+              yieldResult.value = result.unwrap();
+              return yieldResult;
+            }
+          }
+        },
+      };
+    });
+  }
+
+  /**
+   * Creates an iterator that both filters and maps.
+   * `fn` returns `Some(value)` to yield the value, or `None()` to end iteration.
+   *
+   * Modeled after Rust's `map_while`.
+   *
+   * @example
+   * ```ts
+   * import { Some, None } from "@rslike/std";
+   *
+   * iter(["1", "2", "x", "3"])
+   *   .mapWhile(s => /^\d+$/.test(s) ? Some(Number(s)) : None())
+   *   .collect();
+   * // [1, 2]
+   * ```
+   */
+  mapWhile<U>(fn: (value: T) => AnyOption<U>): Iter<U> {
+    const source = this.#iter;
+    return new Iter<U>(() => {
+      let done = false;
+      return {
+        next(): IteratorResult<U> {
+          if (done) return { done: true, value: undefined as unknown as U };
+          const r = source.next();
+          if (r.done) {
+            done = true;
+            return r as unknown as IteratorResult<U>;
+          }
+          const mapped = fn(r.value);
+          if (mapped.isNone()) {
+            done = true;
+            return { done: true, value: undefined as unknown as U };
+          }
+          return { done: false, value: mapped.unwrap() };
+        },
+      };
+    });
+  }
+
+  /**
+   * Creates an iterator that maintains internal state and yields the result
+   * of `fn` at each step. `fn` receives the current state and the next element,
+   * and returns `Some([newState, output])` to yield `output`, or `None()` to
+   * end iteration.
+   *
+   * Modeled after Rust's `scan`.
+   *
+   * @example
+   * ```ts
+   * import { Some, None } from "@rslike/std";
+   *
+   * // running total
+   * iter([1, 2, 3, 4])
+   *   .scan(0, (acc, x) => Some([acc + x, acc + x]))
+   *   .collect();
+   * // [1, 3, 6, 10]
+   *
+   * // stop when the total exceeds 5
+   * iter([1, 2, 3, 4])
+   *   .scan(0, (acc, x) => acc + x > 5 ? None() : Some([acc + x, acc + x]))
+   *   .collect();
+   * // [1, 3]
+   * ```
+   */
+  scan<S, U>(
+    init: S,
+    fn: (acc: S, value: T) => AnyOption<readonly [S, U]>,
+  ): Iter<U> {
+    const source = this.#iter;
+    return new Iter<U>(() => {
+      let acc = init;
+      let done = false;
+      return {
+        next(): IteratorResult<U> {
+          if (done) return { done: true, value: undefined as unknown as U };
+          const r = source.next();
+          if (r.done) {
+            done = true;
+            return r as unknown as IteratorResult<U>;
+          }
+          const out = fn(acc, r.value);
+          if (out.isNone()) {
+            done = true;
+            return { done: true, value: undefined as unknown as U };
+          }
+          const [nextAcc, value] = out.unwrap();
+          acc = nextAcc;
+          return { done: false, value };
+        },
+      };
+    });
+  }
+
+  /**
+   * Creates an iterator that places a copy of `separator` between adjacent
+   * elements.
+   *
+   * Modeled after Rust's `intersperse`.
+   *
+   * @example
+   * ```ts
+   * iter([1, 2, 3]).intersperse(0).collect(); // [1, 0, 2, 0, 3]
+   * iter([1]).intersperse(0).collect();       // [1]
+   * iter([]).intersperse(0).collect();        // []
+   * ```
+   */
+  intersperse(separator: T): Iter<T> {
+    const source = this.#iter;
+    return new Iter<T>(() => {
+      let ahead: IteratorResult<T> | undefined;
+      let wantSep = false;
+      return {
+        next(): IteratorResult<T> {
+          if (wantSep) {
+            wantSep = false;
+            return { done: false, value: separator };
+          }
+          let r: IteratorResult<T>;
+          if (ahead !== undefined) {
+            r = ahead;
+            ahead = undefined;
+          } else {
+            r = source.next();
+          }
+          if (r.done) return r;
+          const next = source.next();
+          if (!next.done) {
+            ahead = next;
+            wantSep = true;
+          }
+          return r;
+        },
+      };
+    });
+  }
+
+  /**
+   * Creates an iterator that repeats the elements endlessly.
+   * Elements are buffered on the first pass; an empty source stays empty.
+   *
+   * Pair it with `take()` to avoid an infinite loop.
+   *
+   * Modeled after Rust's `cycle`.
+   *
+   * @example
+   * ```ts
+   * iter([1, 2, 3]).cycle().take(7).collect(); // [1, 2, 3, 1, 2, 3, 1]
+   * iter([]).cycle().take(3).collect();        // []
+   * ```
+   */
+  cycle(): Iter<T> {
+    const source = this.#iter;
+    return new Iter<T>(() => {
+      const buf: T[] = [];
+      let idx = 0;
+      let sourceDone = false;
+      return {
+        next(): IteratorResult<T> {
+          if (!sourceDone) {
+            const r = source.next();
+            if (!r.done) {
+              buf.push(r.value);
+              return r;
+            }
+            sourceDone = true;
+          }
+          if (buf.length === 0) {
+            return { done: true, value: undefined as unknown as T };
+          }
+          const value = buf[idx];
+          idx = (idx + 1) % buf.length;
+          return { done: false, value };
+        },
+      };
     });
   }
 
@@ -327,12 +592,56 @@ export class Iter<const T> implements Iterable<T> {
    * ```
    */
   flatten<U>(this: Iter<Iterable<U>>): Iter<U> {
-    const source = this.#iter;
-    return new Iter(function* () {
-      for (const value of { [Symbol.iterator]: () => source }) {
-        yield* value;
-      }
+    const source = this.#iter as Iterator<Iterable<U>>;
+    return new Iter<U>(() => {
+      let inner: Iterator<U> | undefined;
+      return {
+        next(): IteratorResult<U> {
+          while (true) {
+            if (inner !== undefined) {
+              const r = inner.next();
+              if (!r.done) return r;
+              inner = undefined;
+            }
+            const outer = source.next();
+            if (outer.done) return outer as unknown as IteratorResult<U>;
+            inner = outer.value[Symbol.iterator]();
+          }
+        },
+      };
     });
+  }
+
+  /**
+   * Creates an iterator that yields arrays of at most `n` elements.
+   * The last chunk may be smaller than `n`.
+   *
+   * Modeled after Rust's `slice::chunks`.
+   *
+   * @example
+   * ```ts
+   * iter([1, 2, 3, 4, 5]).chunks(2).collect(); // [[1, 2], [3, 4], [5]]
+   * ```
+   */
+  chunks(n: number): Iter<T[]> {
+    if (n < 1) {
+      throw new RangeError("chunks: chunk size must be >= 1");
+    }
+    const source = this.#iter;
+    return new Iter<T[]>(() => ({
+      next(): IteratorResult<T[]> {
+        const chunk: T[] = [];
+        while (chunk.length < n) {
+          const r = source.next();
+          if (r.done) break;
+          chunk.push(r.value);
+        }
+        if (chunk.length === 0) {
+          return { done: true, value: undefined as unknown as T[] };
+        }
+        return { done: false, value: chunk };
+      },
+    }));
   }
 
   /**
@@ -350,12 +659,13 @@ export class Iter<const T> implements Iterable<T> {
    */
   inspect(fn: (value: T) => void): Iter<T> {
     const source = this.#iter;
-    return new Iter(function* () {
-      for (const value of { [Symbol.iterator]: () => source }) {
-        fn(value);
-        yield value;
-      }
-    });
+    return new Iter<T>(() => ({
+      next(): IteratorResult<T> {
+        const r = source.next();
+        if (!r.done) fn(r.value);
+        return r;
+      },
+    }));
   }
 
   /**
@@ -371,14 +681,22 @@ export class Iter<const T> implements Iterable<T> {
       throw new RangeError("stepBy: step must be >= 1");
     }
     const source = this.#iter;
-    return new Iter(function* () {
-      let i = 0;
-      for (const value of { [Symbol.iterator]: () => source }) {
-        if (i % n === 0) {
-          yield value;
-        }
-        i++;
-      }
+    return new Iter<T>(() => {
+      let first = true;
+      return {
+        next(): IteratorResult<T> {
+          if (first) {
+            first = false;
+            return source.next();
+          }
+          // skip n-1 elements, then return the n-th
+          for (let i = 1; i < n; i++) {
+            const r = source.next();
+            if (r.done) return r;
+          }
+          return source.next();
+        },
+      };
     });
   }
 
@@ -395,8 +713,7 @@ export class Iter<const T> implements Iterable<T> {
    * ```
    */
   peekable(): Peekable<T> {
-    const it = this.#iter;
-    return new Peekable(() => it);
+    return new Peekable<T>(this.#iter);
   }
 
   // ── Consumers (eager) ────────────────────────────────────────────
@@ -404,13 +721,40 @@ export class Iter<const T> implements Iterable<T> {
   /**
    * Collects all remaining elements into an array.
    *
+   * Optionally accepts a constructor to collect into a specific collection:
+   * `Array` returns a plain array, `Map` requires an iterator of `[K, V]` pairs,
+   * and any class constructible from `T[]` works — `Set`, `WeakSet`, `Iter`,
+   * `DoubleEndedIter`, or the `@rslike/collections` classes
+   * (`Array`, `ReadonlyArray`, `Map`, `ReadonlyMap`, `Set`, `ReadonlySet`).
+   *
+   * Modeled after Rust's `collect`, which collects into a type chosen by the caller.
+   *
    * @example
    * ```ts
-   * iter([1, 2, 3]).collect(); // [1, 2, 3]
+   * iter([1, 2, 3]).collect();        // [1, 2, 3]
+   * iter([1, 2, 3]).collect(Array);   // [1, 2, 3]
+   * iter([1, 2, 2]).collect(Set);     // Set(2) { 1, 2 }
+   * iter([["a", 1]] as ["a" | "b", number][]).collect(Map); // Map { "a" => 1 }
+   * iter([1, 2, 3]).collect(Iter);    // Iter<number> — re-iterable
    * ```
    */
-  collect(): T[] {
-    return [...{ [Symbol.iterator]: () => this.#iter }];
+  collect(): T[];
+  collect(ctor: ArrayConstructor): T[];
+  collect<K, V>(this: Iter<readonly [K, V]>, ctor: MapConstructor): Map<K, V>;
+  collect<C>(ctor: new (items: T[]) => C): C;
+  collect(
+    ctor?: ArrayConstructor | MapConstructor | (new (items: T[]) => unknown),
+  ): unknown {
+    const result: T[] = [];
+    let r = this.#iter.next();
+    while (!r.done) {
+      result.push(r.value);
+      r = this.#iter.next();
+    }
+    if (ctor === undefined || ctor === Array) {
+      return result;
+    }
+    return new (ctor as new (items: T[]) => unknown)(result);
   }
 
   /**
@@ -430,8 +774,10 @@ export class Iter<const T> implements Iterable<T> {
    */
   fold<U>(init: U, fn: (acc: U, value: T) => U): U {
     let acc = init;
-    for (const value of { [Symbol.iterator]: () => this.#iter }) {
-      acc = fn(acc, value);
+    let r = this.#iter.next();
+    while (!r.done) {
+      acc = fn(acc, r.value);
+      r = this.#iter.next();
     }
     return acc;
   }
@@ -450,8 +796,10 @@ export class Iter<const T> implements Iterable<T> {
     const first = this.#iter.next();
     if (first.done) return None();
     let acc = first.value;
-    for (const value of { [Symbol.iterator]: () => this.#iter }) {
-      acc = fn(acc, value);
+    let r = this.#iter.next();
+    while (!r.done) {
+      acc = fn(acc, r.value);
+      r = this.#iter.next();
     }
     return Some(acc);
   }
@@ -465,8 +813,10 @@ export class Iter<const T> implements Iterable<T> {
    * ```
    */
   forEach(fn: (value: T) => void): void {
-    for (const value of { [Symbol.iterator]: () => this.#iter }) {
-      fn(value);
+    let r = this.#iter.next();
+    while (!r.done) {
+      fn(r.value);
+      r = this.#iter.next();
     }
   }
 
@@ -480,8 +830,10 @@ export class Iter<const T> implements Iterable<T> {
    */
   count(): number {
     let count = 0;
-    for (const _ of { [Symbol.iterator]: () => this.#iter }) {
+    let r = this.#iter.next();
+    while (!r.done) {
       count++;
+      r = this.#iter.next();
     }
     return count;
   }
@@ -496,11 +848,15 @@ export class Iter<const T> implements Iterable<T> {
    * ```
    */
   last(): AnyOption<T> {
-    let last: { value: T } | undefined;
-    for (const value of { [Symbol.iterator]: () => this.#iter }) {
-      last = { value };
+    let last: T | undefined;
+    let hasValue = false;
+    let r = this.#iter.next();
+    while (!r.done) {
+      last = r.value;
+      hasValue = true;
+      r = this.#iter.next();
     }
-    return last ? Some(last.value) : None();
+    return hasValue ? Some(last as T) : None();
   }
 
   /**
@@ -514,9 +870,11 @@ export class Iter<const T> implements Iterable<T> {
    */
   nth(n: number): AnyOption<T> {
     let i = 0;
-    for (const value of { [Symbol.iterator]: () => this.#iter }) {
-      if (i === n) return Some(value);
+    let r = this.#iter.next();
+    while (!r.done) {
+      if (i === n) return Some(r.value);
       i++;
+      r = this.#iter.next();
     }
     return None();
   }
@@ -531,8 +889,35 @@ export class Iter<const T> implements Iterable<T> {
    * ```
    */
   find(fn: (value: T) => boolean): AnyOption<T> {
-    for (const value of { [Symbol.iterator]: () => this.#iter }) {
-      if (fn(value)) return Some(value);
+    let r = this.#iter.next();
+    while (!r.done) {
+      if (fn(r.value)) return Some(r.value);
+      r = this.#iter.next();
+    }
+    return None();
+  }
+
+  /**
+   * Returns the first `Some` produced by `fn` as `Option<U>`.
+   * Short-circuits at the first non-`None` result.
+   *
+   * Modeled after Rust's `find_map`.
+   *
+   * @example
+   * ```ts
+   * import { Some, None } from "@rslike/std";
+   *
+   * iter(["a", "1", "b", "2"])
+   *   .findMap(s => /^\d+$/.test(s) ? Some(Number(s)) : None());
+   * // Some(1)
+   * ```
+   */
+  findMap<U>(fn: (value: T) => AnyOption<U>): AnyOption<U> {
+    let r = this.#iter.next();
+    while (!r.done) {
+      const mapped = fn(r.value);
+      if (mapped.isSome()) return mapped;
+      r = this.#iter.next();
     }
     return None();
   }
@@ -547,8 +932,10 @@ export class Iter<const T> implements Iterable<T> {
    * ```
    */
   any(fn: (value: T) => boolean): boolean {
-    for (const value of { [Symbol.iterator]: () => this.#iter }) {
-      if (fn(value)) return true;
+    let r = this.#iter.next();
+    while (!r.done) {
+      if (fn(r.value)) return true;
+      r = this.#iter.next();
     }
     return false;
   }
@@ -564,8 +951,10 @@ export class Iter<const T> implements Iterable<T> {
    * ```
    */
   all(fn: (value: T) => boolean): boolean {
-    for (const value of { [Symbol.iterator]: () => this.#iter }) {
-      if (!fn(value)) return false;
+    let r = this.#iter.next();
+    while (!r.done) {
+      if (!fn(r.value)) return false;
+      r = this.#iter.next();
     }
     return true;
   }
@@ -633,11 +1022,36 @@ export class Iter<const T> implements Iterable<T> {
    */
   position(fn: (value: T) => boolean): AnyOption<number> {
     let i = 0;
-    for (const value of { [Symbol.iterator]: () => this.#iter }) {
-      if (fn(value)) return Some(i);
+    let r = this.#iter.next();
+    while (!r.done) {
+      if (fn(r.value)) return Some(i);
       i++;
+      r = this.#iter.next();
     }
     return None();
+  }
+
+  /**
+   * Consumes the iterator and splits its elements into two arrays:
+   * elements matching the predicate and elements that don't.
+   *
+   * Modeled after Rust's `partition`.
+   *
+   * @example
+   * ```ts
+   * iter([1, 2, 3, 4, 5]).partition(x => x % 2 === 0);
+   * // [[2, 4], [1, 3, 5]]
+   * ```
+   */
+  partition(fn: (value: T) => boolean): [T[], T[]] {
+    const yes: T[] = [];
+    const no: T[] = [];
+    let r = this.#iter.next();
+    while (!r.done) {
+      (fn(r.value) ? yes : no).push(r.value);
+      r = this.#iter.next();
+    }
+    return [yes, no];
   }
 
   /**
@@ -652,9 +1066,12 @@ export class Iter<const T> implements Iterable<T> {
   unzip<A, B>(this: Iter<[A, B]>): [A[], B[]] {
     const as: A[] = [];
     const bs: B[] = [];
-    for (const [a, b] of { [Symbol.iterator]: () => this.#iter }) {
+    let r = this.#iter.next();
+    while (!r.done) {
+      const [a, b] = r.value;
       as.push(a);
       bs.push(b);
+      r = this.#iter.next();
     }
     return [as, bs];
   }
@@ -795,11 +1212,13 @@ export class Iter<const T> implements Iterable<T> {
    */
   cmp(other: Iterable<T>): number {
     const otherIter = other[Symbol.iterator]();
-    for (const a of { [Symbol.iterator]: () => this.#iter }) {
+    let r = this.#iter.next();
+    while (!r.done) {
       const b = otherIter.next();
       if (b.done) return 1;
-      const c = compare(a as any, b.value as any);
+      const c = compare(r.value as any, b.value as any);
       if (c !== 0) return c;
+      r = this.#iter.next();
     }
     return otherIter.next().done ? 0 : -1;
   }
@@ -815,10 +1234,12 @@ export class Iter<const T> implements Iterable<T> {
    */
   eqBy(other: Iterable<T>): boolean {
     const otherIter = other[Symbol.iterator]();
-    for (const a of { [Symbol.iterator]: () => this.#iter }) {
+    let r = this.#iter.next();
+    while (!r.done) {
       const b = otherIter.next();
       if (b.done) return false;
-      if (!equals(a as any, b.value as any)) return false;
+      if (!equals(r.value as any, b.value as any)) return false;
+      r = this.#iter.next();
     }
     return otherIter.next().done === true;
   }
@@ -835,14 +1256,23 @@ export class Iter<const T> implements Iterable<T> {
    */
   dedup(): Iter<T> {
     const source = this.#iter;
-    return new Iter(function* () {
-      let prev: { value: T } | undefined;
-      for (const value of { [Symbol.iterator]: () => source }) {
-        if (prev === undefined || !equals(prev.value as any, value as any)) {
-          yield value;
-          prev = { value };
-        }
-      }
+    return new Iter<T>(() => {
+      let hasPrev = false;
+      let prev: T;
+      return {
+        next(): IteratorResult<T> {
+          while (true) {
+            const r = source.next();
+            if (r.done) return r;
+            const v = r.value;
+            if (!hasPrev || !equals(prev as any, v as any)) {
+              hasPrev = true;
+              prev = v;
+              return r;
+            }
+          }
+        },
+      };
     });
   }
 
@@ -857,14 +1287,23 @@ export class Iter<const T> implements Iterable<T> {
    */
   dedupBy(fn: (a: T, b: T) => boolean): Iter<T> {
     const source = this.#iter;
-    return new Iter(function* () {
-      let prev: { value: T } | undefined;
-      for (const value of { [Symbol.iterator]: () => source }) {
-        if (prev === undefined || !fn(prev.value, value)) {
-          yield value;
-          prev = { value };
-        }
-      }
+    return new Iter<T>(() => {
+      let hasPrev = false;
+      let prev: T;
+      return {
+        next(): IteratorResult<T> {
+          while (true) {
+            const r = source.next();
+            if (r.done) return r;
+            const v = r.value;
+            if (!hasPrev || !fn(prev, v)) {
+              hasPrev = true;
+              prev = v;
+              return r;
+            }
+          }
+        },
+      };
     });
   }
 
@@ -888,6 +1327,9 @@ export class Iter<const T> implements Iterable<T> {
 /**
  * A peekable iterator that allows looking at the next element without consuming it.
  *
+ * The peek buffer is managed at the raw-iterator level so that all consumers
+ * (`collect`, `fold`, `forEach`, etc.) correctly see the peeked element.
+ *
  * @example
  * ```ts
  * const p = iter([1, 2, 3]).peekable();
@@ -897,7 +1339,27 @@ export class Iter<const T> implements Iterable<T> {
  * ```
  */
 export class Peekable<const T> extends Iter<T> {
-  #peeked: AnyOption<T> | undefined;
+  // Shared buffer between the wrapped raw-iterator and peek().
+  readonly #buf: { v: IteratorResult<T> | undefined };
+  readonly #src: Iterator<T>;
+
+  constructor(src: Iterator<T>) {
+    const buf: { v: IteratorResult<T> | undefined } = { v: undefined };
+    // Wrap the source so that the peek buffer is drained before calling src.next().
+    // This means ALL consumers (collect, fold, find, …) pick up the peeked element.
+    super(() => ({
+      next(): IteratorResult<T> {
+        if (buf.v !== undefined) {
+          const v = buf.v;
+          buf.v = undefined;
+          return v;
+        }
+        return src.next();
+      },
+    }));
+    this.#buf = buf;
+    this.#src = src;
+  }
 
   /**
    * Returns `Option<T>` of the next element without consuming it.
@@ -913,18 +1375,10 @@ export class Peekable<const T> extends Iter<T> {
    * ```
    */
   peek(): AnyOption<T> {
-    if (this.#peeked === undefined) {
-      this.#peeked = super.next();
+    if (this.#buf.v === undefined) {
+      this.#buf.v = this.#src.next();
     }
-    return this.#peeked;
-  }
-
-  override next(): AnyOption<T> {
-    if (this.#peeked !== undefined) {
-      const val = this.#peeked;
-      this.#peeked = undefined;
-      return val;
-    }
-    return super.next();
+    const r = this.#buf.v;
+    return r.done ? None() : Some(r.value);
   }
 }

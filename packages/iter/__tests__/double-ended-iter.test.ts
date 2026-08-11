@@ -1,6 +1,6 @@
 import { test, expect } from "vitest";
 import { Option, Some, None } from "@rslike/std";
-import { Iter, DoubleEndedIter, iter, doubleEndedIter } from "../src/index";
+import { DoubleEndedIter, Iter, iter, doubleEndedIter } from "../src/index";
 
 // ── DoubleEndedIter.from() ─────────────────────────────────────────
 
@@ -349,4 +349,47 @@ test("DoubleEndedIter.from with filter_map chain", () => {
     .rev()
     .collect();
   expect(result).toEqual(["Value: 60", "Value: 40"]);
+});
+
+// ── collect(ctor) ──────────────────────────────────────────────────
+
+test("collect() with no ctor returns plain array", () => {
+  expect(doubleEndedIter([1, 2, 3]).collect()).toEqual([1, 2, 3]);
+});
+
+test("collect(Array) returns plain array, not nested", () => {
+  const result = doubleEndedIter([1, 2, 3]).collect(Array);
+  expect(result).toEqual([1, 2, 3]);
+  expect(Array.isArray(result)).toBe(true);
+});
+
+test("collect(Set) dedupes remaining elements", () => {
+  const result = doubleEndedIter([1, 2, 2, 3]).collect(Set);
+  expect(result).toBeInstanceOf(Set);
+  expect([...result]).toEqual([1, 2, 3]);
+});
+
+test("collect(Map) from pairs", () => {
+  const result = doubleEndedIter([["a", 1], ["b", 2]] as [string, number][]).collect(Map);
+  expect(result).toBeInstanceOf(Map);
+  expect(result.get("b")).toBe(2);
+});
+
+test("collect(Iter) returns a re-iterable Iter", () => {
+  const result = doubleEndedIter([1, 2, 3]).collect(Iter);
+  expect(result).toBeInstanceOf(Iter);
+  expect(result.collect()).toEqual([1, 2, 3]);
+});
+
+test("collect(DoubleEndedIter) preserves double-ended access", () => {
+  const result = doubleEndedIter([1, 2, 3]).collect(DoubleEndedIter);
+  expect(result).toBeInstanceOf(DoubleEndedIter);
+  expect(result.nextBack().unwrap()).toBe(3);
+});
+
+test("collect(ctor) collects only remaining elements", () => {
+  const dei = doubleEndedIter([1, 2, 3, 4]);
+  dei.next();
+  dei.nextBack();
+  expect(dei.collect(Array)).toEqual([2, 3]);
 });
