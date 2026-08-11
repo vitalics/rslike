@@ -155,7 +155,7 @@ export class RSLikeSet<T>
    */
   union(other: AnySet<T>): Iter<T> {
     return Iter.from(this._internalSet).chain(
-      Iter.from(other).filter((v) => !this._internalSet.has(v))
+      Iter.from(other).filter((v) => !this._internalSet.has(v)),
     );
   }
 
