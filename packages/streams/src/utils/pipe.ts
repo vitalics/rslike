@@ -1,4 +1,4 @@
-import { type Result } from "@rslike/std";
+import type { Result } from "@rslike/std";
 
 import type { StreamBase } from "../stream-base.js";
 import type { Sink } from "../sink.js";
