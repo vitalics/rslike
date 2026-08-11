@@ -108,7 +108,7 @@ export class AsyncIter<const T>
   static from<T>(source: AnySource<T>): AsyncIter<T>;
   static from<T, U>(
     source: AnySource<T>,
-    mapFn: (value: T, index: number) => U | Promise<U>
+    mapFn: (value: T, index: number) => U | Promise<U>,
   ): AsyncIter<U>;
   static from<T, U>(
     source: AnySource<T>,
