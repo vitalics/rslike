@@ -9,6 +9,9 @@ permissions:
   contents: write
   pull-requests: write
   packages: write
+  # Required for npm trusted publishing (OIDC): npm exchanges the GitHub
+  # OIDC token for short-lived publish credentials, no NPM_TOKEN needed.
+  id-token: write
 
 # Automatically cancel in-progress actions on the same branch
 concurrency:
@@ -20,14 +23,16 @@ jobs:
     name: Build Packages
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: pnpm/action-setup@v2
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
         with:
           version: 10
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: "pnpm"
+      # Trusted publishing requires npm >= 11.5.1
+      - run: npm --version
       - if: ${{ steps.cache-node.outputs.cache-hit != 'true' }}
         run: pnpm install
       - run: pnpm build
@@ -39,5 +44,4 @@ jobs:
           commit: "[ci] release"
           title: "[ci] release"
         env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
