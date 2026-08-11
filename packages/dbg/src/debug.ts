@@ -24,11 +24,11 @@ SOFTWARE.
 
 type InspectionString<
   Delimiter extends string = typeof DEFAULT_DELIMITER,
-  Prefix extends string = typeof DEFAULT_PREFIX
+  Prefix extends string = typeof DEFAULT_PREFIX,
 > = `${Prefix}${string}${Delimiter}${string}`;
 type InspectionResult<
   Delimiter extends string = typeof DEFAULT_DELIMITER,
-  Prefix extends string = typeof DEFAULT_PREFIX
+  Prefix extends string = typeof DEFAULT_PREFIX,
 > = {
   /**
    * Print message that using for `console.log`.
@@ -83,7 +83,7 @@ export const DEFAULT_PREFIX = "dbg | ";
 
 type Options<
   Delimiter extends string = typeof DEFAULT_DELIMITER,
-  Prefix extends string = typeof DEFAULT_PREFIX
+  Prefix extends string = typeof DEFAULT_PREFIX,
 > = {
   /**
    * symbol which appends before expression: `{name}{delimiter}{value}`
@@ -144,15 +144,15 @@ type Options<
  */
 export function dbg<
   Delimiter extends string = typeof DEFAULT_DELIMITER,
-  Prefix extends string = typeof DEFAULT_PREFIX
+  Prefix extends string = typeof DEFAULT_PREFIX,
 >(
   f: () => unknown,
-  options?: Options<Delimiter, Prefix>
+  options?: Options<Delimiter, Prefix>,
 ): InspectionResult<Delimiter, Prefix> {
   if (!isLambda(f)) {
     throw new TypeError(
       "Cannot print debug info for not for an arrow function.",
-      { cause: { value: f, type: typeof f, usage: USAGE } }
+      { cause: { value: f, type: typeof f, usage: USAGE } },
     );
   }
   const nameOf = f.toString().replace(/^\(\)\s*=>\s*/, "");
@@ -228,10 +228,8 @@ export function dbg<
   const valueStr = useStringify ? JSON.stringify(value) : (value as string);
 
   const displayName = proxyDetected ? `${nameOf} (Proxy)` : nameOf;
-  const message: InspectionString<
-    Delimiter,
-    Prefix
-  > = `${prefix}${displayName}${delimiter}${valueStr}`;
+  const message: InspectionString<Delimiter, Prefix> =
+    `${prefix}${displayName}${delimiter}${valueStr}`;
   outputFunction(message);
 
   const result: InspectionResult<Delimiter, Prefix> = {

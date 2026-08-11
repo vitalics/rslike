@@ -1,8 +1,13 @@
-import { type Option, Some, None } from "@rslike/std";
-import { Iter, ParIter, DoubleEndedIter, type IntoIterLike } from "@rslike/iter";
+import {
+  DoubleEndedIter,
+  type IntoIterLike,
+  Iter,
+  ParIter,
+} from "@rslike/iter";
+import { None, type Option, Some } from "@rslike/std";
 import { RSLikeArray } from "./array";
-import { type IterSource, toIterable } from "./iter-source";
 import type { RsArrayLike } from "./array-like";
+import { type IterSource, toIterable } from "./iter-source";
 
 export class RSLikeReadonlyArray<T>
   implements Iterable<T>, IntoIterLike<T>, RsArrayLike<T>
@@ -19,7 +24,7 @@ export class RSLikeReadonlyArray<T>
   #cursor = 0;
 
   static from<T>(
-    items?: IterSource<T> | readonly T[] | null
+    items?: IterSource<T> | readonly T[] | null,
   ): RSLikeReadonlyArray<T> {
     return new RSLikeReadonlyArray(items);
   }

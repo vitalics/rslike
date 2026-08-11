@@ -1,10 +1,10 @@
-import { type Result, type Option, Ok, None, Some, Err } from "@rslike/std";
+import { Err, None, Ok, type Option, type Result, Some } from "@rslike/std";
 
-import { StreamBase } from "../stream-base.js";
-import type { Sink } from "../sink.js";
 import type { AsyncRead } from "../async-read.js";
-import type { Stream } from "../stream.js";
 import type { Duplex } from "../duplex.js";
+import type { Sink } from "../sink.js";
+import { StreamBase } from "../stream-base.js";
+import type { Stream } from "../stream.js";
 import { PureDuplex } from "./pure.js";
 
 class NodeStreamAdapter<T> extends StreamBase<T, Error> {
@@ -156,7 +156,7 @@ class NodeAsyncRead implements AsyncRead {
 }
 
 export const fromNodeReadable = <T>(
-  s: AsyncIterable<T>
+  s: AsyncIterable<T>,
 ): StreamBase<T, Error> => new NodeStreamAdapter(s);
 
 export const fromNodeWritable = <T>(s: NodeJS.WritableStream): Sink<T, Error> =>
@@ -185,9 +185,9 @@ export const nodeAsyncRead = (s: NodeJS.ReadableStream): AsyncRead =>
  * ```
  */
 export const fromNodeDuplex = <T>(
-  s: NodeJS.ReadWriteStream
+  s: NodeJS.ReadWriteStream,
 ): Duplex<T, T, Error> =>
   new PureDuplex(
     new NodeStreamAdapter(s as AsyncIterable<T>),
-    new NodeSinkAdapter<T>(s)
+    new NodeSinkAdapter<T>(s),
   );

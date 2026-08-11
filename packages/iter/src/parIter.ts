@@ -1,8 +1,6 @@
 import { Iter } from "./iter.ts";
 
-type PipelineStage = (
-  items: readonly unknown[]
-) => Promise<readonly unknown[]>;
+type PipelineStage = (items: readonly unknown[]) => Promise<readonly unknown[]>;
 
 /**
  * A lazy parallel iterator inspired by Rust's Rayon crate.
@@ -32,7 +30,7 @@ export class ParIter<T> {
    */
   constructor(
     source: Iterable<T> | (() => Iterator<T>),
-    pipeline: PipelineStage[] = []
+    pipeline: PipelineStage[] = [],
   ) {
     this.#source = source as Iterable<unknown>;
     this.#pipeline = pipeline;
@@ -74,13 +72,16 @@ export class ParIter<T> {
    * ```
    */
   filter(
-    fn: (value: T, index: number) => Promise<boolean> | boolean
+    fn: (value: T, index: number) => Promise<boolean> | boolean,
   ): ParIter<T> {
     const stage: PipelineStage = async (items) => {
       const flags = await Promise.all((items as T[]).map((v, i) => fn(v, i)));
       return (items as T[]).filter((_, i) => flags[i]);
     };
-    return new ParIter<T>(this.#source as Iterable<T>, [...this.#pipeline, stage]);
+    return new ParIter<T>(this.#source as Iterable<T>, [
+      ...this.#pipeline,
+      stage,
+    ]);
   }
 
   /**
@@ -102,10 +103,10 @@ export class ParIter<T> {
       }
       return Promise.resolve(chunks);
     };
-    return new ParIter<readonly T[]>(
-      this.#source as Iterable<readonly T[]>,
-      [...this.#pipeline, stage]
-    );
+    return new ParIter<readonly T[]>(this.#source as Iterable<readonly T[]>, [
+      ...this.#pipeline,
+      stage,
+    ]);
   }
 
   // ── Terminal consumers ────────────────────────────────────────────
@@ -132,7 +133,10 @@ export class ParIter<T> {
    */
   collect(): Promise<T[]>;
   collect(ctor: ArrayConstructor): Promise<T[]>;
-  collect<K, V>(this: ParIter<readonly [K, V]>, ctor: MapConstructor): Promise<Map<K, V>>;
+  collect<K, V>(
+    this: ParIter<readonly [K, V]>,
+    ctor: MapConstructor,
+  ): Promise<Map<K, V>>;
   collect<C>(ctor: new (items: T[]) => C): Promise<C>;
   async collect(
     ctor?: ArrayConstructor | MapConstructor | (new (items: T[]) => unknown),
@@ -155,7 +159,9 @@ export class ParIter<T> {
    * await parIter(urls).forEach(async url => fetch(url));
    * ```
    */
-  async forEach(fn: (value: T, index: number) => Promise<void> | void): Promise<void> {
+  async forEach(
+    fn: (value: T, index: number) => Promise<void> | void,
+  ): Promise<void> {
     const items = await this.collect();
     await Promise.all(items.map((v, i) => fn(v, i)));
   }
@@ -172,7 +178,7 @@ export class ParIter<T> {
    */
   async fold<U>(
     init: U,
-    fn: (acc: U, value: T, index: number) => Promise<U> | U
+    fn: (acc: U, value: T, index: number) => Promise<U> | U,
   ): Promise<U> {
     const items = await this.collect();
     let acc = init;
@@ -201,7 +207,7 @@ export class ParIter<T> {
     if (this.#pipeline.length > 0) {
       throw new Error(
         "Cannot synchronously iterate a ParIter with pending async pipeline stages. " +
-          "Call `await collect()` first, then iterate the resulting array."
+          "Call `await collect()` first, then iterate the resulting array.",
       );
     }
     return (this.#materialize() as T[])[Symbol.iterator]();

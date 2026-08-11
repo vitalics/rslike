@@ -1,8 +1,8 @@
 import type { Result } from "@rslike/std";
 
-import type { StreamBase } from "../stream-base.js";
-import type { Sink } from "../sink.js";
 import { okVoid } from "../shared.js";
+import type { Sink } from "../sink.js";
+import type { StreamBase } from "../stream-base.js";
 
 export type PipeOptions = {
   /**
@@ -21,7 +21,7 @@ export type PipeOptions = {
 
 /** Awaits initiated sends in order; returns the first `Err`, or `null`. */
 async function flushSends<E>(
-  pending: Promise<Result<void, E>>[]
+  pending: Promise<Result<void, E>>[],
 ): Promise<Result<void, E> | null> {
   let failed: Result<void, E> | null = null;
   for (const p of pending) {
@@ -34,12 +34,12 @@ async function flushSends<E>(
 export async function pipe<T, E>(
   source: StreamBase<T, E>,
   sink: Sink<T, E>,
-  options?: PipeOptions
+  options?: PipeOptions,
 ): Promise<Result<void, E>> {
   const batchSize = options?.batchSize ?? 1;
   if (!Number.isInteger(batchSize) || batchSize < 1) {
     throw new TypeError(
-      `pipe: batchSize must be a positive integer, got ${batchSize}`
+      `pipe: batchSize must be a positive integer, got ${batchSize}`,
     );
   }
 

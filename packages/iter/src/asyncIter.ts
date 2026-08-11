@@ -1,4 +1,4 @@
-import { Some, None, UndefinedBehaviorError } from "@rslike/std";
+import { None, Some, UndefinedBehaviorError } from "@rslike/std";
 import type { AnyOption } from "./types.ts";
 
 type AnySource<T> = Iterable<T> | AsyncIterable<T>;
@@ -112,7 +112,7 @@ export class AsyncIter<const T>
   ): AsyncIter<U>;
   static from<T, U>(
     source: AnySource<T>,
-    mapFn?: (value: T, index: number) => U | Promise<U>
+    mapFn?: (value: T, index: number) => U | Promise<U>,
   ): AsyncIter<T> | AsyncIter<U> {
     const it = new AsyncIter(source);
     if (mapFn === undefined) return it;
@@ -149,7 +149,7 @@ export class AsyncIter<const T>
     asyncWrap: (src: AsyncIterator<T>) => AsyncIterator<U>,
     syncWrap:
       | ((src: Iterator<unknown>, promiseMode: boolean) => SyncChannel | null)
-      | null
+      | null,
   ): AsyncIter<U> {
     const sync = this.#channels.sync;
     return new AsyncIter<U>({
@@ -237,7 +237,7 @@ export class AsyncIter<const T>
               : fn(v as T, i++);
           }
         })(),
-      })
+      }),
     );
   }
 
@@ -251,7 +251,7 @@ export class AsyncIter<const T>
    * ```
    */
   filter<S extends T>(
-    fn: (value: T, index: number) => value is S
+    fn: (value: T, index: number) => value is S,
   ): AsyncIter<S>;
   filter(fn: (value: T, index: number) => boolean): AsyncIter<T>;
   filter(fn: (value: T, index: number) => boolean): AsyncIter<T> {
@@ -280,7 +280,7 @@ export class AsyncIter<const T>
             }
           })(),
         };
-      }
+      },
     );
   }
 
@@ -307,7 +307,7 @@ export class AsyncIter<const T>
             if (await fn(r.value, i++)) yield r.value;
           }
         })(),
-      null
+      null,
     );
   }
 
@@ -350,7 +350,7 @@ export class AsyncIter<const T>
             }
           })(),
         };
-      }
+      },
     );
   }
 
@@ -387,7 +387,7 @@ export class AsyncIter<const T>
             }
           })(),
         };
-      }
+      },
     );
   }
 
@@ -447,7 +447,7 @@ export class AsyncIter<const T>
             yield r.value;
           }
         })(),
-      })
+      }),
     );
   }
 
@@ -486,7 +486,7 @@ export class AsyncIter<const T>
             yield r.value;
           }
         })(),
-      })
+      }),
     );
   }
 
@@ -524,7 +524,7 @@ export class AsyncIter<const T>
             }
           })(),
         };
-      }
+      },
     );
   }
 
@@ -577,7 +577,7 @@ export class AsyncIter<const T>
             }
           })(),
         };
-      }
+      },
     );
   }
 
@@ -614,7 +614,7 @@ export class AsyncIter<const T>
             yield* other as Generator<unknown>;
           })(),
         };
-      }
+      },
     );
   }
 
@@ -656,7 +656,7 @@ export class AsyncIter<const T>
             }
           })(),
         };
-      }
+      },
     );
   }
 
@@ -700,7 +700,7 @@ export class AsyncIter<const T>
             }
           }
         })(),
-      })
+      }),
     );
   }
 
@@ -750,7 +750,7 @@ export class AsyncIter<const T>
             yield r.value;
           }
         })(),
-      })
+      }),
     );
   }
 
@@ -772,11 +772,11 @@ export class AsyncIter<const T>
   collect(ctor: ArrayConstructor): Promise<T[]>;
   collect<K, V>(
     this: AsyncIter<readonly [K, V]>,
-    ctor: MapConstructor
+    ctor: MapConstructor,
   ): Promise<Map<K, V>>;
   collect<C>(ctor: new (items: T[]) => C): Promise<C>;
   async collect(
-    ctor?: ArrayConstructor | MapConstructor | (new (items: T[]) => unknown)
+    ctor?: ArrayConstructor | MapConstructor | (new (items: T[]) => unknown),
   ): Promise<unknown> {
     const result: T[] = [];
     const src = this.#channels.async;
@@ -808,7 +808,7 @@ export class AsyncIter<const T>
    * ```
    */
   async forEach(
-    fn: (value: T, index: number) => void | Promise<void>
+    fn: (value: T, index: number) => void | Promise<void>,
   ): Promise<void> {
     assertFunction(fn, "forEach");
     const src = this.#channels.async;
@@ -830,7 +830,7 @@ export class AsyncIter<const T>
    */
   async fold<U>(
     init: U,
-    fn: (acc: U, value: T, index: number) => U | Promise<U>
+    fn: (acc: U, value: T, index: number) => U | Promise<U>,
   ): Promise<U> {
     assertFunction(fn, "fold");
     const src = this.#channels.async;
@@ -852,7 +852,7 @@ export class AsyncIter<const T>
    * ```
    */
   async reduce(
-    fn: (acc: T, value: T) => T | Promise<T>
+    fn: (acc: T, value: T) => T | Promise<T>,
   ): Promise<AnyOption<T>> {
     assertFunction(fn, "reduce");
     const src = this.#channels.async;
@@ -913,7 +913,7 @@ export class AsyncIter<const T>
    * as `Option<T>`.
    */
   async find(
-    fn: (value: T, index: number) => boolean | Promise<boolean>
+    fn: (value: T, index: number) => boolean | Promise<boolean>,
   ): Promise<AnyOption<T>> {
     assertFunction(fn, "find");
     const src = this.#channels.async;
@@ -929,7 +929,7 @@ export class AsyncIter<const T>
    * Returns the first `Some` produced by `fn` (may be async) as `Option<U>`.
    */
   async findMap<U>(
-    fn: (value: T, index: number) => AnyOption<U> | Promise<AnyOption<U>>
+    fn: (value: T, index: number) => AnyOption<U> | Promise<AnyOption<U>>,
   ): Promise<AnyOption<U>> {
     assertFunction(fn, "findMap");
     const src = this.#channels.async;
@@ -947,7 +947,7 @@ export class AsyncIter<const T>
    * (may be async) as `Option<number>`.
    */
   async position(
-    fn: (value: T) => boolean | Promise<boolean>
+    fn: (value: T) => boolean | Promise<boolean>,
   ): Promise<AnyOption<number>> {
     assertFunction(fn, "position");
     const src = this.#channels.async;
@@ -964,7 +964,7 @@ export class AsyncIter<const T>
    * Returns `true` if any element matches the predicate (may be async).
    */
   async any(
-    fn: (value: T, index: number) => boolean | Promise<boolean>
+    fn: (value: T, index: number) => boolean | Promise<boolean>,
   ): Promise<boolean> {
     assertFunction(fn, "any");
     const src = this.#channels.async;
@@ -980,7 +980,7 @@ export class AsyncIter<const T>
    * Returns `true` if all elements match the predicate (may be async).
    */
   async all(
-    fn: (value: T, index: number) => boolean | Promise<boolean>
+    fn: (value: T, index: number) => boolean | Promise<boolean>,
   ): Promise<boolean> {
     assertFunction(fn, "all");
     const src = this.#channels.async;
@@ -1047,7 +1047,7 @@ export class AsyncIter<const T>
    * ```
    */
   async partition(
-    fn: (value: T, index: number) => boolean | Promise<boolean>
+    fn: (value: T, index: number) => boolean | Promise<boolean>,
   ): Promise<[T[], T[]]> {
     assertFunction(fn, "partition");
     const src = this.#channels.async;

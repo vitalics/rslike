@@ -1,13 +1,13 @@
-import { type Option, Some, None } from "@rslike/std";
 import {
-  Iter,
-  ParIter,
   DoubleEndedIter,
   type IntoIterLike,
+  Iter,
+  ParIter,
 } from "@rslike/iter";
+import { None, type Option, Some } from "@rslike/std";
 
-import { type IterSource, toIterable } from "./iter-source";
 import type { RsArrayLike } from "./array-like";
+import { type IterSource, toIterable } from "./iter-source";
 
 export class RSLikeArray<T>
   implements Iterable<T>, IntoIterLike<T>, RsArrayLike<T>

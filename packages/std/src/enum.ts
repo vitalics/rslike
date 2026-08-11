@@ -1,5 +1,5 @@
-import { WELL_KNOWN_CLONE_API } from "./symbols.ts";
 import type { Cloneable } from "./clone.ts";
+import { WELL_KNOWN_CLONE_API } from "./symbols.ts";
 
 type Primitive = string | number | boolean;
 type Prettify<T> = {
@@ -13,8 +13,8 @@ type Prettify<T> = {
 type ReverseKey<V> = V extends PropertyKey
   ? V
   : V extends boolean
-  ? `${V}`
-  : never;
+    ? `${V}`
+    : never;
 
 /**
  * Bidirectional enum type:
@@ -78,15 +78,15 @@ export class Enum implements Cloneable<Enum> {
 
   static new<const T extends Record<string, unknown>>(
     obj: T,
-    options: EnumNewOptions & { soft: true }
+    options: EnumNewOptions & { soft: true },
   ): SoftEnumType<T>;
   static new<const T extends Record<string, unknown>>(
     obj: T,
-    options?: EnumNewOptions
+    options?: EnumNewOptions,
   ): EnumType<T>;
   static new<const T extends Record<string, unknown>>(
     obj: T,
-    options?: EnumNewOptions
+    options?: EnumNewOptions,
   ): EnumType<T> {
     const result: Record<PropertyKey, unknown> = {};
     // Linear scan beats Set for typical enum sizes (no hashing, no allocation).
@@ -105,14 +105,14 @@ export class Enum implements Cloneable<Enum> {
         throw new TypeError(
           `Enum.new: value of "${key}" must be a string, number or boolean, got ${
             value === null ? "null" : t
-          }`
+          }`,
         );
       }
       const reverseKey = t === "string" ? (value as string) : String(value);
       if (usedReverseKeys.indexOf(reverseKey) !== -1) {
         if (soft) continue;
         throw new TypeError(
-          `Enum.new: duplicate value "${reverseKey}" for key "${key}"`
+          `Enum.new: duplicate value "${reverseKey}" for key "${key}"`,
         );
       }
       usedReverseKeys.push(reverseKey);

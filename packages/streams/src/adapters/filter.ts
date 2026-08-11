@@ -1,12 +1,12 @@
 import { Ok, Some } from "@rslike/std";
 
+import { okNone } from "../shared.js";
 import type { Stream } from "../stream.js";
 import type { AdapterFns } from "./map.js";
-import { okNone } from "../shared.js";
 
 export function filterAdapter<T, E>(
   inner: Stream<T, E>,
-  pred: (item: T) => boolean
+  pred: (item: T) => boolean,
 ): AdapterFns<T, E> {
   return {
     next: async () => {

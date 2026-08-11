@@ -22,22 +22,22 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-import {
-  UndefinedBehaviorError,
-  assertArgument,
-  customInspectSymbol,
-} from "./utils.ts";
+import { type Cloneable, clone } from "./clone.ts";
 import { None, Option, Some } from "./option.ts";
-import { clone, type Cloneable } from "./clone.ts";
 import { WELL_KNOWN_CLONE_API } from "./symbols.ts";
 import type {
   ComparatorFn,
   Fn,
   IsNever,
   IsPromise,
-  ToStack,
   TUndefinedBehaviorError,
+  ToStack,
 } from "./types.ts";
+import {
+  UndefinedBehaviorError,
+  assertArgument,
+  customInspectSymbol,
+} from "./utils.ts";
 
 /** Result possible status */
 const Status = Object.freeze({
@@ -57,7 +57,7 @@ type Resolver<T> = (value?: T) => void;
 type Rejecter<E> = (reason?: E) => void;
 export type Executor<T, E, R = T> = (
   resolve: Resolver<T>,
-  reject: Rejecter<E>
+  reject: Rejecter<E>,
 ) => R | void;
 
 /**
@@ -101,16 +101,17 @@ export class Result<
   const TErr = IsNever<TInput> extends true
     ? unknown
     : IsPromise<TInput> extends true
-    ? TUndefinedBehaviorError<{
-        readonly message: `You passed an async function in constructor or executor returned a promise. Only synchronous functions are allowed. Use "Result.fromPromise" or "Result.fromAsync" instead.`;
-        readonly cause: "AsyncFunction";
-        readonly stack: ToStack<["at new Result()", "at constructor"]>;
-      }>
-    : unknown,
+      ? TUndefinedBehaviorError<{
+          readonly message: `You passed an async function in constructor or executor returned a promise. Only synchronous functions are allowed. Use "Result.fromPromise" or "Result.fromAsync" instead.`;
+          readonly cause: "AsyncFunction";
+          readonly stack: ToStack<["at new Result()", "at constructor"]>;
+        }>
+      : unknown,
   const S extends (typeof Status)[StatusKey] = IsNever<TInput> extends true
     ? typeof Status.Err
-    : (typeof Status)[StatusKey]
-> implements Cloneable<Result<TInput, TErr, S>> {
+    : (typeof Status)[StatusKey],
+> implements Cloneable<Result<TInput, TErr, S>>
+{
   private value: TInput | null = null;
   private error: TErr | null | undefined = undefined;
   private status: S | undefined;
@@ -144,7 +145,7 @@ export class Result<
         typeof executionResult.then === "function"
       ) {
         const err = new UndefinedBehaviorError(
-          `You passed an async function in constructor or executor returned a promise. Only synchronous functions are allowed. Use "Result.fromPromise" or "Result.fromAsync" instead.`
+          `You passed an async function in constructor or executor returned a promise. Only synchronous functions are allowed. Use "Result.fromPromise" or "Result.fromAsync" instead.`,
         );
         // fail promise anyway with error as declared before
         executionResult.then(() => {
@@ -253,10 +254,10 @@ export class Result<
   isOk(): [TInput] extends [never]
     ? false
     : S extends typeof Status.Ok
-    ? true
-    : S extends typeof Status.Err
-    ? false
-    : boolean {
+      ? true
+      : S extends typeof Status.Err
+        ? false
+        : boolean {
     return (this.status === Status.Ok) as never;
   }
   /**
@@ -276,7 +277,7 @@ export class Result<
    * @return {*}  {boolean}
    */
   isOkAnd<const R extends boolean>(
-    predicate: (value: TInput) => R
+    predicate: (value: TInput) => R,
   ): S extends typeof Status.Ok ? true : R {
     if (this.status === Status.Err) {
       return false as never;
@@ -301,10 +302,10 @@ export class Result<
   isErr(): IsNever<TInput> extends true
     ? true
     : S extends typeof Status.Err
-    ? true
-    : S extends typeof Status.Ok
-    ? false
-    : boolean {
+      ? true
+      : S extends typeof Status.Ok
+        ? false
+        : boolean {
     return (this.status === Status.Err) as never;
   }
   /**
@@ -325,7 +326,7 @@ export class Result<
    */
   isErrAnd<
     const R extends boolean,
-    const PredicateFn extends Fn<R, [err: TErr]> = Fn<R, [err: TErr]>
+    const PredicateFn extends Fn<R, [err: TErr]> = Fn<R, [err: TErr]>,
   >(predicate: PredicateFn): S extends typeof Status.Err ? true : R {
     if (this.status === Status.Ok) {
       return false as never;
@@ -394,7 +395,7 @@ export class Result<
    * @return {*} {Result<U, E>}
    */
   map<const U>(
-    mapFn: (value: TInput) => U
+    mapFn: (value: TInput) => U,
   ): S extends typeof Status.Err ? this : Result<U, TErr> {
     assertArgument("map", mapFn, "function");
     if (this.status === Status.Ok) {
@@ -422,7 +423,7 @@ export class Result<
    */
   mapOr<const U, const FR>(
     another: U,
-    predicate: (value: TInput) => FR
+    predicate: (value: TInput) => FR,
   ): S extends typeof Status.Err ? U : FR {
     assertArgument("mapOr", predicate, "function");
     if (this.status === Status.Ok) {
@@ -453,7 +454,7 @@ export class Result<
    */
   mapOrElse<const ER, const RR>(
     errFn: (err: TErr) => ER,
-    okFn: (value: TInput) => RR
+    okFn: (value: TInput) => RR,
   ): S extends typeof Status.Err ? ER : RR {
     assertArgument("mapOrElse", errFn, "function");
     if (this.status === Status.Err) {
@@ -481,7 +482,7 @@ export class Result<
    * @return {*}  {Result<T, F>}
    */
   mapErr<const F>(
-    errFn: (err: TErr) => F
+    errFn: (err: TErr) => F,
   ): S extends typeof Status.Err ? Result<TInput, F> : this {
     assertArgument("mapErr", errFn, "function");
     if (this.status === Status.Err) {
@@ -510,7 +511,11 @@ export class Result<
    */
   clone(): Result<TInput, TErr, S> {
     if (this.status === Status.Ok) {
-      return Ok(clone(this.value as TInput)) as unknown as Result<TInput, TErr, S>;
+      return Ok(clone(this.value as TInput)) as unknown as Result<
+        TInput,
+        TErr,
+        S
+      >;
     }
     return Err(clone(this.error as TErr)) as unknown as Result<TInput, TErr, S>;
   }
@@ -567,7 +572,7 @@ export class Result<
    * @return {*} {T}
    */
   unwrapOrElse<const U>(
-    predicate: (err: TErr) => U
+    predicate: (err: TErr) => U,
   ): S extends typeof Status.Ok ? TInput : U {
     if (this.status === Status.Ok) {
       return this.value as never;
@@ -602,7 +607,7 @@ export class Result<
    * @return {*}  {Result<U, E>}
    */
   and<const U, const R extends Result<any, any, any>>(
-    res: R
+    res: R,
   ): S extends typeof Status.Ok
     ? R extends Result<any, infer RE, infer RS>
       ? RS extends typeof Status.Ok
@@ -610,14 +615,14 @@ export class Result<
         : Result<U, RE, RS>
       : Result<TInput, TErr, S>
     : S extends typeof Status.Err
-    ? Result<TInput, TErr, S>
-    : R extends Result<any, infer RE, infer RS>
-    ? Result<U, RE, RS>
-    : Result<TInput, TErr> {
+      ? Result<TInput, TErr, S>
+      : R extends Result<any, infer RE, infer RS>
+        ? Result<U, RE, RS>
+        : Result<TInput, TErr> {
     if (!(res instanceof Result)) {
       throw new UndefinedBehaviorError(
         `Method "and" should accepts instance of Result`,
-        { cause: { value: res } }
+        { cause: { value: res } },
       );
     }
     if (this.status === Status.Err) {
@@ -645,7 +650,7 @@ export class Result<
    */
   andThen<
     const U,
-    const R extends Result<any, any, any> = Result<U, TErr, any>
+    const R extends Result<any, any, any> = Result<U, TErr, any>,
   >(fn: (value: TInput) => R): S extends typeof Status.Err ? this : R {
     assertArgument("andThen", fn, "function");
     if (this.status === Status.Ok) {
@@ -655,7 +660,7 @@ export class Result<
       }
       throw new UndefinedBehaviorError(
         "Function result expected to be instance of Result.",
-        { cause: res }
+        { cause: res },
       );
     }
     return Err(this.error as TErr) as never;
@@ -687,12 +692,12 @@ export class Result<
    * @return {*}  {Result<T, F>}
    */
   or<const F, const R extends Result<any, any, any> = Result<any, F, any>>(
-    res: R
+    res: R,
   ): S extends typeof Status.Err ? R : Result<TInput, F, S> {
     if (!(res instanceof Result)) {
       throw new UndefinedBehaviorError(
         `Operator "or" expect to pass instance of Result`,
-        { cause: { value: res } }
+        { cause: { value: res } },
       );
     }
     if (this.status === Status.Err) {
@@ -719,7 +724,7 @@ export class Result<
    * @return {*}  {Result<T, F>}
    */
   orElse<const R extends Result<any, any, any> = Result<any, any, any>>(
-    fn: (err: TErr) => R
+    fn: (err: TErr) => R,
   ): S extends typeof Status.Ok ? this : R {
     if (this.status === Status.Ok) {
       return this as never;
@@ -729,7 +734,7 @@ export class Result<
     if (!(res instanceof Result)) {
       throw new UndefinedBehaviorError(
         'Operator "orElse" expected to return instance of Result. Use "Ok" or "Err" function to define them.',
-        { cause: { value: res, type: typeof res } }
+        { cause: { value: res, type: typeof res } },
       );
     }
     return res as never;
@@ -759,14 +764,16 @@ export class Result<
   }
 
   static Ok<const V, const E>(value: V) {
-    const res = new Result<V, E, typeof Status.Ok>(_FAST as unknown as Executor<V, E>);
+    const res = new Result<V, E, typeof Status.Ok>(
+      _FAST as unknown as Executor<V, E>,
+    );
     res.value = value ?? null;
     res.status = Status.Ok as never;
     return res;
   }
   static Err<const V, const ErrorValue>(value: ErrorValue) {
     const res = new Result<V, ErrorValue, typeof Status.Err>(
-      _FAST as unknown as Executor<V, ErrorValue>
+      _FAST as unknown as Executor<V, ErrorValue>,
     );
     res.error = value;
     res.status = Status.Err as never;
@@ -819,7 +826,7 @@ export class Result<
    * @returns
    */
   static async fromPromise<const P, const E>(
-    promiseLike: P | Promise<P> | PromiseLike<P>
+    promiseLike: P | Promise<P> | PromiseLike<P>,
   ): Promise<Result<Awaited<P>, E>> {
     let result: Result<Awaited<P>, E>;
     try {
@@ -872,14 +879,14 @@ export class Result<
           ? ComparatorFn<TInput, UValue>
           : DefaultComparator
         : UStatus extends typeof Status.Err
-        ? S extends typeof Status.Err
-          ? ComparatorFn<TErr, UErr>
+          ? S extends typeof Status.Err
+            ? ComparatorFn<TErr, UErr>
+            : DefaultComparator
           : DefaultComparator
-        : DefaultComparator
-      : DefaultComparator
+      : DefaultComparator,
   >(
     other: U,
-    comparatorFn: ResolvedComparatorFn = Object.is as ResolvedComparatorFn
+    comparatorFn: ResolvedComparatorFn = Object.is as ResolvedComparatorFn,
   ): boolean {
     if (other instanceof Result) {
       if (this.status === Status.Ok && other.status === Status.Ok) {
@@ -940,10 +947,10 @@ export class Result<
   [Symbol.iterator](): IsNever<TInput> extends true
     ? never
     : S extends (typeof Status)["Err"]
-    ? never
-    : TInput extends Iterable<infer TT>
-    ? IteratorObject<TT, BuiltinIteratorReturn>
-    : never {
+      ? never
+      : TInput extends Iterable<infer TT>
+        ? IteratorObject<TT, BuiltinIteratorReturn>
+        : never {
     if (this.isErr()) {
       throw this.error;
     }
@@ -963,7 +970,7 @@ export class Result<
           type: typeof this.value,
           status: this.status,
         },
-      }
+      },
     );
   }
 
@@ -978,15 +985,15 @@ export class Result<
       readonly stack: ToStack<
         ["Symbol.split", `TInput===never: ${IsNever<TInput>}`, `Status: ${S}`]
       >;
-    }>
+    }>,
   >(
     string: TInput,
-    limit?: number
+    limit?: number,
   ): IsNever<TInput> extends true
     ? TError
     : S extends (typeof Status)["Err"]
-    ? TError
-    : string[] {
+      ? TError
+      : string[] {
     if (this.isErr()) {
       throw this.error;
     }
@@ -1002,7 +1009,7 @@ export class Result<
           type: typeof this.value,
           status: this.status,
         },
-      }
+      },
     );
   }
 
@@ -1015,14 +1022,14 @@ export class Result<
         readonly status: S;
       };
       readonly stack: ToStack<["Symbol.search", `IsNever: ${IsNever<TInput>}`]>;
-    }>
+    }>,
   >(
-    string: TInput
+    string: TInput,
   ): IsNever<TInput> extends true
     ? TError
     : S extends (typeof Status)["Err"]
-    ? TError
-    : number {
+      ? TError
+      : number {
     if (this.isErr()) {
       throw this.error;
     }
@@ -1037,7 +1044,7 @@ export class Result<
           type: typeof this.value,
           status: this.status,
         },
-      }
+      },
     );
   }
 
@@ -1050,19 +1057,19 @@ export class Result<
   [Symbol.asyncIterator](): IsNever<TInput> extends true
     ? never
     : S extends (typeof Status)["Err"]
-    ? never
-    : TInput extends {
-        readonly [Symbol.asyncIterator]: () => infer _ extends
-          | AsyncIterator<any>
-          | Iterator<any>
-          | Generator<any>;
-      }
-    ? _ extends Generator<infer A>
-      ? AsyncIteratorObject<A>
-      : _ extends AsyncGenerator<infer A>
-      ? AsyncIteratorObject<A>
-      : _
-    : never {
+      ? never
+      : TInput extends {
+            readonly [Symbol.asyncIterator]: () => infer _ extends
+              | AsyncIterator<any>
+              | Iterator<any>
+              | Generator<any>;
+          }
+        ? _ extends Generator<infer A>
+          ? AsyncIteratorObject<A>
+          : _ extends AsyncGenerator<infer A>
+            ? AsyncIteratorObject<A>
+            : _
+        : never {
     if (this.isErr()) {
       throw this.error;
     }
@@ -1082,7 +1089,7 @@ export class Result<
           type: typeof this.value,
           status: this.status,
         },
-      }
+      },
     );
   }
 
@@ -1100,7 +1107,7 @@ export class Result<
       const cause = value.cause ? inspect(value.cause, newOptions) : "";
       return `${options.stylize(name, "special")}(${options.stylize(
         value.name,
-        "regexp"
+        "regexp",
       )}: ${value.message})) ${cause}\n${value.stack}`;
     }
     return `${options.stylize(name, "special")}(${inner})`;
@@ -1127,7 +1134,7 @@ export class Result<
  * }
  */
 export function Ok<const T, const E = never>(
-  value?: T | null
+  value?: T | null,
 ): Result<T, E, typeof Status.Ok> {
   return Result.Ok(value) as Result<T, E, typeof Status.Ok>;
 }
@@ -1161,7 +1168,7 @@ Object.defineProperty(Ok, Symbol.hasInstance, {
  * }
  */
 export function Err<const T, const E = unknown>(
-  err: E
+  err: E,
 ): Result<T, E, typeof Status.Err> {
   return Result.Err(err) as Result<T, E, typeof Status.Err>;
 }

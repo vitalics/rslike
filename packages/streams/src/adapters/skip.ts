@@ -1,10 +1,10 @@
+import { okNone } from "../shared.js";
 import type { Stream } from "../stream.js";
 import type { AdapterFns } from "./map.js";
-import { okNone } from "../shared.js";
 
 export function skipAdapter<T, E>(
   inner: Stream<T, E>,
-  n: number
+  n: number,
 ): AdapterFns<T, E> {
   // Shared countdown: a poll that goes pending mid-skip resumes where it left off.
   let remaining = n;

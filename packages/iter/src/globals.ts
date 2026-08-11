@@ -24,17 +24,17 @@ SOFTWARE.
 
 // biome-ignore lint/style/useImportType: this is not types. set in globalThis
 import {
-  Iter,
-  Peekable,
-  DoubleEndedIter,
-  ParIter,
-  WorkerParIter,
   AsyncIter,
-  iter,
+  DoubleEndedIter,
+  Iter,
+  ParIter,
+  Peekable,
+  WorkerParIter,
+  asyncIter,
   doubleEndedIter,
+  iter,
   parIter,
   workerParIter,
-  asyncIter,
 } from "./index";
 
 type IterCtor = typeof Iter;

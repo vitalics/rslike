@@ -1,8 +1,8 @@
-import { None, Ok, Some, type Result, type Option } from "@rslike/std";
 import type { IterLike } from "@rslike/iter";
+import { None, Ok, type Option, type Result, Some } from "@rslike/std";
 
-import { StreamBase } from "../stream-base.js";
 import { Channel } from "../runtime/pure.js";
+import { StreamBase } from "../stream-base.js";
 
 /**
  * Creates a `Stream` from any sync or async iterable, or from an
@@ -13,16 +13,13 @@ import { Channel } from "../runtime/pure.js";
  * array prefer {@link fromArray}.
  */
 export function fromIterable<T>(
-  it: Iterable<T> | AsyncIterable<T> | IterLike<T>
+  it: Iterable<T> | AsyncIterable<T> | IterLike<T>,
 ): StreamBase<T, Error> {
   const src = new Channel<T>();
   (async () => {
     try {
       const obj = Object(it);
-      if (
-        Symbol.iterator in obj ||
-        Symbol.asyncIterator in obj
-      ) {
+      if (Symbol.iterator in obj || Symbol.asyncIterator in obj) {
         for await (const x of it as Iterable<T> | AsyncIterable<T>) {
           const r = await src.send(x);
           if (r.isErr()) return;

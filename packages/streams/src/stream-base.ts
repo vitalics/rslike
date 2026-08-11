@@ -1,19 +1,19 @@
-import type { Stream } from "./stream.js";
-import { type Result, type Option, Ok, None, Some } from "@rslike/std";
 import { AsyncIter } from "@rslike/iter";
+import { None, Ok, type Option, type Result, Some } from "@rslike/std";
+import type { Stream } from "./stream.js";
 
-import { mapAdapter, type NextFn, type AdapterFns } from "./adapters/map.js";
+import { bufferAdapter } from "./adapters/buffer.js";
+import { chainAdapter } from "./adapters/chain.js";
+import { enumerateAdapter } from "./adapters/enumerate.js";
 import { filterAdapter } from "./adapters/filter.js";
-import { takeAdapter } from "./adapters/take.js";
+import { fuseAdapter } from "./adapters/fuse.js";
+import { inspectAdapter } from "./adapters/inspect.js";
+import { type AdapterFns, type NextFn, mapAdapter } from "./adapters/map.js";
 import { skipAdapter } from "./adapters/skip.js";
 import { stepByAdapter } from "./adapters/step-by.js";
-import { chainAdapter } from "./adapters/chain.js";
-import { zipAdapter } from "./adapters/zip.js";
-import { enumerateAdapter } from "./adapters/enumerate.js";
-import { inspectAdapter } from "./adapters/inspect.js";
+import { takeAdapter } from "./adapters/take.js";
 import { throttleAdapter } from "./adapters/throttle.js";
-import { bufferAdapter } from "./adapters/buffer.js";
-import { fuseAdapter } from "./adapters/fuse.js";
+import { zipAdapter } from "./adapters/zip.js";
 
 /**
  * Base class for all streams — implements every `Stream` adapter and
@@ -39,7 +39,7 @@ export abstract class StreamBase<T, E = Error> implements Stream<T, E> {
    */
   static fromNext<T, E>(
     nextFn: NextFn<T, E>,
-    pollFn?: () => Result<Option<T>, E> | undefined
+    pollFn?: () => Result<Option<T>, E> | undefined,
   ): StreamBase<T, E> {
     return new FnStream(nextFn, pollFn);
   }
@@ -99,7 +99,7 @@ export abstract class StreamBase<T, E = Error> implements Stream<T, E> {
   // Each pull goes through the `pollNext?.() ?? await next()` fast path:
   // synchronously-ready sources skip the per-item microtask tick entirely.
   async forEach(
-    f: (item: T) => void | Promise<void>
+    f: (item: T) => void | Promise<void>,
   ): Promise<Result<void, E>> {
     while (true) {
       const r = this.pollNext?.() ?? (await this.next());
@@ -212,7 +212,7 @@ class FnStream<T, E> extends StreamBase<T, E> {
 
   constructor(
     private nextFn: NextFn<T, E>,
-    private pollFn?: () => Result<Option<T>, E> | undefined
+    private pollFn?: () => Result<Option<T>, E> | undefined,
   ) {
     super();
   }

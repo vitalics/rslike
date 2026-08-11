@@ -27,7 +27,7 @@ import { WELL_KNOWN_CLONE_API } from "./symbols.ts";
 export type Fn<
   R = unknown,
   A extends readonly unknown[] = [],
-  This = void
+  This = void,
 > = Function & ((this: This, ...args: A) => R);
 
 export type AsyncFn<R = unknown, A extends unknown[] = [], This = void> = Fn<
@@ -43,7 +43,7 @@ export type Box<T> = {
 
 export type ComparatorFn<Self, Other = Self> = (
   self: Self,
-  other: Other
+  other: Other,
 ) => boolean;
 
 export type IsNever<T> = [T] extends [never] ? true : false;
@@ -68,10 +68,10 @@ export type TUndefinedBehaviorError<ErrLike extends Omit<ErrorLike, "name">> =
 
 export type ToStack<
   Messages extends readonly string[] = readonly [],
-  R extends string = ""
+  R extends string = "",
 > = Messages extends readonly [
   infer Head extends string,
-  ...infer Tail extends string[]
+  ...infer Tail extends string[],
 ]
   ? `${Head}
   ${ToStack<Tail, R>}`

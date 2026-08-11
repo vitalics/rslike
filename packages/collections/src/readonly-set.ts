@@ -1,7 +1,7 @@
-import { type Option, Some, None } from "@rslike/std";
-import { Iter, ParIter, type IntoIterLike } from "@rslike/iter";
-import { RSLikeSetIterator } from "./set";
+import { type IntoIterLike, Iter, ParIter } from "@rslike/iter";
+import { None, type Option, Some } from "@rslike/std";
 import { type IterSource, toIterable } from "./iter-source";
+import { RSLikeSetIterator } from "./set";
 
 /** Structural type accepted by all set-algebra methods. */
 type AnySet<T> = { has(value: T): boolean } & Iterable<T>;
@@ -88,7 +88,7 @@ export class RSLikeReadonlySet<T> implements IntoIterLike<T> {
   forEach(
     callbackfn: (value: T, value2: T, set: Set<T>) => void,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    thisArg?: any
+    thisArg?: any,
   ): void {
     this.#internalSet.forEach(callbackfn, thisArg);
   }
@@ -106,7 +106,7 @@ export class RSLikeReadonlySet<T> implements IntoIterLike<T> {
    */
   union(other: AnySet<T>): Iter<T> {
     return Iter.from(this.#internalSet).chain(
-      Iter.from(other).filter((v) => !this.#internalSet.has(v))
+      Iter.from(other).filter((v) => !this.#internalSet.has(v)),
     );
   }
 

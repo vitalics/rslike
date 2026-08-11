@@ -1,5 +1,5 @@
-import { type Option, Some, None } from "@rslike/std";
-import { Iter, ParIter, type IntoIterLike } from "@rslike/iter";
+import { type IntoIterLike, Iter, ParIter } from "@rslike/iter";
+import { None, type Option, Some } from "@rslike/std";
 
 import { type IterSource, toIterable } from "./iter-source";
 
@@ -35,7 +35,9 @@ type AnySet<T> = { has(value: T): boolean } & Iterable<T>;
  * ```
  */
 export class RSLikeSet<T>
-  implements Omit<Set<T>, "add" | "values" | "keys" | "entries">, IntoIterLike<T>
+  implements
+    Omit<Set<T>, "add" | "values" | "keys" | "entries">,
+    IntoIterLike<T>
 {
   _internalSet: Set<T>;
 
@@ -44,7 +46,8 @@ export class RSLikeSet<T>
    *   pull-based `IterLike` (`next(): Option<T>`).
    */
   constructor(source?: IterSource<T> | null) {
-    this._internalSet = source != null ? new Set(toIterable(source)) : new Set();
+    this._internalSet =
+      source != null ? new Set(toIterable(source)) : new Set();
   }
 
   // ── Mutation ──────────────────────────────────────────────────────────
@@ -136,7 +139,7 @@ export class RSLikeSet<T>
   forEach(
     callbackfn: (value: T, value2: T, set: Set<T>) => void,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    thisArg?: any
+    thisArg?: any,
   ): void {
     this._internalSet.forEach(callbackfn, thisArg);
   }

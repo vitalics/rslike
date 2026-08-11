@@ -1,10 +1,10 @@
+import { okNone } from "../shared.js";
 import type { Stream } from "../stream.js";
 import type { AdapterFns } from "./map.js";
-import { okNone } from "../shared.js";
 
 export function takeAdapter<T, E>(
   inner: Stream<T, E>,
-  n: number
+  n: number,
 ): AdapterFns<T, E> {
   let taken = 0;
   return {

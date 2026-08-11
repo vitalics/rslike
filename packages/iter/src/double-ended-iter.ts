@@ -1,4 +1,4 @@
-import { Some, None } from "@rslike/std";
+import { None, Some } from "@rslike/std";
 import { Iter } from "./iter.ts";
 import type { AnyOption } from "./types.ts";
 
@@ -265,7 +265,7 @@ export class DoubleEndedIter<const T> extends Iter<T> {
    */
   override map<U>(fn: (value: T) => U): DoubleEndedIter<U> {
     return new DoubleEndedIter(
-      this.#s.items.slice(this.#s.front, this.#s.back + 1).map(fn)
+      this.#s.items.slice(this.#s.front, this.#s.back + 1).map(fn),
     );
   }
 
@@ -273,11 +273,13 @@ export class DoubleEndedIter<const T> extends Iter<T> {
    * Creates a `DoubleEndedIter` with only elements matching the predicate.
    * Note: eagerly evaluates to preserve double-ended capability.
    */
-  override filter<S extends T>(fn: (value: T) => value is S): DoubleEndedIter<S>;
+  override filter<S extends T>(
+    fn: (value: T) => value is S,
+  ): DoubleEndedIter<S>;
   override filter(fn: (value: T) => boolean): DoubleEndedIter<T>;
   override filter(fn: (value: T) => boolean): DoubleEndedIter<T> {
     return new DoubleEndedIter(
-      this.#s.items.slice(this.#s.front, this.#s.back + 1).filter(fn)
+      this.#s.items.slice(this.#s.front, this.#s.back + 1).filter(fn),
     );
   }
 
@@ -286,7 +288,10 @@ export class DoubleEndedIter<const T> extends Iter<T> {
    */
   override take(n: number): DoubleEndedIter<T> {
     return new DoubleEndedIter(
-      this.#s.items.slice(this.#s.front, Math.min(this.#s.front + n, this.#s.back + 1))
+      this.#s.items.slice(
+        this.#s.front,
+        Math.min(this.#s.front + n, this.#s.back + 1),
+      ),
     );
   }
 
@@ -295,7 +300,10 @@ export class DoubleEndedIter<const T> extends Iter<T> {
    */
   override skip(n: number): DoubleEndedIter<T> {
     return new DoubleEndedIter(
-      this.#s.items.slice(Math.min(this.#s.front + n, this.#s.back + 1), this.#s.back + 1)
+      this.#s.items.slice(
+        Math.min(this.#s.front + n, this.#s.back + 1),
+        this.#s.back + 1,
+      ),
     );
   }
 

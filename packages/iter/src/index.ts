@@ -5,8 +5,8 @@ export { WorkerParIter } from "./workerParIter.ts";
 export { AsyncIter } from "./asyncIter.ts";
 export type { AnyOption, IterLike, IntoIterLike } from "./types.ts";
 
-import { Iter } from "./iter.ts";
 import { DoubleEndedIter } from "./double-ended-iter.ts";
+import { Iter } from "./iter.ts";
 import { ParIter } from "./parIter.ts";
 
 /**

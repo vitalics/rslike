@@ -1,5 +1,5 @@
-import { type Option, Some, None } from "@rslike/std";
-import { Iter, ParIter, type IntoIterLike } from "@rslike/iter";
+import { type IntoIterLike, Iter, ParIter } from "@rslike/iter";
+import { None, type Option, Some } from "@rslike/std";
 
 import { type IterSource, toIterable } from "./iter-source";
 
@@ -29,7 +29,7 @@ export class RSLikeMap<K, V>
   }
   forEach(
     callbackfn: (value: V, key: K, map: Map<K, V>) => void,
-    thisArg?: any
+    thisArg?: any,
   ): void {
     this._internalMap.forEach(callbackfn, thisArg);
   }

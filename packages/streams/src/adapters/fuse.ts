@@ -1,8 +1,8 @@
-import type { Result, Option } from "@rslike/std";
+import type { Option, Result } from "@rslike/std";
 
+import { okNone } from "../shared.js";
 import type { Stream } from "../stream.js";
 import type { AdapterFns } from "./map.js";
-import { okNone } from "../shared.js";
 
 /**
  * Makes a stream "fused": after the first `None` or `Err`,

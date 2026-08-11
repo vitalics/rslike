@@ -65,7 +65,7 @@ export function clone<T>(value: T): T {
   const maybeWellKnownCloneable = value as Record<PropertyKey, unknown>;
   if (typeof maybeWellKnownCloneable[WELL_KNOWN_CLONE_API] === "function") {
     return (maybeWellKnownCloneable[WELL_KNOWN_CLONE_API] as () => T).call(
-      value
+      value,
     );
   }
   const maybeCloneable = value as { clone?: unknown };
@@ -84,7 +84,7 @@ export function clone<T>(value: T): T {
           ctor: value?.constructor,
           originalError: e,
         },
-      }
+      },
     );
   }
 }

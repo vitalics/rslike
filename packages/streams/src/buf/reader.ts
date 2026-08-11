@@ -1,6 +1,6 @@
-import { type Result, Ok, Err } from "@rslike/std";
+import { Err, Ok, type Result } from "@rslike/std";
 
-import type { AsyncRead, AsyncBufRead } from "../async-read.js";
+import type { AsyncBufRead, AsyncRead } from "../async-read.js";
 
 export class BufReader implements AsyncBufRead {
   private buf: Uint8Array;
@@ -8,7 +8,10 @@ export class BufReader implements AsyncBufRead {
   private cap = 0;
   private eof = false;
 
-  constructor(private inner: AsyncRead, size = 8192) {
+  constructor(
+    private inner: AsyncRead,
+    size = 8192,
+  ) {
     this.buf = new Uint8Array(size);
   }
 

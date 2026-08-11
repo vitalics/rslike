@@ -44,13 +44,13 @@ type TypeofResult =
 export const assertArgument = <Methods extends string>(
   method: Methods,
   value: unknown,
-  expectedType: TypeofResult
+  expectedType: TypeofResult,
 ) => {
   // biome-ignore lint/suspicious/useValidTypeof: this is typeof only types
   if (typeof value !== expectedType) {
     throw new UndefinedBehaviorError(
       `Method "${String(method)}" should accepts ${expectedType}`,
-      { cause: { value, type: typeof value } }
+      { cause: { value, type: typeof value } },
     );
   }
 };

@@ -1,5 +1,5 @@
-import { Some, None } from "@rslike/std";
-import { compare, equals, type Ord } from "@rslike/cmp";
+import { type Ord, compare, equals } from "@rslike/cmp";
+import { None, Some } from "@rslike/std";
 import type { AnyOption, IterLike } from "./types.ts";
 
 /**
@@ -45,11 +45,11 @@ export class Iter<const T> implements Iterable<T>, IterLike<T> {
   static from<T>(source: Iterable<T>): Iter<T>;
   static from<T, U>(
     source: Iterable<T>,
-    mapFn: (value: T, index: number) => U
+    mapFn: (value: T, index: number) => U,
   ): Iter<U>;
   static from<T, U>(
     source: Iterable<T>,
-    mapFn?: (value: T, index: number) => U
+    mapFn?: (value: T, index: number) => U,
   ): Iter<T> | Iter<U> {
     if (mapFn === undefined) {
       return new Iter(source);
@@ -472,7 +472,7 @@ export class Iter<const T> implements Iterable<T>, IterLike<T> {
    */
   scan<S, U>(
     init: S,
-    fn: (acc: S, value: T) => AnyOption<readonly [S, U]>
+    fn: (acc: S, value: T) => AnyOption<readonly [S, U]>,
   ): Iter<U> {
     const source = this.#iter;
     return new Iter<U>(() => {
@@ -743,7 +743,7 @@ export class Iter<const T> implements Iterable<T>, IterLike<T> {
   collect<K, V>(this: Iter<readonly [K, V]>, ctor: MapConstructor): Map<K, V>;
   collect<C>(ctor: new (items: T[]) => C): C;
   collect(
-    ctor?: ArrayConstructor | MapConstructor | (new (items: T[]) => unknown)
+    ctor?: ArrayConstructor | MapConstructor | (new (items: T[]) => unknown),
   ): unknown {
     const result: T[] = [];
     let r = this.#iter.next();

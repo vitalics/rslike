@@ -6,12 +6,12 @@ import type {
   WritableStreamDefaultWriter,
 } from "node:stream/web";
 
-import { type Result, type Option, Ok, None, Some, Err } from "@rslike/std";
+import { Err, None, Ok, type Option, type Result, Some } from "@rslike/std";
 
-import { StreamBase } from "../stream-base.js";
-import type { Sink } from "../sink.js";
-import type { Stream } from "../stream.js";
 import type { Duplex } from "../duplex.js";
+import type { Sink } from "../sink.js";
+import { StreamBase } from "../stream-base.js";
+import type { Stream } from "../stream.js";
 import { PureDuplex } from "./pure.js";
 
 class WebStreamAdapter<T> extends StreamBase<T, Error> {
@@ -32,7 +32,7 @@ class WebStreamAdapter<T> extends StreamBase<T, Error> {
   cancel(): Promise<Result<void, Error>> {
     return this.reader.cancel().then(
       () => Ok<void>(undefined),
-      (e) => Err(e as Error)
+      (e) => Err(e as Error),
     );
   }
 
@@ -89,7 +89,7 @@ class WebSinkAdapter<T> implements Sink<T, Error> {
 }
 
 export const fromWebReadable = <T>(
-  s: ReadableStream<T>
+  s: ReadableStream<T>,
 ): StreamBase<T, Error> => new WebStreamAdapter(s.getReader());
 
 export const fromWebWritable = <T>(s: WritableStream<T>): Sink<T, Error> =>
@@ -112,6 +112,6 @@ export const fromWebWritable = <T>(s: WritableStream<T>): Sink<T, Error> =>
  * ```
  */
 export const fromWebTransform = <I, O>(
-  ts: TransformStream<I, O>
+  ts: TransformStream<I, O>,
 ): Duplex<I, O, Error> =>
   new PureDuplex(fromWebReadable(ts.readable), fromWebWritable(ts.writable));

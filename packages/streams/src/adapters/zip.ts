@@ -1,12 +1,12 @@
 import { Ok, Some } from "@rslike/std";
 
+import { okNone } from "../shared.js";
 import type { Stream } from "../stream.js";
 import type { AdapterFns } from "./map.js";
-import { okNone } from "../shared.js";
 
 export function zipAdapter<T, U, E>(
   a: Stream<T, E>,
-  b: Stream<U, E>
+  b: Stream<U, E>,
 ): AdapterFns<[T, U], E> {
   // When poll pulled a's value but b was pending, the value is stashed
   // so nothing is lost between pulls.

@@ -1,4 +1,4 @@
-import { Ok, None, type Result, type Option } from "@rslike/std";
+import { None, Ok, type Option, type Result } from "@rslike/std";
 
 /**
  * Shared immutable singletons for the two hottest protocol values.
@@ -10,7 +10,7 @@ import { Ok, None, type Result, type Option } from "@rslike/std";
  */
 const OK_VOID: Result<void, never> = Object.freeze(Ok(undefined)) as never;
 const OK_NONE: Result<Option<never>, never> = Object.freeze(
-  Ok(None())
+  Ok(None()),
 ) as never;
 
 /** `Ok(undefined)` — successful void operation. */

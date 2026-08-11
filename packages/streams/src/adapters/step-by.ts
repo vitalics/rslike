@@ -1,10 +1,10 @@
+import { okNone } from "../shared.js";
 import type { Stream } from "../stream.js";
 import type { AdapterFns } from "./map.js";
-import { okNone } from "../shared.js";
 
 export function stepByAdapter<T, E>(
   inner: Stream<T, E>,
-  step: number
+  step: number,
 ): AdapterFns<T, E> {
   if (step < 1) {
     throw new RangeError("stepBy: step must be >= 1");

@@ -9,13 +9,17 @@ import { ParIter } from "./parIter.ts";
  *   fallback → 1
  */
 function getParallelism(): number {
-  if (typeof navigator !== "undefined" && (navigator.hardwareConcurrency ?? 0) > 0) {
+  if (
+    typeof navigator !== "undefined" &&
+    (navigator.hardwareConcurrency ?? 0) > 0
+  ) {
     return navigator.hardwareConcurrency;
   }
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const os = require("node:os") as typeof import("node:os");
-    const ap = (os as { availableParallelism?: () => number }).availableParallelism;
+    const ap = (os as { availableParallelism?: () => number })
+      .availableParallelism;
     return typeof ap === "function" ? ap() : os.cpus().length;
   } catch {
     return 1;
@@ -70,7 +74,8 @@ function spawnWorker<T>(items: T[], pipeline: WorkerStage[]): Promise<T[]> {
     } else {
       // Node.js — worker_threads
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { Worker: NodeWorker } = require("node:worker_threads") as typeof import("node:worker_threads");
+      const { Worker: NodeWorker } =
+        require("node:worker_threads") as typeof import("node:worker_threads");
       const worker = new NodeWorker(WORKER_CODE, {
         eval: true,
         workerData: { items, pipeline },
@@ -78,7 +83,8 @@ function spawnWorker<T>(items: T[], pipeline: WorkerStage[]): Promise<T[]> {
       worker.on("message", (result: T[]) => resolve(result));
       worker.on("error", reject);
       worker.on("exit", (code: number) => {
-        if (code !== 0) reject(new Error(`Worker thread exited with code ${code}`));
+        if (code !== 0)
+          reject(new Error(`Worker thread exited with code ${code}`));
       });
     }
   });
@@ -121,10 +127,12 @@ export class WorkerParIter<T> {
   constructor(
     source: Iterable<T> | (() => Iterator<T>) | ParIter<T>,
     pipeline: WorkerStage[] = [],
-    workerCount = getParallelism()
+    workerCount = getParallelism(),
   ) {
     if (source instanceof ParIter) {
-      this.#asyncSource = (source as ParIter<T>).collect() as Promise<unknown[]>;
+      this.#asyncSource = (source as ParIter<T>).collect() as Promise<
+        unknown[]
+      >;
       this.#source = [] as unknown as Iterable<unknown>;
     } else {
       this.#source = source as Iterable<unknown> | (() => Iterator<unknown>);
@@ -137,7 +145,11 @@ export class WorkerParIter<T> {
   // ── Private clone helper ─────────────────────────────────────────────────
 
   #clone<U>(pipeline: WorkerStage[]): WorkerParIter<U> {
-    const inst = new WorkerParIter<U>([] as unknown as Iterable<U>, pipeline, this.#workerCount);
+    const inst = new WorkerParIter<U>(
+      [] as unknown as Iterable<U>,
+      pipeline,
+      this.#workerCount,
+    );
     if (this.#asyncSource !== null) {
       inst.#asyncSource = this.#asyncSource;
     } else {
@@ -160,7 +172,10 @@ export class WorkerParIter<T> {
    * ```
    */
   map<U>(fn: (value: T) => U): WorkerParIter<U> {
-    return this.#clone<U>([...this.#pipeline, { method: "map", fnStr: fn.toString() }]);
+    return this.#clone<U>([
+      ...this.#pipeline,
+      { method: "map", fnStr: fn.toString() },
+    ]);
   }
 
   /**
@@ -175,7 +190,10 @@ export class WorkerParIter<T> {
    * ```
    */
   filter(fn: (value: T) => boolean): WorkerParIter<T> {
-    return this.#clone<T>([...this.#pipeline, { method: "filter", fnStr: fn.toString() }]);
+    return this.#clone<T>([
+      ...this.#pipeline,
+      { method: "filter", fnStr: fn.toString() },
+    ]);
   }
 
   // ── Terminal consumers ────────────────────────────────────────────────────
@@ -200,7 +218,10 @@ export class WorkerParIter<T> {
    */
   collect(): Promise<T[]>;
   collect(ctor: ArrayConstructor): Promise<T[]>;
-  collect<K, V>(this: WorkerParIter<readonly [K, V]>, ctor: MapConstructor): Promise<Map<K, V>>;
+  collect<K, V>(
+    this: WorkerParIter<readonly [K, V]>,
+    ctor: MapConstructor,
+  ): Promise<Map<K, V>>;
   collect<C>(ctor: new (items: T[]) => C): Promise<C>;
   async collect(
     ctor?: ArrayConstructor | MapConstructor | (new (items: T[]) => unknown),
@@ -224,7 +245,7 @@ export class WorkerParIter<T> {
     }
 
     const results = await Promise.all(
-      chunks.map((chunk) => spawnWorker<T>(chunk, this.#pipeline))
+      chunks.map((chunk) => spawnWorker<T>(chunk, this.#pipeline)),
     );
 
     const flat = results.flat();
@@ -262,7 +283,7 @@ export class WorkerParIter<T> {
     if (this.#asyncSource !== null) {
       throw new Error(
         "Cannot synchronously convert a WorkerParIter backed by a ParIter source to Iter. " +
-          "Call `await collect()` first, then wrap in iter()."
+          "Call `await collect()` first, then wrap in iter().",
       );
     }
     return Iter.from(this.#materialize() as T[]);
@@ -280,7 +301,7 @@ export class WorkerParIter<T> {
     if (this.#asyncSource !== null) {
       throw new Error(
         "Cannot synchronously convert a WorkerParIter backed by a ParIter source to ParIter. " +
-          "Call `await collect()` first, then wrap in parIter()."
+          "Call `await collect()` first, then wrap in parIter().",
       );
     }
     return new ParIter<T>(this.#materialize() as T[]);
@@ -295,13 +316,13 @@ export class WorkerParIter<T> {
     if (this.#asyncSource !== null) {
       throw new Error(
         "Cannot synchronously iterate a WorkerParIter backed by a ParIter source. " +
-          "Call `await collect()` first, then iterate the resulting array."
+          "Call `await collect()` first, then iterate the resulting array.",
       );
     }
     if (this.#pipeline.length > 0) {
       throw new Error(
         "Cannot synchronously iterate a WorkerParIter with pending pipeline stages. " +
-          "Call `await collect()` first, then iterate the resulting array."
+          "Call `await collect()` first, then iterate the resulting array.",
       );
     }
     return (this.#materialize() as T[])[Symbol.iterator]();
@@ -348,7 +369,7 @@ export class WorkerParIter<T> {
  */
 export function workerParIter<T>(
   source: Iterable<T> | ParIter<T>,
-  workerCount?: number
+  workerCount?: number,
 ): WorkerParIter<T> {
   return new WorkerParIter(source, [], workerCount);
 }

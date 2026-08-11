@@ -1,4 +1,4 @@
-import { type Result, Ok, Err } from "@rslike/std";
+import { Err, Ok, type Result } from "@rslike/std";
 
 import type { AsyncWrite } from "../async-write.js";
 
@@ -6,7 +6,10 @@ export class BufWriter implements AsyncWrite {
   private buf: Uint8Array;
   private pos = 0;
 
-  constructor(private inner: AsyncWrite, size = 8192) {
+  constructor(
+    private inner: AsyncWrite,
+    size = 8192,
+  ) {
     this.buf = new Uint8Array(size);
   }
 

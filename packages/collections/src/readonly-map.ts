@@ -1,7 +1,7 @@
-import { type Option, Some, None } from "@rslike/std";
-import { Iter, ParIter, type IntoIterLike } from "@rslike/iter";
-import { RSLikeMapIterator } from "./map";
+import { type IntoIterLike, Iter, ParIter } from "@rslike/iter";
+import { None, type Option, Some } from "@rslike/std";
 import { type IterSource, toIterable } from "./iter-source";
+import { RSLikeMapIterator } from "./map";
 
 /**
  * An immutable Rust-inspired `HashMap` wrapper.
@@ -28,7 +28,7 @@ export class RSLikeReadonlyMap<K, V> implements IntoIterLike<[K, V]> {
   #internalMap: Map<K, V>;
 
   static from<K, V>(
-    iterable?: IterSource<readonly [K, V]> | null
+    iterable?: IterSource<readonly [K, V]> | null,
   ): RSLikeReadonlyMap<K, V> {
     return new RSLikeReadonlyMap(iterable);
   }
@@ -88,7 +88,7 @@ export class RSLikeReadonlyMap<K, V> implements IntoIterLike<[K, V]> {
   forEach(
     callbackfn: (value: V, key: K, map: Map<K, V>) => void,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    thisArg?: any
+    thisArg?: any,
   ): void {
     this.#internalMap.forEach(callbackfn, thisArg);
   }

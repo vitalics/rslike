@@ -1,10 +1,10 @@
-import { type Result, type Option, Ok, Some, Err } from "@rslike/std";
+import { Err, Ok, type Option, type Result, Some } from "@rslike/std";
 
-import { StreamBase } from "../stream-base.js";
-import type { Sink } from "../sink.js";
-import type { Stream } from "../stream.js";
 import type { Duplex } from "../duplex.js";
 import { okNone, okVoid } from "../shared.js";
+import type { Sink } from "../sink.js";
+import { StreamBase } from "../stream-base.js";
+import type { Stream } from "../stream.js";
 
 /**
  * Amortized O(1) FIFO queue backed by an array with a head cursor —
@@ -123,7 +123,7 @@ export class Channel<T> extends StreamBase<T, Error> implements Sink<T, Error> {
 export class PureDuplex<I, O = I> implements Duplex<I, O, Error> {
   constructor(
     readonly source: Stream<O, Error>,
-    readonly sink: Sink<I, Error>
+    readonly sink: Sink<I, Error>,
   ) {}
 }
 
@@ -165,7 +165,7 @@ export function duplexPair<I = unknown, O = I>(): [
  * ```
  */
 export function transform<I, O>(
-  f: (item: I) => O | Promise<O>
+  f: (item: I) => O | Promise<O>,
 ): PureDuplex<I, O> {
   const input = new Channel<I>();
   const output = new Channel<O>();

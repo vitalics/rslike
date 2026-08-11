@@ -11,7 +11,7 @@ import type { AdapterFns } from "./map.js";
  */
 export function throttleAdapter<T, E>(
   inner: Stream<T, E>,
-  ms: number
+  ms: number,
 ): AdapterFns<T, E> {
   let lastEmit = 0;
   return {

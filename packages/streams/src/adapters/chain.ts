@@ -3,7 +3,7 @@ import type { AdapterFns } from "./map.js";
 
 export function chainAdapter<T, E>(
   first: Stream<T, E>,
-  second: Stream<T, E>
+  second: Stream<T, E>,
 ): AdapterFns<T, E> {
   let onSecond = false;
   return {

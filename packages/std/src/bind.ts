@@ -26,9 +26,9 @@ SOFTWARE.
 
 import { Async } from "./async.ts";
 import { match } from "./match.ts";
-import { UndefinedBehaviorError } from "./utils.ts";
 import { type Option, Some } from "./option.ts";
-import { type Result, Err, Ok } from "./result.ts";
+import { Err, Ok, type Result } from "./result.ts";
+import { UndefinedBehaviorError } from "./utils.ts";
 
 /**
  * Function decorator. Combines `Option` and `Result` classes.

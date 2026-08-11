@@ -1,12 +1,12 @@
-import { type Result, type Option, Ok, Some } from "@rslike/std";
+import { Ok, type Option, type Result, Some } from "@rslike/std";
 
+import { okNone } from "../shared.js";
 import type { Stream } from "../stream.js";
 import type { AdapterFns } from "./map.js";
-import { okNone } from "../shared.js";
 
 export function inspectAdapter<T, E>(
   inner: Stream<T, E>,
-  f: (item: T) => void
+  f: (item: T) => void,
 ): AdapterFns<T, E> {
   const transform = (r: Result<Option<T>, E>): Result<Option<T>, E> => {
     if (r.isErr()) return r;

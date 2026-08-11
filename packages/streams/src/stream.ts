@@ -1,5 +1,5 @@
-import type { Result, Option } from "@rslike/std";
 import type { IterLike } from "@rslike/iter";
+import type { Option, Result } from "@rslike/std";
 
 export interface Stream<T, E = Error>
   extends IterLike<T, Promise<Result<Option<T>, E>>> {

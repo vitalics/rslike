@@ -1,8 +1,8 @@
-import { type Result, type Option, Ok, Some } from "@rslike/std";
+import { Ok, type Option, type Result, Some } from "@rslike/std";
 
+import { okNone } from "../shared.js";
 import type { Stream } from "../stream.js";
 import type { AdapterFns } from "./map.js";
-import { okNone } from "../shared.js";
 
 /**
  * Accumulates items into arrays of at most `size` elements.
@@ -16,7 +16,7 @@ import { okNone } from "../shared.js";
  */
 export function bufferAdapter<T, E>(
   inner: Stream<T, E>,
-  size: number
+  size: number,
 ): AdapterFns<T[], E> {
   if (size < 1) {
     throw new RangeError("buffer: size must be >= 1");

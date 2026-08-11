@@ -1,7 +1,7 @@
-import { type Result, type Option, Ok, Some } from "@rslike/std";
+import { Ok, type Option, type Result, Some } from "@rslike/std";
 
-import type { Stream } from "../stream.js";
 import { okNone } from "../shared.js";
+import type { Stream } from "../stream.js";
 
 export type NextFn<T, E> = () => Promise<Result<Option<T>, E>>;
 
@@ -22,7 +22,7 @@ export type AdapterFns<T, E> = {
 
 export function mapAdapter<T, U, E>(
   inner: Stream<T, E>,
-  f: (item: T) => U
+  f: (item: T) => U,
 ): AdapterFns<U, E> {
   const transform = (r: Result<Option<T>, E>): Result<Option<U>, E> => {
     if (r.isErr()) return r as never;
