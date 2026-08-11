@@ -41,7 +41,7 @@ function assertFunction(value: unknown, method: string): void {
   if (typeof value !== "function") {
     throw new UndefinedBehaviorError(
       `"AsyncIter.${method}" expects function, got ${typeof value}`,
-      { cause: { value, type: typeof value } }
+      { cause: { value, type: typeof value } },
     );
   }
 }
