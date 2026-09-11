@@ -32,7 +32,7 @@
     "tsx": "4.19.1",
     "typedoc": "0.27.9",
     "typescript": "5.8.2",
-    "vitest": "3.2.6",
+    "vitest": "4.1.11",
     "zx": "8.8.5"
   },
   "keywords": [
